@@ -1,0 +1,4 @@
+{"config": {"reply": {"items": {"mode": {"description": "模式", "labels": ["快速", "安全"]}}},
+            "accounts": {"items": {"api_key": {"description": "API 密钥"}}},
+            "endpoint": {"hint": "服务的基础地址"},
+            "music": {"templates": {"netease": {"name": "网易云音乐", "items": {"cookie": {"description": "Cookie"}}}}}}}

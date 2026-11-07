@@ -1,0 +1,7 @@
+{"tags": {"description": "Tags", "type": "list", "options": ["news", "sports", "tech"], "labels": ["News", "Sports", "Tech"], "default": ["news"]},
+ "keywords": {"description": "Keywords", "type": "list"},
+ "accounts": {"description": "Accounts", "type": "list", "items": {
+   "name": {"description": "Name", "type": "string"},
+   "api_key": {"description": "API key", "type": "string", "secret": true}}},
+ "headers": {"description": "Headers", "type": "dict"},
+ "ratio": {"description": "Ratio", "type": "float", "slider": {"min": 0, "max": 1, "step": 0.1}, "default": 0.5}}

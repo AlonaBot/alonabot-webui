@@ -1,0 +1,6 @@
+{"music": {"description": "Music source", "type": "template", "templates": {
+   "netease": {"name": "NetEase Cloud Music", "hint": "Log in with a cookie", "items": {"cookie": {"description": "Cookie", "type": "string", "secret": true, "required": true}}},
+   "local": {"name": "Local files", "items": {"dir": {"description": "Directory", "type": "string", "default": "music"}}}}},
+ "sources": {"description": "Sources", "type": "template_list", "templates": {
+   "rss": {"name": "RSS", "display_item": "url", "items": {"url": {"description": "Feed URL", "type": "string", "required": true}, "every_minutes": {"description": "Interval", "type": "int", "default": 30}}},
+   "webhook": {"name": "Webhook", "hint": "Receive pushes", "hide_hint_in_list": true, "items": {"token": {"description": "Token", "type": "string", "secret": true}}}}}}

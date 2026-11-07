@@ -1,0 +1,7 @@
+{"welcome": {"description": "Welcome message", "type": "text", "required": true, "default": "Hello"},
+ "reply": {"description": "Reply", "type": "object", "items": {
+   "prefix": {"description": "Prefix", "hint": "Text placed before every reply", "type": "string", "default": "> "},
+   "mode": {"description": "Mode", "type": "string", "options": ["fast", "safe"], "labels": ["Fast", "Safe"], "default": "fast"}}},
+ "level": {"description": "Level", "type": "int", "slider": {"min": 1, "max": 5, "step": 1}, "default": 3},
+ "advanced": {"description": "Advanced", "type": "bool"},
+ "template": {"description": "Template", "hint": "Raw JSON template", "obvious_hint": true, "type": "text", "editor_mode": true, "condition": {"advanced": true}}}

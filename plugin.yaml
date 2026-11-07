@@ -1,0 +1,9 @@
+# 官方管理界面的静态组件声明。
+id: alonabot_webui_admin
+name: AlonaBot Admin
+version: 0.1.0
+source: https://github.com/AlonaBot/AlonaBot
+role: webui
+assets: dist
+admin_api_min_major: 1
+admin_api_max_major: 1
