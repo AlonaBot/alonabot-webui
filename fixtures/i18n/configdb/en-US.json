@@ -1,0 +1,8 @@
+{
+  "messages": {
+    "note.saved": "Saved {key}",
+    "note.value": "{key}: {value}",
+    "note.deleted": "Deleted {key}",
+    "note.hello": "Hello, {name}"
+  }
+}

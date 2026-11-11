@@ -1,0 +1,15 @@
+{
+  "$version": 2,
+  "greeting": {"type": "string", "description": "Greeting", "default": "Hello"},
+  "enabled": {"type": "bool", "description": "Enabled", "default": true},
+  "count": {"type": "int", "description": "Count", "default": 7},
+  "tags": {"type": "list", "description": "Tags", "default": ["example"]},
+  "labels": {"type": "dict", "description": "Labels", "default": {"example": "value"}},
+  "nested": {"type": "object", "description": "Nested settings", "items": {
+    "enabled": {"type": "bool", "description": "Enabled", "default": true}
+  }},
+  "token": {"type": "string", "description": "Access token", "secret": true},
+  "hidden": {"type": "string", "invisible": true, "default": "retained"},
+  "fail_migration": {"type": "bool", "invisible": true},
+  "fail_start": {"type": "bool", "invisible": true}
+}

@@ -1,0 +1,16 @@
+{
+  "config": {
+    "greeting": {"description": "问候语"},
+    "enabled": {"description": "启用"},
+    "count": {"description": "数量"},
+    "tags": {"description": "标签"},
+    "nested": {"description": "嵌套设置", "items": {"enabled": {"description": "启用"}}},
+    "token": {"description": "访问令牌"}
+  },
+  "messages": {
+    "note.saved": "已保存 {key}",
+    "note.value": "{key}：{value}",
+    "note.deleted": "已删除 {key}",
+    "note.hello": "你好，{name}"
+  }
+}
