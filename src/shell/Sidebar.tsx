@@ -20,6 +20,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
+  ArrowUpCircle,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -42,6 +43,7 @@ interface SidebarProps {
   routes: RouteEntry[];
   version: string;
   onLogout?: () => void;
+  coreUpdate?: { version: string; releaseURL: string };
 }
 
 interface SortableNavItemProps {
@@ -138,7 +140,7 @@ function SortableEditItem(props: {
  * 包含 AlonaBot 品牌菜单、主体导航（支持 dnd-kit 拖动排序、右键隐藏与恢复）、底部设置与关于对话框。
  */
 export function Sidebar(props: SidebarProps): JSX.Element {
-  const { routes, version, onLogout } = props;
+  const { routes, version, onLogout, coreUpdate } = props;
   const ui = useUI();
   const labels: Record<string, string> = ui;
   const currentPath = usePath();
@@ -305,7 +307,10 @@ export function Sidebar(props: SidebarProps): JSX.Element {
                     key={entry.id}
                     entry={entry}
                     collapsed={state.collapsed}
-                    isActive={currentPath === entry.path}
+                    isActive={
+                      currentPath === entry.path ||
+                      (entry.path === '/components' && currentPath.startsWith('/components/'))
+                    }
                     onContextMenu={handleContextMenu}
                   />
                 ))}
@@ -387,14 +392,29 @@ export function Sidebar(props: SidebarProps): JSX.Element {
             return itemContent;
           })}
 
-          <button
-            type="button"
-            className="sidebar-version-button font-mono"
-            onClick={() => setAboutOpen(true)}
-            aria-label={ui.about}
-          >
-            {version}
-          </button>
+          <div className="sidebar-version-container">
+            <button
+              type="button"
+              className="sidebar-version-button font-mono"
+              onClick={() => setAboutOpen(true)}
+              aria-label={ui.about}
+            >
+              {version}
+            </button>
+            {coreUpdate ? (
+              <a
+                href={coreUpdate.releaseURL}
+                target="_blank"
+                rel="noreferrer"
+                className="sidebar-update-badge"
+                title={`${ui.newVersionAvailable}: ${coreUpdate.version}`}
+                aria-label={`${ui.newVersionAvailable}: ${coreUpdate.version}`}
+              >
+                <ArrowUpCircle size={14} />
+                {!state.collapsed ? <span className="sidebar-update-text">→ {coreUpdate.version}</span> : null}
+              </a>
+            ) : null}
+          </div>
         </div>
 
         {/* 右键菜单弹层 */}

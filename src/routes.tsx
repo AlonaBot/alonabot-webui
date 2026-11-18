@@ -1,8 +1,12 @@
-import React, { useState, type JSX } from 'react';
+import { useState, type JSX } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { SlidersHorizontal } from 'lucide-react';
+import { Bot, LayoutDashboard, Puzzle, SlidersHorizontal } from 'lucide-react';
 import { ConfigForm } from './components/ConfigForm';
 import { useUI } from './i18n/UI';
+import { type CoreInfo } from './api/admin';
+import { OverviewPage } from './pages/OverviewPage';
+import { PluginsPage } from './pages/PluginsPage';
+import { AccountsPage } from './pages/AccountsPage';
 import chinese from '../i18n/zh-CN.json';
 import collections from '../fixtures/collections.config_schema.json';
 import pluginChinese from '../fixtures/i18n/zh-CN.json';
@@ -19,6 +23,17 @@ export type RouteEntry = {
   group: 'main' | 'bottom';
   render: () => JSX.Element;
 };
+
+let cachedCore: CoreInfo | null = null;
+
+export function setCachedCore(core: CoreInfo | null) {
+  cachedCore = core;
+}
+
+function OverviewRouteWrapper(): JSX.Element {
+  const ui = useUI();
+  return cachedCore ? <OverviewPage core={cachedCore} /> : <p role="status">{ui.coreUnavailable}</p>;
+}
 
 const secretSet = { $secret_set: true };
 const formExamples = [
@@ -105,16 +120,42 @@ function FormPreview(): JSX.Element {
   );
 }
 
-/** routes 登记官方 WebUI 页面，开发环境包含表单预览。 */
-export const routes: RouteEntry[] = import.meta.env.DEV
-  ? [
-      {
-        id: 'dev-forms',
-        path: '/dev/forms',
-        label: 'pageTitle',
-        icon: SlidersHorizontal,
-        group: 'main',
-        render: () => <FormPreview />,
-      },
-    ]
-  : [];
+/** routes 登记官方 WebUI 页面（避开 Core 保留的 /plugins 路径）。 */
+export const routes: RouteEntry[] = [
+  {
+    id: 'overview',
+    path: '/overview',
+    label: 'overview',
+    icon: LayoutDashboard,
+    group: 'main',
+    render: () => <OverviewRouteWrapper />,
+  },
+  {
+    id: 'plugins',
+    path: '/components',
+    label: 'plugins',
+    icon: Puzzle,
+    group: 'main',
+    render: () => <PluginsPage />,
+  },
+  {
+    id: 'accounts',
+    path: '/accounts',
+    label: 'accounts',
+    icon: Bot,
+    group: 'main',
+    render: () => <AccountsPage />,
+  },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          id: 'dev-forms',
+          path: '/dev/forms',
+          label: 'pageTitle',
+          icon: SlidersHorizontal,
+          group: 'main' as const,
+          render: () => <FormPreview />,
+        },
+      ]
+    : []),
+];

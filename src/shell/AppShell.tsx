@@ -16,9 +16,10 @@ import { TopBar } from './TopBar';
 export function AppShell(props: {
   version: string;
   onLogout?: () => void;
+  coreUpdate?: { version: string; releaseURL: string };
   children: React.ReactNode;
 }): JSX.Element {
-  const { version, onLogout, children } = props;
+  const { version, onLogout, coreUpdate, children } = props;
   const currentPath = usePath();
   const ui = useUI();
 
@@ -56,16 +57,16 @@ export function AppShell(props: {
   }, [routeSearchItems, registeredItems]);
 
   // 解析当前页面标题（用于移动端顶栏与桌面顶栏）
-  const activeRoute = routes.find(r => r.path === currentPath);
+  const activeRoute = routes.find(r => r.path === currentPath || (r.id === 'plugins' && currentPath.startsWith('/components/')));
   const currentTitle = activeRoute ? (ui as Record<string, string>)[activeRoute.label] : '';
 
   return (
     <SearchContext.Provider value={searchContextValue}>
       <div className="app-shell">
-        <Sidebar routes={routes} version={version} onLogout={onLogout} />
+        <Sidebar routes={routes} version={version} onLogout={onLogout} coreUpdate={coreUpdate} />
 
         <div className="shell-main">
-          <TopBar title={currentTitle} searchItems={allSearchItems} />
+          <TopBar title={currentTitle} searchItems={allSearchItems} onLogout={onLogout} />
           <main className="shell-content">{children}</main>
         </div>
 

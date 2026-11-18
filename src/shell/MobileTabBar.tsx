@@ -1,4 +1,4 @@
-import React, { useState, type JSX } from 'react';
+import { useState, type JSX } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import type { RouteEntry } from '../routes';
@@ -33,7 +33,7 @@ export function MobileTabBar(props: MobileTabBarProps): JSX.Element {
       <div className="mobile-tabbar-inner">
         {visibleTabs.map(route => {
           const Icon = route.icon;
-          const isActive = currentPath === route.path;
+          const isActive = currentPath === route.path || (route.id === 'plugins' && currentPath.startsWith('/components/'));
           return (
             <Link
               key={route.id}
