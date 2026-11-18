@@ -8,6 +8,7 @@ import { Link, navigate, usePath } from './router';
 interface MobileTabBarProps {
   routes: RouteEntry[];
   moreLabel?: string;
+  agentInstalled?: boolean;
 }
 
 /**
@@ -17,7 +18,7 @@ interface MobileTabBarProps {
 export function MobileTabBar(props: MobileTabBarProps): JSX.Element {
   const ui = useUI();
   const labels: Record<string, string> = ui;
-  const { routes, moreLabel = ui.sidebarMore } = props;
+  const { routes, moreLabel = ui.sidebarMore, agentInstalled } = props;
   const currentPath = usePath();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -70,6 +71,21 @@ export function MobileTabBar(props: MobileTabBarProps): JSX.Element {
                 {allMoreTabs.map(tab => {
                   const TabIcon = tab.icon;
                   const isActive = currentPath === tab.path;
+                  const isDisabled = tab.id === 'models' && agentInstalled === false;
+                  if (isDisabled) {
+                    return (
+                      <DropdownMenu.Item
+                        key={tab.id}
+                        className={`dropdown-menu-item ${isActive ? 'is-active' : ''} is-disabled`}
+                        disabled={true}
+                      >
+                        <span className="mobile-more-link is-disabled" aria-disabled="true" tabIndex={-1}>
+                          <TabIcon size={16} />
+                          <span>{labels[tab.label]}</span>
+                        </span>
+                      </DropdownMenu.Item>
+                    );
+                  }
                   return (
                     <DropdownMenu.Item
                       key={tab.id}

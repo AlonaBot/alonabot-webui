@@ -81,7 +81,26 @@ export function PluginsPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'installed' | 'store'>('installed');
+  const [activeTab, setActiveTab] = useState<'installed' | 'store'>(() => {
+    if (typeof window !== 'undefined') {
+      const search = new URLSearchParams(window.location.search);
+      if (search.get('tab') === 'store') return 'store';
+    }
+    return 'installed';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const search = new URLSearchParams(window.location.search);
+      if (search.get('tab') === 'store') {
+        setActiveTab('store');
+      } else if (!search.has('tab')) {
+        setActiveTab('installed');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // 筛选与排序
   const [roleFilter, setRoleFilter] = useState<string>('all');

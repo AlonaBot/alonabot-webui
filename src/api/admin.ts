@@ -7,13 +7,15 @@ export class AdminAPIError extends Error {
   status: number;
   code?: string;
   affected?: string[];
+  description?: string;
 
-  constructor(status: number, message: string, code?: string, affected?: string[]) {
+  constructor(status: number, message: string, code?: string, affected?: string[], description?: string) {
     super(message);
     this.name = 'AdminAPIError';
     this.status = status;
     this.code = code;
     this.affected = affected;
+    this.description = description;
   }
 }
 
@@ -89,6 +91,27 @@ function notifySessionExpired() {
   }
 }
 
+type PackagesChangedHandler = () => void;
+const packagesChangedHandlers = new Set<PackagesChangedHandler>();
+
+/** 订阅组件安装、更新或卸载成功事件，返回取消订阅函数。 */
+export function onPackagesChanged(handler: PackagesChangedHandler): () => void {
+  packagesChangedHandlers.add(handler);
+  return () => {
+    packagesChangedHandlers.delete(handler);
+  };
+}
+
+function notifyPackagesChanged() {
+  for (const handler of packagesChangedHandlers) {
+    try {
+      handler();
+    } catch (err) {
+      console.error('Packages changed handler failed:', err);
+    }
+  }
+}
+
 async function parseErrorResponse(response: Response): Promise<AdminAPIError> {
   const text = await response.text();
   if (response.headers.get('content-type')?.includes('application/json')) {
@@ -103,8 +126,11 @@ async function parseErrorResponse(response: Response): Promise<AdminAPIError> {
       const affected = Array.isArray(error.affected) && error.affected.every(item => typeof item === 'string')
         ? error.affected as string[] : undefined;
       const code = typeof error.code === 'string' ? error.code : undefined;
-      const message = typeof error.safe_message === 'string' ? error.safe_message : text;
-      return new AdminAPIError(response.status, message, code, affected);
+      const description = typeof error.description === 'string' ? error.description : undefined;
+      const message = typeof error.safe_message === 'string'
+        ? error.safe_message
+        : (description ?? text);
+      return new AdminAPIError(response.status, message, code, affected, description);
     }
   }
   return new AdminAPIError(response.status, text || `HTTP ${response.status}`);
@@ -215,18 +241,21 @@ export function packageIconURL(id: string): string {
 export async function installPackage(
   input: { Source: string; Replace?: boolean; Confirm?: boolean } | FormData,
 ): Promise<Package> {
+  let pkg: Package;
   if (input instanceof FormData) {
-    return request<Package>('/api/v1/packages/install', {
+    pkg = await request<Package>('/api/v1/packages/install', {
       method: 'POST',
       body: input,
     });
+  } else {
+    pkg = await request<Package>('/api/v1/packages/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
   }
-
-  return request<Package>('/api/v1/packages/install', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+  notifyPackagesChanged();
+  return pkg;
 }
 
 /** 更新组件（JSON 沿用原来源或 FormData 上传更新包）。 */
@@ -234,23 +263,26 @@ export async function updatePackage(
   id: string,
   input: { confirm?: boolean } | FormData,
 ): Promise<{ warnings?: string[] }> {
+  let result: { warnings?: string[] };
   if (input instanceof FormData) {
     input.set('id', id);
-    return request<{ warnings?: string[] }>('/api/v1/packages/update', {
+    result = await request<{ warnings?: string[] }>('/api/v1/packages/update', {
       method: 'POST',
       body: input,
     });
+  } else {
+    result = await request<{ warnings?: string[] }>('/api/v1/packages/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        confirm: input.confirm ?? false,
+        install: {},
+      }),
+    });
   }
-
-  return request<{ warnings?: string[] }>('/api/v1/packages/update', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id,
-      confirm: input.confirm ?? false,
-      install: {},
-    }),
-  });
+  notifyPackagesChanged();
+  return result;
 }
 
 /** 启停、重启或重载组件。 */
@@ -281,6 +313,7 @@ export async function uninstallPackage(id: string, purge: 0 | 1 | 2, confirm?: b
       confirm: confirm ?? false,
     }),
   });
+  notifyPackagesChanged();
 }
 
 /** 回退组件到指定代次。 */
@@ -382,6 +415,105 @@ export type AdapterInstance = {
 export async function listInstances(): Promise<AdapterInstance[]> {
   const result = await request<{ instances: AdapterInstance[] }>('/api/v1/adapter/instances');
   return result.instances;
+}
+
+// ----------------------------------------------------------------------------
+// 插件配置与代次 API
+// ----------------------------------------------------------------------------
+
+export type PendingConfig = {
+  base_generation: string;
+  config: Record<string, unknown>;
+};
+
+export type ConfigSnapshot = {
+  active_generation: string;
+  active: Record<string, unknown>;
+  pending: PendingConfig | null;
+  schema: unknown;
+  i18n: Record<string, Record<string, unknown>>;
+};
+
+/** 读取指定插件的配置快照（包含 active、pending、schema、i18n）。 */
+export async function getPluginConfig(id: string): Promise<ConfigSnapshot> {
+  return request<ConfigSnapshot>(`/api/v1/plugins/${encodeURIComponent(id)}/config`);
+}
+
+/** 提交插件配置 Merge Patch，返回更新后的脱敏 Pending 配置。 */
+export async function patchPluginConfig(
+  id: string,
+  baseGeneration: string,
+  patch: Record<string, unknown>,
+): Promise<PendingConfig> {
+  return request<PendingConfig>(`/api/v1/plugins/${encodeURIComponent(id)}/config/pending`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      base_generation: baseGeneration,
+      patch,
+    }),
+  });
+}
+
+// ----------------------------------------------------------------------------
+// Agent 模型管理路由 API
+// ----------------------------------------------------------------------------
+
+export type ModelDiscoveryInput =
+  | { provider: string }
+  | { protocol: string; base_url: string; api_key?: string };
+
+export type DiscoveredModel = {
+  id: string;
+  type: string;
+};
+
+export type ModelUsage = {
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+};
+
+/** discoverAgentModels 调用 Agent 的 POST discover 路由发现远端可用模型。 */
+export async function discoverAgentModels(
+  id: string,
+  input: ModelDiscoveryInput,
+): Promise<{ models: DiscoveredModel[]; description?: string }> {
+  return request<{ models: DiscoveredModel[]; description?: string }>(
+    `/plugins/${encodeURIComponent(id)}/models/discover`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+/** testAgentModel 调用 Agent 的 POST test 路由测试 Active 模型。 */
+export async function testAgentModel(
+  id: string,
+  model: string,
+): Promise<{ ok: boolean; duration_ms: number; description?: string }> {
+  return request<{ ok: boolean; duration_ms: number; description?: string }>(
+    `/plugins/${encodeURIComponent(id)}/models/test`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model }),
+    },
+  );
+}
+
+/** getAgentModelUsage 调用 Agent 的 GET usage 路由读取当天用量记录。 */
+export async function getAgentModelUsage(
+  id: string,
+): Promise<{ models: ModelUsage[] }> {
+  return request<{ models: ModelUsage[] }>(
+    `/plugins/${encodeURIComponent(id)}/models/usage`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 // ----------------------------------------------------------------------------

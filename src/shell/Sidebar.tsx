@@ -44,21 +44,24 @@ interface SidebarProps {
   version: string;
   onLogout?: () => void;
   coreUpdate?: { version: string; releaseURL: string };
+  agentInstalled?: boolean;
 }
 
 interface SortableNavItemProps {
   entry: RouteEntry;
   collapsed: boolean;
   isActive: boolean;
+  disabled?: boolean;
   onContextMenu: (e: React.MouseEvent, entryId: string) => void;
 }
 
 function SortableNavItem(props: SortableNavItemProps): JSX.Element {
-  const { entry, collapsed, isActive, onContextMenu } = props;
+  const { entry, collapsed, isActive, disabled, onContextMenu } = props;
   const ui = useUI();
   const label = (ui as Record<string, string>)[entry.label];
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: entry.id,
+    disabled,
   });
 
   const style: React.CSSProperties = {
@@ -69,22 +72,39 @@ function SortableNavItem(props: SortableNavItemProps): JSX.Element {
 
   const IconComponent = entry.icon;
 
+  const linkContent = (
+    <>
+      <IconComponent className="sidebar-nav-icon" size={18} aria-hidden="true" />
+      {!collapsed ? <span className="sidebar-nav-label">{label}</span> : null}
+    </>
+  );
+
   const content = (
     <div
       ref={setNodeRef}
       style={style}
-      className={`sidebar-nav-item ${isActive ? 'is-active' : ''} ${isDragging ? 'is-dragging' : ''}`}
+      className={`sidebar-nav-item ${isActive ? 'is-active' : ''} ${isDragging ? 'is-dragging' : ''} ${disabled ? 'is-disabled' : ''}`}
       onContextMenu={e => onContextMenu(e, entry.id)}
     >
-      <Link to={entry.path} className="sidebar-nav-link">
-        <IconComponent className="sidebar-nav-icon" size={18} aria-hidden="true" />
-        {!collapsed ? <span className="sidebar-nav-label">{label}</span> : null}
-      </Link>
+      {disabled ? (
+        <span
+          className="sidebar-nav-link is-disabled"
+          aria-disabled="true"
+          tabIndex={-1}
+        >
+          {linkContent}
+        </span>
+      ) : (
+        <Link to={entry.path} className="sidebar-nav-link">
+          {linkContent}
+        </Link>
+      )}
       {!collapsed ? (
         <button
           type="button"
           className="sidebar-drag-handle"
           aria-label={ui.reorderItem.replace('{label}', label)}
+          disabled={disabled}
           {...attributes}
           {...listeners}
         >
@@ -140,7 +160,7 @@ function SortableEditItem(props: {
  * 包含 AlonaBot 品牌菜单、主体导航（支持 dnd-kit 拖动排序、右键隐藏与恢复）、底部设置与关于对话框。
  */
 export function Sidebar(props: SidebarProps): JSX.Element {
-  const { routes, version, onLogout, coreUpdate } = props;
+  const { routes, version, onLogout, coreUpdate, agentInstalled } = props;
   const ui = useUI();
   const labels: Record<string, string> = ui;
   const currentPath = usePath();
@@ -302,18 +322,22 @@ export function Sidebar(props: SidebarProps): JSX.Element {
               strategy={verticalListSortingStrategy}
             >
               <div className="sidebar-nav-list">
-                {visibleMainRoutes.map(entry => (
-                  <SortableNavItem
-                    key={entry.id}
-                    entry={entry}
-                    collapsed={state.collapsed}
-                    isActive={
-                      currentPath === entry.path ||
-                      (entry.path === '/components' && currentPath.startsWith('/components/'))
-                    }
-                    onContextMenu={handleContextMenu}
-                  />
-                ))}
+                {visibleMainRoutes.map(entry => {
+                  const isDisabled = entry.id === 'models' && agentInstalled === false;
+                  return (
+                    <SortableNavItem
+                      key={entry.id}
+                      entry={entry}
+                      collapsed={state.collapsed}
+                      isActive={
+                        currentPath === entry.path ||
+                        (entry.path === '/components' && currentPath.startsWith('/components/'))
+                      }
+                      disabled={isDisabled}
+                      onContextMenu={handleContextMenu}
+                    />
+                  );
+                })}
               </div>
             </SortableContext>
           </DndContext>
@@ -338,12 +362,24 @@ export function Sidebar(props: SidebarProps): JSX.Element {
                   <div className="dropdown-section-title">{ui.sidebarHiddenTitle}</div>
                   {hiddenMainRoutes.map(item => {
                     const ItemIcon = item.icon;
+                    const isDisabled = item.id === 'models' && agentInstalled === false;
                     return (
-                      <div key={item.id} className="dropdown-more-row">
-                        <Link to={item.path} className="dropdown-more-link">
-                          <ItemIcon size={16} />
-                          <span>{labels[item.label]}</span>
-                        </Link>
+                      <div key={item.id} className={`dropdown-more-row ${isDisabled ? 'is-disabled' : ''}`}>
+                        {isDisabled ? (
+                          <span
+                            className="dropdown-more-link is-disabled"
+                            aria-disabled="true"
+                            tabIndex={-1}
+                          >
+                            <ItemIcon size={16} />
+                            <span>{labels[item.label]}</span>
+                          </span>
+                        ) : (
+                          <Link to={item.path} className="dropdown-more-link">
+                            <ItemIcon size={16} />
+                            <span>{labels[item.label]}</span>
+                          </Link>
+                        )}
                         <button
                           type="button"
                           className="dropdown-restore-button"
