@@ -1,5 +1,4 @@
 {
-  "$version": 2,
   "greeting": {"type": "string", "description": "Greeting", "default": "Hello"},
   "enabled": {"type": "bool", "description": "Enabled", "default": true},
   "count": {"type": "int", "description": "Count", "default": 7},
