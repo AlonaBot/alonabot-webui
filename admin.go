@@ -41,21 +41,21 @@ func New() *sdk.Plugin {
 		return err
 	})
 	// 2. 入站观察点先于等待与命令截断；发送按实际回执记录。
-	p.PreEvent("observe.incoming", sdk.MessageCreated).Handle(func(c *sdk.Context, payload *message.CreatedPayload) (*message.CreatedPayload, error) {
-		err := recordIncoming(c.Context(), c.Event(), c.User())
+	p.PreEvent(sdk.MessageCreated).ID("observe.incoming").Handle(func(c *sdk.Context, payload *message.CreatedPayload) (*message.CreatedPayload, error) {
+		err := recordIncoming(c, c.Event(), c.User())
 		if err != nil {
-			slog.ErrorContext(c.Context(), "record incoming statistics failed", "error", err)
+			slog.ErrorContext(c, "record incoming statistics failed", "error", err)
 		}
 		return payload, nil
 	})
-	p.On("observe.command", sdk.CommandInvoked).Handle(func(c *sdk.Context, payload *message.CommandInvokedPayload) error {
-		return recordCommand(c.Context(), c.Event(), payload)
+	p.On(sdk.CommandInvoked).ID("observe.command").Handle(func(c *sdk.Context, payload *message.CommandInvokedPayload) error {
+		return recordCommand(c, c.Event(), payload)
 	})
-	p.AfterSend("observe.outgoing").Handle(func(c *sdk.Context, to string, result *message.SendResult, sendErr error) error {
+	p.AfterSend().ID("observe.outgoing").Handle(func(c *sdk.Context, to string, result *message.SendResult, sendErr error) error {
 		if c.Editing() != "" {
 			return nil
 		}
-		return recordSend(c.Context(), result, sendErr)
+		return recordSend(c, result, sendErr)
 	})
 	// 3. 管理路由沿用默认认证；抓取连接随插件停止释放。
 	p.Route("GET", "/stats").HandleFunc(statisticsHTTP)
