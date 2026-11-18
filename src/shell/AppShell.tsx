@@ -18,9 +18,10 @@ export function AppShell(props: {
   version: string;
   onLogout?: () => void;
   coreUpdate?: { version: string; releaseURL: string };
+  coreUpdateFailed?: boolean;
   children: React.ReactNode;
 }): JSX.Element {
-  const { version, onLogout, coreUpdate, children } = props;
+  const { version, onLogout, coreUpdate, coreUpdateFailed, children } = props;
   const currentPath = usePath();
   const ui = useUI();
 
@@ -99,6 +100,7 @@ export function AppShell(props: {
           version={version}
           onLogout={onLogout}
           coreUpdate={coreUpdate}
+          coreUpdateFailed={coreUpdateFailed}
           agentInstalled={agentInstalled}
         />
 

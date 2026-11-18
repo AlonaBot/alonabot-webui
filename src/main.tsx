@@ -11,6 +11,9 @@ import { navigate, usePath } from './shell/router';
 import { AdminAPIError, getCore, logout, onSessionExpired, restoreSession, type CoreInfo } from './api/admin';
 import { LoginPage } from './pages/LoginPage';
 import { PluginDetailPage } from './pages/PluginDetailPage';
+import { getLatestRelease, type LatestRelease } from './api/webui';
+import { compareVersions } from './pages/versions';
+import { ChangelogDialog } from './components/ChangelogDialog';
 import { useTheme } from './theme/theme';
 import './style.css';
 
@@ -29,6 +32,9 @@ function AdminApp() {
   const [sessionState, setSessionState] = useState<'checking' | 'authenticated' | 'unauthenticated' | 'failed'>('checking');
   const [coreInfo, setCoreInfo] = useState<CoreInfo | null>(null);
 
+  const [coreUpdateFailed, setCoreUpdateFailed] = useState(false);
+  const [latestCore, setLatestCore] = useState<LatestRelease | null>(null);
+  const [showCoreContent, setShowCoreContent] = useState(true);
   const [appError, setAppError] = useState<string | null>(null);
 
   const restore = async () => {
@@ -71,6 +77,14 @@ function AdminApp() {
 
   useEffect(() => {
     if (sessionState === 'authenticated') void loadCore();
+  }, [sessionState]);
+
+  useEffect(() => {
+    if (sessionState !== 'authenticated') return;
+    let active = true;
+    setCoreUpdateFailed(false); setLatestCore(null);
+    getLatestRelease('AlonaBot/AlonaBot').then(value => { if (active) { setLatestCore(value); setCoreUpdateFailed(!!value?.error); } }).catch(() => { if (active) setCoreUpdateFailed(true); });
+    return () => { active = false; };
   }, [sessionState]);
 
   // 路由跳转与鉴权保护
@@ -157,7 +171,10 @@ function AdminApp() {
       <AppShell
         version={coreInfo?.version ?? ui.loading}
         onLogout={handleLogout}
+        coreUpdateFailed={coreUpdateFailed}
+        coreUpdate={latestCore && coreInfo && compareVersions(latestCore.version, coreInfo.version) === 1 ? { version: latestCore.version, releaseURL: latestCore.release_url } : undefined}
       >
+        {coreInfo && <ChangelogDialog component="core" version={coreInfo.version} open={showCoreContent} automatic onClose={() => setShowCoreContent(false)} />}
         {appError && <div className="plugins-error-banner" role="alert"><span>{appError}</span><button type="button" onClick={() => void loadCore()}>{ui.refresh}</button></div>}
         {import.meta.env.DEV && matchedRoute?.id === 'dev-forms' ? (
           <div className="dev-form-toolbar">

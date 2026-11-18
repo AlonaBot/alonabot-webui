@@ -44,6 +44,7 @@ interface SidebarProps {
   version: string;
   onLogout?: () => void;
   coreUpdate?: { version: string; releaseURL: string };
+  coreUpdateFailed?: boolean;
   agentInstalled?: boolean;
 }
 
@@ -160,7 +161,7 @@ function SortableEditItem(props: {
  * 包含 AlonaBot 品牌菜单、主体导航（支持 dnd-kit 拖动排序、右键隐藏与恢复）、底部设置与关于对话框。
  */
 export function Sidebar(props: SidebarProps): JSX.Element {
-  const { routes, version, onLogout, coreUpdate, agentInstalled } = props;
+  const { routes, version, onLogout, coreUpdate, coreUpdateFailed, agentInstalled } = props;
   const ui = useUI();
   const labels: Record<string, string> = ui;
   const currentPath = usePath();
@@ -451,6 +452,7 @@ export function Sidebar(props: SidebarProps): JSX.Element {
               </a>
             ) : null}
           </div>
+          {coreUpdateFailed && <p className="muted sidebar-update-error" role="status" title={ui.updateCheckFailed}>{state.collapsed ? <ArrowUpCircle size={14} aria-label={ui.updateCheckFailed} /> : ui.updateCheckFailed}</p>}
         </div>
 
         {/* 右键菜单弹层 */}

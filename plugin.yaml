@@ -1,4 +1,4 @@
-# 官方管理界面的静态组件声明。
+# 官方管理界面的进程与静态资源声明。
 id: alonabot-webui-admin
 name: AlonaBot Admin
 version: 0.1.0

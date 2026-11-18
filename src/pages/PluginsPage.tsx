@@ -29,6 +29,10 @@ import {
   updatePackage,
   type Package,
 } from '../api/admin';
+import { ChangelogDialog, ReleasePreview } from '../components/ChangelogDialog';
+import { getLatestRelease, type LatestRelease } from '../api/webui';
+import { repository, compareVersions } from './versions';
+import { StorePanel } from './StorePanel';
 import { useUI } from '../i18n/UI';
 import { buildPackageUpload } from './packageUpload';
 import { hasPackageProblem } from './packageState';
@@ -77,6 +81,9 @@ export function PluginsPage(): JSX.Element {
   const ui = useUI();
   const { register } = useContext(SearchContext);
 
+  const [updateFailures, setUpdateFailures] = useState<string[]>([]);
+  const [latest, setLatest] = useState<Record<string, LatestRelease>>({});
+  const [updated, setUpdated] = useState<{id: string; version: string} | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
@@ -119,6 +126,7 @@ export function PluginsPage(): JSX.Element {
   const [publicKeyText, setPublicKeyText] = useState('');
 
   // 更新对话框
+  const [previewReady, setPreviewReady] = useState(false);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [updatingPkg, setUpdatingPkg] = useState<Package | null>(null);
   const [updateMode, setUpdateMode] = useState<'source' | 'upload'>('source');
@@ -282,9 +290,26 @@ export function PluginsPage(): JSX.Element {
     }
   };
 
+  useEffect(() => {
+    let active = true;
+    const installed = packages.filter(pkg => !pkg.Uninstalled && repository(pkg.Source));
+    Promise.allSettled(installed.map(async pkg => [pkg.ID, await getLatestRelease(repository(pkg.Source)!)] as const)).then(results => {
+      if (!active) return;
+      const values: Record<string, LatestRelease> = {};
+      const errors: string[] = [];
+      results.forEach((result, i) => {
+        if (result.status === 'fulfilled') { const [id, release] = result.value; if (release) { values[id] = release; if (release.error) errors.push(id); } }
+        else errors.push(installed[i].ID);
+      });
+      setLatest(values); setUpdateFailures(errors);
+    });
+    return () => { active = false; };
+  }, [packages]);
+
   const handleOpenUpdate = (pkg: Package) => {
     setErrorBanner(null);
     setUpdatingPkg(pkg);
+    setPreviewReady(false);
     setUpdateMode('source');
     setArchiveFile(null);
     setReleaseFile(null);
@@ -308,6 +333,8 @@ export function PluginsPage(): JSX.Element {
         res = await updatePackage(updatingPkg.ID, formData);
       }
 
+      const installed = (await listPackages()).find(pkg => pkg.ID === updatingPkg.ID);
+      if (installed) setUpdated({ id: installed.ID, version: installed.Version });
       setUpdateModalOpen(false);
       setUpdatingPkg(null);
       setArchiveFile(null);
@@ -411,6 +438,7 @@ export function PluginsPage(): JSX.Element {
 
   return (
     <div className="plugins-page">
+      {updated && <ChangelogDialog component={updated.id} version={updated.version} open automatic onClose={() => setUpdated(null)} />}
       {/* 顶部标签切换：已安装 / 商店 */}
       <div className="plugins-top-tabs">
         <button
@@ -431,11 +459,7 @@ export function PluginsPage(): JSX.Element {
       </div>
 
       {activeTab === 'store' ? (
-        <div className="store-placeholder-view">
-          <PackageIcon size={48} className="store-placeholder-icon" />
-          <h2>{ui.storeTab}</h2>
-          <p>{ui.storePlaceholder}</p>
-        </div>
+        <StorePanel packages={packages} onInstalled={loadData} />
       ) : (
         <>
           {/* 筛选与搜索工具栏 */}
@@ -601,7 +625,7 @@ export function PluginsPage(): JSX.Element {
                         >
                           {pkg.ID}
                         </button>
-                        <span className="plugin-version font-mono">v{pkg.Version}</span>
+                        <span className="plugin-version font-mono">v{pkg.Version}{latest[pkg.ID] && compareVersions(latest[pkg.ID].version, pkg.Version) === 1 ? ` → ${latest[pkg.ID].version}` : ''}</span>
                       </div>
 
                       <div className="plugin-switch-box">
@@ -614,6 +638,7 @@ export function PluginsPage(): JSX.Element {
                     </div>
 
                     <div className="plugin-card-body">
+                      {updateFailures.includes(pkg.ID) && <p className="muted" role="status">{ui.updateCheckFailed}</p>}
                       {pkg.Source ? (
                         <p className="plugin-source-text font-mono" title={pkg.Source}>
                           {pkg.Source}
@@ -935,6 +960,7 @@ export function PluginsPage(): JSX.Element {
                 <p className="dialog-hint-text">
                   {ui.sourceLabel}: <span className="font-mono">{updatingPkg?.Source || ui.none}</span>
                 </p>
+                {updatingPkg && repository(updatingPkg.Source) && <ReleasePreview repo={repository(updatingPkg.Source)!} onLoaded={() => setPreviewReady(true)} />}
               </div>
             ) : (
               <div className="dialog-form-body">
@@ -991,7 +1017,7 @@ export function PluginsPage(): JSX.Element {
                 type="button"
                 className="dialog-button is-primary"
                 onClick={() => executeUpdate(false)}
-                disabled={updateMode === 'upload' && (!archiveFile || !releaseFile)}
+                disabled={updateMode === 'upload' ? (!archiveFile || !releaseFile) : !previewReady}
               >
                 {ui.confirm}
               </button>

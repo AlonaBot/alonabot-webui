@@ -1,6 +1,9 @@
-import { useContext, useEffect, useMemo, useState, type JSX } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { AlertTriangle, CheckCircle, ExternalLink, RefreshCw } from 'lucide-react';
 import { listPackages, type CoreInfo, type Package } from '../api/admin';
+import { getStatistics, type Statistics } from '../api/webui';
+import { StatisticsCharts } from '../components/StatisticsCharts';
+import { rangeLogs, type LogRecord } from './statistics';
 import { useUI } from '../i18n/UI';
 import { hasPackageProblem } from './packageState';
 import { routes } from '../routes';
@@ -13,33 +16,44 @@ export interface OverviewPageProps {
 
 type TimeRange = '24h' | '7d' | '30d';
 
-/** OverviewPage 展示真实 Core 信息、组件故障概况与统计空态。 */
+/** OverviewPage 展示 Core、组件故障与后台采集的统计。 */
 export function OverviewPage(props: { core: CoreInfo }): JSX.Element {
   const { core } = props;
   const ui = useUI();
   const { register } = useContext(SearchContext);
 
+  const loadSequence = useRef(0);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statistics, setStatistics] = useState<Statistics | null>(null);
+  const [logs, setLogs] = useState<LogRecord[]>([]);
+  const [logError, setLogError] = useState('');
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
 
   const loadData = async () => {
+    const sequence = ++loadSequence.current;
     setLoading(true);
     setError(null);
+    setStatistics(null);
     try {
-      const pkgs = await listPackages();
+      const [pkgs, stats] = await Promise.all([listPackages(), getStatistics(timeRange)]);
+      if (sequence !== loadSequence.current) return;
       setPackages(pkgs);
+      setStatistics(stats);
+      setLogError('');
+      try { const rows = await rangeLogs(stats.buckets); if (sequence === loadSequence.current) setLogs(rows); } catch (err) { if (sequence === loadSequence.current) { setLogs([]); setLogError(String(err)); } }
     } catch (error) {
-      setError(error instanceof Error ? error.message : String(error));
+      if (sequence === loadSequence.current) setError(error instanceof Error ? error.message : String(error));
     } finally {
-      setLoading(false);
+      if (sequence === loadSequence.current) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData();
+    return () => { loadSequence.current++; };
+  }, [timeRange]);
 
   // 注册页面搜索项，离开时注销
   useEffect(() => {
@@ -55,7 +69,7 @@ export function OverviewPage(props: { core: CoreInfo }): JSX.Element {
       },
     ];
     return register(searchItems);
-  }, [register, ui]);
+  }, [register, ui, timeRange]);
 
   // 只统计已确认的故障，启动和停止中的过渡阶段保留实际状态。
   const problematicPackages = useMemo(() => {
@@ -154,78 +168,8 @@ export function OverviewPage(props: { core: CoreInfo }): JSX.Element {
         </div>
       </div>
 
-      {/* 四组图表卡片区 */}
-      <div className="overview-charts-grid">
-        {/* 卡片 1：消息量 */}
-        <section className="overview-chart-card" aria-labelledby="chart-message-title">
-          <div className="chart-card-header">
-            <h2 id="chart-message-title" className="chart-card-title">
-              {ui.chartMessageVolume}
-            </h2>
-          </div>
-          <div className="chart-empty-container">
-            <div className="chart-empty-placeholder">
-              <span className="chart-empty-title">{ui.noStatsData}</span>
-              
-            </div>
-          </div>
-        </section>
+      {statistics && <StatisticsCharts statistics={statistics} packages={packages} logs={logs} logError={logError} />}
 
-        {/* 卡片 2：各账号 */}
-        <section className="overview-chart-card" aria-labelledby="chart-accounts-title">
-          <div className="chart-card-header">
-            <h2 id="chart-accounts-title" className="chart-card-title">
-              {ui.chartAccounts}
-            </h2>
-          </div>
-          <div className="chart-empty-container">
-            <div className="chart-empty-placeholder">
-              <span className="chart-empty-title">{ui.noStatsData}</span>
-              
-            </div>
-          </div>
-        </section>
-
-        {/* 卡片 3：热门插件 */}
-        <section className="overview-chart-card" aria-labelledby="chart-plugins-title">
-          <div className="chart-card-header">
-            <h2 id="chart-plugins-title" className="chart-card-title">
-              {ui.chartTopPlugins}
-            </h2>
-          </div>
-          <div className="chart-empty-container">
-            <div className="chart-empty-placeholder">
-              <span className="chart-empty-title">{ui.noStatsData}</span>
-              
-            </div>
-          </div>
-        </section>
-
-        {/* 卡片 4：错误与警告 */}
-        <section className="overview-chart-card" aria-labelledby="chart-errors-title">
-          <div className="chart-card-header">
-            <h2 id="chart-errors-title" className="chart-card-title">
-              {ui.chartErrorsWarnings}
-            </h2>
-            <div className="chart-legend-row">
-              <span className="chart-legend-badge is-warning">
-                <span className="legend-dot is-warning" />
-                {ui.warningLabel}
-              </span>
-              <span className="chart-legend-badge is-critical">
-                <span className="legend-dot is-critical" />
-                {ui.criticalLabel}
-              </span>
-            </div>
-          </div>
-          <div className="chart-empty-container">
-            <div className="chart-empty-placeholder">
-              <span className="chart-empty-title">{ui.noStatsData}</span>
-              
-            </div>
-          </div>
-        </section>
-      </div>
     </div>
   );
 }

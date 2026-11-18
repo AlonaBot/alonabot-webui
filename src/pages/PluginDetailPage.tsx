@@ -30,6 +30,10 @@ import {
   type Package,
   type SourceLogLevel,
 } from '../api/admin';
+import { ChangelogDialog } from '../components/ChangelogDialog';
+import { StoragePanel } from './StoragePanel';
+import { ConversationsPanel } from './ConversationsPanel';
+import { DatabasePanel } from './DatabasePanel';
 import { useUI } from '../i18n/UI';
 import { Link, navigate } from '../shell/router';
 import { SearchContext } from '../shell/search';
@@ -43,6 +47,8 @@ export function PluginDetailPage(props: {
   const ui = useUI();
   const { register } = useContext(SearchContext);
 
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [autoContent, setAutoContent] = useState(true);
   const [pkg, setPkg] = useState<Package | null>(null);
   const [loading, setLoading] = useState(true);
   const [retained, setRetained] = useState<readonly Generation[]>([]);
@@ -53,7 +59,8 @@ export function PluginDetailPage(props: {
     `${generation.id} ${generation.version}`.toLowerCase().includes(generationQuery.toLowerCase()),
   );
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'versions' | 'advanced'>('versions');
+  const [activeTab, setActiveTab] = useState<'versions' | 'advanced' | 'data'>('versions');
+  const [dataView, setDataView] = useState<'database' | 'storage' | 'conversations'>('database');
 
   // 日志级别状态
   const [logLevels, setLogLevels] = useState<LogLevels | null>(null);
@@ -257,6 +264,7 @@ export function PluginDetailPage(props: {
 
   return (
     <div className="plugin-detail-page">
+      {pkg && <><ChangelogDialog component={id} version={pkg.Version} open={showChangelog} onClose={() => setShowChangelog(false)} /><ChangelogDialog component={id} version={pkg.Version} open={autoContent} automatic onClose={() => setAutoContent(false)} /></>}
       {/* 头部导航与操作栏 */}
       <div className="plugin-detail-header">
         <div className="detail-breadcrumb-row">
@@ -377,6 +385,7 @@ export function PluginDetailPage(props: {
 
       {/* 两个功能标签：版本记录 / 高级 */}
       <div className="detail-tabs">
+        <button type="button" className={`detail-tab-button ${activeTab === 'data' ? 'is-active' : ''}`} onClick={() => setActiveTab('data')}><Database size={16} />{ui.dataTab}</button>
         <button
           type="button"
           className={`detail-tab-button ${activeTab === 'versions' ? 'is-active' : ''}`}
@@ -396,8 +405,18 @@ export function PluginDetailPage(props: {
       </div>
 
       <div className="detail-tab-content">
-        {activeTab === 'versions' ? (
+        {activeTab === 'data' ? (
+          <>
+            <div className="time-range-pills data-view-tabs">
+              <button className={`time-range-pill ${dataView === 'database' ? 'is-active' : ''}`} onClick={() => setDataView('database')}>{ui.database}</button>
+              <button className={`time-range-pill ${dataView === 'storage' ? 'is-active' : ''}`} onClick={() => setDataView('storage')}>{ui.storage}</button>
+              {pkg?.Role === 'agent' && <button className={`time-range-pill ${dataView === 'conversations' ? 'is-active' : ''}`} onClick={() => setDataView('conversations')}>{ui.conversations}</button>}
+            </div>
+            {dataView === 'database' ? <>{generationError && <pre role="alert" className="form-error">{generationError}</pre>}<DatabasePanel id={id} generations={generations ?? retained} /></> : dataView === 'storage' ? <StoragePanel id={id} /> : <ConversationsPanel id={id} />}
+          </>
+        ) : activeTab === 'versions' ? (
           <div className="versions-tab-pane">
+            <button onClick={() => setShowChangelog(true)}>{ui.viewChangelog}</button>
             <div className="current-version-card">
               <div className="version-info-row">
                 <div className="version-meta-item">
@@ -428,8 +447,10 @@ export function PluginDetailPage(props: {
                     {generationList.map(gen => (
                       <tr key={gen.id} className={gen.active ? 'is-active-gen' : ''}>
                         <td>
-                          <span className="gen-id-badge">{gen.id}</span>
-                          {gen.active ? <span className="active-pill">{ui.activeGeneration}</span> : null}
+                          <div className="generation-identity">
+                            <span className="gen-id-badge font-mono" title={gen.id}>{gen.id}</span>
+                            {gen.active ? <span className="active-pill">{ui.activeGeneration}</span> : null}
+                          </div>
                         </td>
                         <td>{gen.version}</td>
                         <td>{gen.created_at}</td>

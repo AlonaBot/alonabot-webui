@@ -1,5 +1,6 @@
 import { useUI } from '../i18n/UI';
-import { type JSX } from 'react';
+import { useState, type JSX } from 'react';
+import { ChangelogDialog } from '../components/ChangelogDialog';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ExternalLink, X } from 'lucide-react';
 import oflTxtUrl from '../assets/fonts/OFL.txt?no-inline';
@@ -18,9 +19,10 @@ interface AboutDialogProps {
 export function AboutDialog(props: AboutDialogProps): JSX.Element {
   const { open, onOpenChange, version } = props;
   const ui = useUI();
+  const [showChangelog, setShowChangelog] = useState(false);
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <><ChangelogDialog component="core" version={version} open={showChangelog} onClose={() => setShowChangelog(false)} /><Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content about-dialog-content">
@@ -41,6 +43,7 @@ export function AboutDialog(props: AboutDialogProps): JSX.Element {
             </Dialog.Close>
           </div>
 
+          <button onClick={() => setShowChangelog(true)}>{ui.viewChangelog}</button>
           <div className="about-info-grid">
             <div className="about-info-row">
               <span className="about-info-label">{ui.version}</span>
@@ -70,6 +73,6 @@ export function AboutDialog(props: AboutDialogProps): JSX.Element {
           </div>
         </Dialog.Content>
       </Dialog.Portal>
-    </Dialog.Root>
+    </Dialog.Root></>
   );
 }
