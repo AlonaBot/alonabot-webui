@@ -375,3 +375,46 @@ export async function listInstances(): Promise<AdapterInstance[]> {
   const result = await request<{ instances: AdapterInstance[] }>('/api/v1/adapter/instances');
   return result.instances;
 }
+
+export type Chat = {
+  session: string;
+  title: string;
+  chat_type: 'private' | 'group' | 'channel';
+  instance_id: string;
+  last_active_at: string;
+};
+
+/** listChats 读取完整聊天目录，再按实例归组，避免把单页或 Adapter 总数当成账号会话数。 */
+export async function listChats(): Promise<Chat[]> {
+  const chats: Chat[] = [];
+  let total: number;
+  do {
+    const page = await request<{ chats: Chat[]; total: number }>(`/api/v1/chats?offset=${chats.length}&limit=50`);
+    chats.push(...page.chats);
+    total = page.total;
+  } while (chats.length < total);
+  return chats;
+}
+
+export type Profile = { id: string; name: string; color: string; sessions: number };
+export type ProfileAssignments = {
+  instances: Record<string, string>;
+  sessions: { instance: string; session: string; profile: string }[];
+};
+
+/** listProfiles 读取配置文件选择项。 */
+export function listProfiles(): Promise<Profile[]> {
+  return request<Profile[]>('/api/v1/profiles');
+}
+
+/** getProfileAssignments 读取实例缺省与会话单独指定的配置文件。 */
+export function getProfileAssignments(): Promise<ProfileAssignments> {
+  return request<ProfileAssignments>('/api/v1/profiles/assignments');
+}
+
+/** assignInstanceProfile 保存已创建实例的配置文件指定。 */
+export async function assignInstanceProfile(instanceID: string, profile: string): Promise<void> {
+  await request('/api/v1/profiles/assignments/instances/' + encodeURIComponent(instanceID), {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile }),
+  });
+}

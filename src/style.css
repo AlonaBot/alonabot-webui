@@ -2688,3 +2688,96 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .dialog-schema-form-box .save-button { padding: 10px 18px; }
 .dialog-schema-form-box .field-heading > button { padding: 3px 0; }
 .dialog-schema-form-box .collection-row { padding: 14px; margin-bottom: 12px; }
+
+/* 登录页：网络节点围绕中央卡片，颜色跟随现有主题令牌。 */
+.login-wrapper { isolation: isolate; }
+.login-locale-bar { position: absolute; top: 32px; right: 36px; padding: 0; z-index: 1; }
+.login-locale-bar .language-switch { font-size: 0; gap: 0; }
+.login-locale-bar select { font-size: var(--text-sm); background: var(--color-surface); border: 0; border-radius: var(--radius); padding: 8px 12px; }
+.login-page-container { min-height: 100svh; position: relative; padding: 90px 24px; }
+.login-network { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; color: var(--color-accent); opacity: .65; }
+.login-center { width: min(100%, 400px); }
+.login-card { max-width: none; padding: 30px 32px 28px; }
+.login-header { display: flex; align-items: center; gap: 10px; text-align: left; margin-bottom: 16px; }
+.login-brand-mark { margin: 0; }
+.login-title { font-size: var(--text-xl); font-weight: 700; letter-spacing: 0; margin: 0; }
+.login-label { font-size: var(--text-xs); font-weight: 400; color: var(--color-ink-muted); }
+.login-token-control { display: flex; align-items: center; border: 1px solid var(--color-line); border-radius: var(--radius); padding: 0 12px; gap: 8px; color: var(--color-ink-muted); }
+.login-token-control:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.login-token-control .login-input { border: 0; outline: 0; box-shadow: none; padding: 8px 0; background: transparent; color: var(--color-ink); }
+.login-token-control > svg { flex-shrink: 0; }
+.login-token-control button, .login-command button { display: inline-flex; padding: 2px; border: 0; background: transparent; color: var(--color-ink-muted); flex-shrink: 0; }
+.login-submit-button { height: 42px; background: var(--color-bubble); color: var(--color-on-bubble); border-radius: var(--radius); font-weight: 500; }
+.login-submit-button:hover:not(:disabled) { background: color-mix(in srgb, var(--color-bubble) 88%, var(--color-accent)); }
+.login-token-help { margin-top: 18px; background: var(--color-surface-2); border-radius: var(--radius); padding: 12px 14px; font-size: var(--text-xs); line-height: 1.35; color: var(--color-ink-muted); }
+.login-token-help p { margin: 0; }
+.login-command { display: flex; align-items: center; gap: 8px; background: var(--color-surface); border-radius: var(--radius-sm); padding: 7px 8px 7px 10px; margin: 6px 0 8px; color: var(--color-ink); }
+.login-command code { flex: 1; min-width: 0; font-family: var(--font-mono); overflow-wrap: anywhere; }
+.login-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.login-version { margin: 14px 0 0; text-align: center; color: var(--color-ink-muted); font-size: var(--text-xs); }
+
+/* 机器人账号页与对话框：只覆盖本页的卡片、表单和分页。 */
+.accounts-page { max-width: 864px; margin: 0 auto; gap: 16px; }
+.accounts-topbar { gap: 12px; }
+.accounts-topbar > input { max-width: 320px; font-size: var(--text-sm); }
+.accounts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+.account-card { border: 0; border-radius: var(--radius-lg); padding: 20px; gap: 16px; min-width: 0; }
+.account-card-header { gap: 14px; flex-wrap: nowrap; }
+.account-avatar-box { width: 52px; height: 52px; border: 0; border-radius: var(--radius-lg); color: var(--color-accent); }
+.account-header-meta { flex-basis: auto; }
+.account-instance-name { font-size: var(--text-lg); font-weight: 600; }
+.account-default-instance { margin-left: 8px; color: var(--color-accent); }
+.account-card .plugin-switch-label { width: 44px; height: 26px; flex-shrink: 0; }
+.account-card .plugin-switch-slider:before { width: 20px; height: 20px; }
+.account-card .plugin-switch-label input:checked + .plugin-switch-slider:before { transform: translateX(18px); }
+.account-card .plugin-switch-label:has(input:disabled) { cursor: wait; opacity: .6; }
+.account-chat-summary { background: var(--color-surface-2); border-radius: var(--radius-lg); padding: 10px 14px; }
+.account-chat-summary ul, .account-chat-list { margin: 0; padding: 0; list-style: none; }
+.account-chat-row { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; font-size: var(--text-sm); min-width: 0; }
+.account-chat-row > span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.account-profile-name { font-size: var(--text-xs); color: var(--color-accent); text-align: right; max-width: 40%; overflow-wrap: anywhere; }
+.account-all-chats { padding: 8px 0 0; border: 0; background: transparent; color: var(--color-accent); font-size: var(--text-sm); font-weight: 500; }
+.account-no-chats { margin: 6px 0; color: var(--color-ink-muted); }
+.account-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; }
+.account-card-actions { border: 0; padding: 0; margin: 0; justify-content: flex-start; }
+.account-card-actions .account-action-button { border: 0; padding: 4px; color: var(--color-ink-muted); background: transparent; }
+.account-card-actions .is-danger-text:hover { color: var(--color-danger); }
+.account-add-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 200px; border: 1px dashed var(--color-accent); border-radius: var(--radius-lg); background: var(--color-accent-soft); color: var(--color-accent); font-size: var(--text-md); }
+.account-add-card:hover { background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface)); }
+.accounts-pagination { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.accounts-pagination button { padding: 6px 10px; }
+.accounts-pagination [aria-current=page] { color: var(--color-accent); background: var(--color-accent-soft); }
+.accounts-pagination button:disabled { opacity: .5; cursor: default; }
+.accounts-add-dialog { width: 520px; max-width: calc(100vw - 32px); padding: 24px 28px; }
+.accounts-add-dialog .dialog-header { margin-bottom: 20px; }
+.accounts-add-dialog .dialog-title { font-size: var(--text-xl); }
+.accounts-add-dialog .dialog-form-body { gap: 24px; margin-top: 0; }
+.account-adapter-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.account-adapter-choice { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 12px 16px; border: 2px solid transparent; background: var(--color-surface-2); border-radius: var(--radius-lg); text-align: left; font-size: var(--text-md); }
+.account-adapter-choice > svg { color: var(--color-accent); flex-shrink: 0; }
+.account-adapter-choice > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.account-adapter-choice[aria-pressed=true] { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.accounts-add-dialog .dialog-form-field { display: flex; flex-direction: column; gap: 8px; color: var(--color-ink-muted); font-size: var(--text-xs); }
+.accounts-add-dialog :is(input:not([type=checkbox]), select, textarea) { background: var(--color-surface-2); border: 1px solid transparent; border-radius: var(--radius); padding: 12px 14px; font-size: var(--text-md); color: var(--color-ink); }
+.accounts-add-dialog .dialog-schema-form-box { border: 0; padding: 0; margin: 0; }
+.accounts-add-dialog .dialog-schema-form-box > fieldset { padding: 0; margin: 0; }
+.accounts-add-dialog .field-heading { align-items: center; }
+.accounts-add-dialog .field-heading > label { font-weight: 400; color: var(--color-ink-muted); font-size: var(--text-xs); }
+.accounts-add-dialog .field-heading > button { font-size: var(--text-xs); }
+.accounts-add-dialog .secret-control { gap: 8px; }
+.accounts-add-dialog .secret-control > input { flex-basis: 200px; }
+.accounts-add-dialog .secret-control > button { padding: 4px; color: var(--color-ink-muted); }
+.accounts-add-dialog .dialog-actions { margin-top: 20px; }
+.accounts-add-dialog .dialog-button { min-height: 44px; padding: 10px 18px; border-radius: var(--radius); border: 1px solid var(--color-line); }
+.accounts-add-dialog .dialog-button.is-primary { border-color: var(--color-accent); }
+.accounts-chats-dialog > input { margin-top: 20px; }
+.accounts-chats-dialog .account-chat-list { margin: 12px 0; }
+.accounts-chats-dialog .account-chat-row { border-bottom: 1px solid var(--color-line); }
+@media (max-width: 767px) {
+  .login-locale-bar { top: 20px; right: 20px; }
+  .login-card { padding: 28px 24px; }
+  .accounts-grid { grid-template-columns: minmax(0, 1fr); }
+  .accounts-topbar > input { flex-basis: auto; }
+  .accounts-add-dialog { padding: 24px 20px; }
+  .account-adapter-choice { padding: 10px; gap: 8px; font-size: var(--text-sm); }
+}

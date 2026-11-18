@@ -1,5 +1,6 @@
 import { useId, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
+import type { ChangeEvent, FormEvent, ReactNode } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { fieldsFromSchema } from '../schema/model';
 import type { Field, Template } from '../schema/model';
 import { buildPatch, isSecretSet, MissingSecretsError } from '../schema/patch';
@@ -69,7 +70,8 @@ type FieldProps = {
 function FieldControl({ field, value, original, path, messages, missing, onChange }: FieldProps) {
   const ui = useUI();
   const id = useId();
-  const [editingSecret, setEditingSecret] = useState(false);
+  const [editingSecret, setEditingSecret] = useState(value === undefined);
+  const [showSecret, setShowSecret] = useState(false);
   const text = fieldText(messages, field);
   const missingValue = missing.includes(valuePath(path));
   const attributes = { id, 'aria-describedby': text.hint ? `${id}-hint` : undefined, 'aria-invalid': missingValue || undefined };
@@ -84,11 +86,13 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
     const set = isSecretSet(value) || (typeof value === 'string' && value.length > 0);
     control = <div className="secret-control">
       <span role="status">{set ? ui.secretSet : ui.secretUnset}</span>
-      {!editingSecret && <button type="button" onClick={() => setEditingSecret(true)}>{ui.modify}</button>}
-      {editingSecret && <input {...attributes} type="password" autoComplete="new-password"
+      {!editingSecret && <button type="button" onClick={() => { setShowSecret(false); setEditingSecret(true); }}>{ui.modify}</button>}
+      {editingSecret && <><input {...attributes} type={showSecret ? 'text' : 'password'} autoComplete="new-password"
         required={field.required} value={typeof value === 'string' ? value : ''}
-        onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.value)} />}
-      <button type="button" onClick={() => { setEditingSecret(false); onChange(null); }}>{ui.clear}</button>
+        onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.value)} />
+        <button type="button" aria-label={showSecret ? ui.hideSecret : ui.showSecret} aria-pressed={showSecret}
+          onClick={() => setShowSecret(!showSecret)}>{showSecret ? <EyeOff size={18} /> : <Eye size={18} />}</button></>}
+      <button type="button" onClick={() => { setEditingSecret(false); setShowSecret(false); onChange(null); }}>{ui.clear}</button>
     </div>;
   } else {
     switch (field.type) {
@@ -186,6 +190,7 @@ type ConfigFormProps = {
   value: unknown;
   messages: Record<string, unknown>;
   onSubmit: (patch: Record<string, unknown>) => void;
+  footer?: ReactNode;
 };
 
 /** ConfigForm 将完整编辑状态绑定到当前读取的配置和 Schema。 */
@@ -233,7 +238,7 @@ function FormEditor(props: ConfigFormProps) {
       <p>{error instanceof MissingSecretsError ? ui.missingSecrets : ui.patchError}</p>
       <pre>{error.message}</pre>
     </div>}
-    <button type="submit" className="save-button">{ui.save}</button>
+    {props.footer ?? <button type="submit" className="save-button">{ui.save}</button>}
   </form>;
 }
 
