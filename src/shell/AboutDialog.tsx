@@ -1,5 +1,5 @@
 import { useUI } from '../i18n/UI';
-import React, { type JSX } from 'react';
+import { type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ExternalLink, X } from 'lucide-react';
 import oflTxtUrl from '../assets/fonts/OFL.txt?no-inline';
