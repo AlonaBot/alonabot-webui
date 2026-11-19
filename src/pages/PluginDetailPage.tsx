@@ -82,6 +82,12 @@ export function PluginDetailPage(props: {
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'config' | `page:${string}` | 'jobs' | 'data' | 'versions' | 'advanced'>('config');
 
+  useEffect(() => {
+    const sync = () => { if (new URLSearchParams(window.location.search).get('tab') === 'config') setActiveTab('config'); };
+    sync(); window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+
   // 发信许可与实例
   const [allowedInstances, setAllowedInstancesState] = useState<AllowedInstances | null>(null);
   const [allAdapterInstances, setAllAdapterInstances] = useState<AdapterInstance[]>([]);

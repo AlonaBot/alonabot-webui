@@ -22,9 +22,11 @@ export type ConfigFormProps = {
   onDiscard?: () => void;
   onReveal?: (path: string[]) => Promise<string>;
   footer?: ReactNode;
+  editablePaths?: readonly string[];
 };
 
 interface FormContextValue {
+  editablePaths?: readonly string[];
   options?: {
     list: (path: string, q: string) => Promise<OptionsPage>;
     resolve: (path: string, values: string[]) => Promise<OptionsPage>;
@@ -194,7 +196,7 @@ function optionsPath(path: string[]): string {
   return path.filter((_, index) => index % 2 === 0).join('.');
 }
 
-function OptionsFromControl({ field, value, onChange, attributes, optionsAPI }: {
+export function OptionsFromControl({ field, value, onChange, attributes, optionsAPI }: {
   field: Field; value: unknown; onChange: (value: unknown) => void;
   attributes: Record<string, unknown>; optionsAPI: NonNullable<ConfigFormProps['options']>;
 }) {
@@ -300,6 +302,9 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
   const [revealing, setRevealing] = useState(false);
   const [revealError, setRevealError] = useState<string | null>(null);
 
+  const dottedPath = path.join('.');
+  const editable = !formContext?.editablePaths || formContext.editablePaths.some(marked => dottedPath === marked || dottedPath.startsWith(marked + '.'));
+  const group = field.type === 'object' && formContext?.editablePaths?.some(marked => marked.startsWith(dottedPath + '.'));
   const text = fieldText(messages, field);
   const missingValue = missing.includes(valuePath(path));
   const attributes = { id, 'aria-describedby': text.hint ? `${id}-hint` : undefined, 'aria-invalid': missingValue || undefined };
@@ -418,7 +423,7 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
     {field.type === 'object' && <legend>{title}</legend>}
     <div className="field-heading">
       {field.type !== 'object' && <label htmlFor={id}>{title}</label>}
-      <button type="button" onClick={() => { setEditingSecret(false); setRevealedSecret(null); setShowSecret(false); onChange(null); }}>{ui.restoreDefault}</button>
+      <button type="button" disabled={!editable} onClick={() => { setEditingSecret(false); setRevealedSecret(null); setShowSecret(false); onChange(null); }}>{ui.restoreDefault}</button>
     </div>
     {text.hint && <p id={`${id}-hint`} className={field.obviousHint ? 'field-hint obvious-hint' : 'field-hint'}
 >{text.hint}</p>}
@@ -462,7 +467,7 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
     )}
     {missingValue && <p role="alert">{ui.missingSecrets} {valuePath(path)}</p>}
   </>;
-  return field.type === 'object' ? <fieldset className="config-group">{body}</fieldset> : <div className="config-field">{body}</div>;
+  return <fieldset className={field.type === 'object' ? 'config-group' : 'config-field'} disabled={!editable && !group}>{body}</fieldset>;
 }
 
 function Fields({ fields, value = {}, original, path, messages, missing, onChange }: {
@@ -496,6 +501,16 @@ export function ConfigForm(props: ConfigFormProps): JSX.Element {
   return <FormEditor key={source.revision} {...props} />;
 }
 
+function editablePatch(patch: Record<string, unknown>, paths: readonly string[], prefix = ''): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(patch).flatMap(([key, value]) => {
+    const path = prefix ? prefix + '.' + key : key;
+    if (paths.some(marked => path === marked || path.startsWith(marked + '.'))) return [[key, value]];
+    if (!paths.some(marked => marked.startsWith(path + '.')) || value === null || typeof value !== 'object' || Array.isArray(value)) return [];
+    const nested = editablePatch(value as Record<string, unknown>, paths, path);
+    return Object.keys(nested).length ? [[key, nested]] : [];
+  }));
+}
+
 function FormEditor(props: ConfigFormProps) {
   const ui = useUI();
   const fields = useMemo(() => fieldsFromSchema(props.schema), [props.schema]);
@@ -506,6 +521,7 @@ function FormEditor(props: ConfigFormProps) {
   const isDirty = useMemo(() => JSON.stringify(edited) !== JSON.stringify(props.value), [edited, props.value]);
 
   const formContextValue = useMemo<FormContextValue>(() => ({
+    editablePaths: props.editablePaths,
     options: props.options,
     exampleImageURL: props.exampleImageURL,
     commandPrefix: props.commandPrefix,
@@ -513,7 +529,7 @@ function FormEditor(props: ConfigFormProps) {
     rootEdited: edited,
     fields,
     messages: props.messages,
-  }), [props.options, props.exampleImageURL, props.commandPrefix, props.onReveal, edited, fields, props.messages]);
+  }), [props.editablePaths, props.options, props.exampleImageURL, props.commandPrefix, props.onReveal, edited, fields, props.messages]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -521,6 +537,7 @@ function FormEditor(props: ConfigFormProps) {
     let patch: Record<string, unknown>;
     try {
       patch = buildPatch(props.value, submissionFields(edited, fields, false), fields);
+      if (props.editablePaths) patch = editablePatch(patch, props.editablePaths);
     } catch (caught) {
       if (!(caught instanceof Error)) throw caught;
       setError(caught);

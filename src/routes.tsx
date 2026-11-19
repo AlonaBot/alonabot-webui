@@ -12,6 +12,7 @@ import { PermissionsPage } from './pages/PermissionsPage';
 import { ConversationsPage } from './pages/ConversationsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ModelsPage } from './pages/ModelsPage';
+import { ProfilesPage } from './pages/ProfilesPage';
 import { LogsPage } from './pages/LogsPage';
 import chinese from '../i18n/zh-CN.json';
 import collections from '../fixtures/collections.config_schema.json';
@@ -160,6 +161,14 @@ export const routes: RouteEntry[] = [
     icon: Box,
     group: 'main',
     render: () => <ModelsPage />,
+  },
+  {
+    id: 'profiles',
+    path: '/profiles',
+    label: 'profiles',
+    icon: SlidersHorizontal,
+    group: 'main',
+    render: () => <ProfilesPage />,
   },
   {
     id: 'conversations',
