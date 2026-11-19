@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, type JSX } from 'react';
+import { useContext, useEffect, useRef, useState, type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
@@ -33,6 +33,9 @@ import {
   setAllowedInstances,
   listInstances,
   getPluginConfig,
+  getPluginRuntime,
+  getPluginSleepPolicy,
+  setPluginSleepPolicy,
   patchPluginConfig,
   type Generation,
   type LogLevels,
@@ -44,6 +47,8 @@ import {
   listCoreOptions,
   resolveCoreOptions,
   type ConfigOption,
+  type PluginRuntime,
+  type SleepPolicy,
 } from '../api/admin';
 import { ChangelogDialog } from '../components/ChangelogDialog';
 import { StoragePanel } from './StoragePanel';
@@ -57,6 +62,7 @@ import { PluginJobsPanel } from './PluginJobsPanel';
 import { useUISettings } from '../shell/settings';
 import { rawConfigPatch } from './rawConfig';
 import { PluginPageFrame } from '../components/PluginPageFrame';
+import { PluginSleepPanel } from './PluginSleepPanel';
 
 /** PluginDetailPage 展示保留代次、回退确认及组件高级设置。 */
 export function PluginDetailPage(props: {
@@ -113,6 +119,14 @@ export function PluginDetailPage(props: {
   const [logLevels, setLogLevels] = useState<LogLevels | null>(null);
   const [savingLogLevel, setSavingLogLevel] = useState(false);
   const [logLevelSavedMessage, setLogLevelSavedMessage] = useState(false);
+  const [sleepPolicy, setSleepPolicy] = useState<SleepPolicy | null>(null);
+  const [runtime, setRuntime] = useState<PluginRuntime | null>(null);
+  const [sleepPolicyError, setSleepPolicyError] = useState<string | null>(null);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [sleepWriteError, setSleepWriteError] = useState<string | null>(null);
+  const [sleepLoading, setSleepLoading] = useState(true);
+  const [savingSleep, setSavingSleep] = useState(false);
+  const sleepRead = useRef(0);
 
   // 回退确认对话框
   const [rollbackModalOpen, setRollbackModalOpen] = useState(false);
@@ -127,16 +141,50 @@ export function PluginDetailPage(props: {
   const [confirmAffected, setConfirmAffected] = useState<string[]>([]);
   const [pendingConfirmAction, setPendingConfirmAction] = useState<(() => Promise<void>) | null>(null);
 
+  const readSleep = async () => {
+    const revision = ++sleepRead.current;
+    setSleepLoading(true);
+    const results = await Promise.all([
+      getPluginSleepPolicy(id).then(value => {
+        if (revision !== sleepRead.current) return false;
+        setSleepPolicy(value); setSleepPolicyError(null); return true;
+      }).catch(error => {
+        if (revision === sleepRead.current) setSleepPolicyError(error instanceof Error ? error.message : String(error));
+        return false;
+      }),
+      getPluginRuntime(id).then(value => {
+        if (revision !== sleepRead.current) return false;
+        setRuntime(value); setRuntimeError(null); return true;
+      }).catch(error => {
+        if (revision === sleepRead.current) setRuntimeError(error instanceof Error ? error.message : String(error));
+        return false;
+      }),
+    ]);
+    if (revision !== sleepRead.current) return false;
+    setSleepLoading(false);
+    return results.every(Boolean);
+  };
+
+  const saveSleep = async (policy: string | null) => {
+    setSavingSleep(true); setSleepWriteError(null);
+    let written = true;
+    try { await setPluginSleepPolicy(id, policy); }
+    catch (error) { written = false; setSleepWriteError(error instanceof Error ? error.message : String(error)); }
+    const read = await readSleep();
+    setSavingSleep(false);
+    return written && read;
+  };
+
   const loadData = async () => {
     setLoading(true);
     setGenerationError(null);
     const report = (error: unknown) => setErrorBanner(previous => [previous, error instanceof Error ? error.message : String(error)].filter(Boolean).join('\n'));
     await Promise.all([
-      listPackages().then(packages => {
+      listPackages().then(async packages => {
         const found = packages.find(item => item.ID === id && !item.Uninstalled);
         setPkg(found ?? null);
         if (!found) setErrorBanner(ui.packageNotFound);
-
+        if (found?.Role === 'plugin' || found?.Role === 'agent') await readSleep();
       }).catch(report),
       getLogLevels().then(setLogLevels).catch(report),
       generations === undefined ? listGenerations(id).then(setRetained).catch(error => {
@@ -198,6 +246,7 @@ export function PluginDetailPage(props: {
 
   useEffect(() => {
     loadData();
+    return () => { sleepRead.current += 1; };
   }, [id]);
 
   useEffect(() => {
@@ -348,6 +397,11 @@ export function PluginDetailPage(props: {
 
   const renderStatus = () => {
     if (!pkg) return null;
+    const state = pkg.Role === 'plugin' || pkg.Role === 'agent' ? runtime?.state ?? pkg.RuntimeState : undefined;
+    if (state) {
+      const tone = ({ STOPPED: 'stopped', WAKING: 'transition', ACTIVE: 'running', QUIESCING: 'transition', SUSPENDED: 'suspended', FAILED: 'degraded' } as const)[state];
+      return <span className={`pkg-status-badge is-${tone}`}><span className={`pkg-status-dot is-${tone}`} />{ui[`runtime${state}`]}</span>;
+    }
     if (!pkg.Enabled) {
       return (
         <span className="pkg-status-badge is-stopped">
@@ -373,6 +427,7 @@ export function PluginDetailPage(props: {
   };
 
   const isWebUI = pkg?.Role === 'webui';
+  const hasSleep = pkg?.Role === 'plugin' || pkg?.Role === 'agent';
 
   return (
     <div className="plugin-detail-page">
@@ -655,16 +710,19 @@ export function PluginDetailPage(props: {
         {activeTab === 'advanced' && (
           <div className="advanced-tab-pane">
             {/* 日志级别设置 */}
-            <div className="advanced-card">
+            <div className={`advanced-card${hasSleep ? ' runtime-card' : ''}`}>
               <div className="advanced-card-header">
-                <h3 className="advanced-card-title">{ui.logLevel}</h3>
+                <h3 className="advanced-card-title">{hasSleep ? ui.runtimeStatus : ui.logLevel}</h3>
                 {logLevelSavedMessage ? (
                   <span className="log-saved-pill">{ui.logLevelSaved}</span>
                 ) : null}
               </div>
               <div className="advanced-card-body">
-                <div className="log-level-selector-row">
+                <div className={hasSleep ? 'settings-row' : 'log-level-selector-row'}>
+                  {hasSleep && <div className="settings-label-col"><label htmlFor="plugin-log-level">{ui.logLevel}</label><p>{ui.pluginLogLevelDesc}</p></div>}
                   <select
+                    id="plugin-log-level"
+                    aria-label={ui.logLevel}
                     className="log-level-select font-mono"
                     value={currentLevelSetting}
                     disabled={savingLogLevel || !logLevels}
@@ -681,6 +739,7 @@ export function PluginDetailPage(props: {
                     <option value="off">{ui.logOff}</option>
                   </select>
                 </div>
+                {hasSleep && <PluginSleepPanel policy={sleepPolicy} runtime={runtime} policyError={sleepPolicyError} runtimeError={runtimeError} writeError={sleepWriteError} loading={sleepLoading} busy={savingSleep} onSubmit={saveSleep} />}
               </div>
             </div>
 

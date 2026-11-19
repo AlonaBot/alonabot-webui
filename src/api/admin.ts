@@ -44,6 +44,7 @@ export type Package = {
   Signed: boolean;
   Active: string;
   State: string;
+  RuntimeState?: RuntimeState;
   Warnings?: string[];
   pages?: { path: string; title: string }[];
 };
@@ -1286,4 +1287,60 @@ export function getProfileTools(id: string): Promise<{ items: ProfileToolPolicy[
 /** putProfileTools 更新指定配置文件的工具策略覆盖项。 */
 export async function putProfileTools(id: string, items: ProfileToolPolicy[]): Promise<void> {
   await request(`/api/v1/profiles/${encodeURIComponent(id)}/tools`, jsonBody({ items }, 'PUT'));
+}
+
+/** CoreSleep 保存全局休眠设置与逐插件覆盖。 */
+export type CoreSleep = {
+  mode: 'always_on' | 'component_idle';
+  idle_timeout: string;
+  plugins: Record<string, string>;
+};
+
+/** SleepPolicy 返回原始覆盖、生效策略与当前准入原因。 */
+export type SleepPolicy = {
+  policy: string | null;
+  effective_policy: string;
+  sleep_capable: boolean;
+  eligible: boolean;
+  reason: string;
+  warnings?: string[];
+};
+
+/** RuntimeState 描述插件或 Agent 的实际运行状态。 */
+export type RuntimeState = 'STOPPED' | 'WAKING' | 'ACTIVE' | 'QUIESCING' | 'SUSPENDED' | 'FAILED';
+
+/** PluginRuntime 保留实际代次及最近的状态、唤醒和休眠记录。 */
+export type PluginRuntime = {
+  enabled: boolean;
+  generation_id: string;
+  state: RuntimeState;
+  reason: string;
+  changed_at: string;
+  last_wake?: { reason: string; at: string };
+  last_suspend?: { reason: string; at: string };
+};
+
+/** getCoreSleep 只读当前全局休眠设置与插件覆盖。 */
+export function getCoreSleep(): Promise<CoreSleep> {
+  return request<CoreSleep>('/api/v1/core/sleep');
+}
+
+/** setCoreSleep 修改全局模式和空闲时长，保留逐插件覆盖。 */
+export async function setCoreSleep(value: Pick<CoreSleep, 'mode' | 'idle_timeout'>): Promise<void> {
+  await request('/api/v1/core/sleep', jsonBody({ mode: value.mode, idle_timeout: value.idle_timeout }, 'PUT'));
+}
+
+/** getPluginSleepPolicy 查询休眠准入，不启动插件。 */
+export function getPluginSleepPolicy(id: string): Promise<SleepPolicy> {
+  return request<SleepPolicy>(`${pluginPath(id)}/sleep-policy`);
+}
+
+/** setPluginSleepPolicy 保存原始策略，null 删除覆盖并跟随全局。 */
+export async function setPluginSleepPolicy(id: string, policy: string | null): Promise<void> {
+  await request(`${pluginPath(id)}/sleep-policy`, policy === null ? { method: 'DELETE' } : jsonBody({ policy }, 'PUT'));
+}
+
+/** getPluginRuntime 只读运行状态与实际事件时间。 */
+export function getPluginRuntime(id: string): Promise<PluginRuntime> {
+  return request<PluginRuntime>(`${pluginPath(id)}/runtime`);
 }

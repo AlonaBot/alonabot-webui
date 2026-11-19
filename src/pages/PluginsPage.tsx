@@ -404,6 +404,11 @@ export function PluginsPage(): JSX.Element {
   };
 
   const renderStatusDot = (pkg: Package) => {
+    const state = pkg.Role === 'plugin' || pkg.Role === 'agent' ? pkg.RuntimeState : undefined;
+    if (state) {
+      const tone = ({ STOPPED: 'stopped', WAKING: 'transition', ACTIVE: 'running', QUIESCING: 'transition', SUSPENDED: 'suspended', FAILED: 'degraded' } as const)[state];
+      return <span className={`pkg-status-badge is-${tone}`}><span className={`pkg-status-dot is-${tone}`} />{ui[`runtime${state}`]}</span>;
+    }
     if (!pkg.Enabled) {
       return (
         <span className="pkg-status-badge is-stopped">

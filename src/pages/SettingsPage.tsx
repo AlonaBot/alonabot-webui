@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, type JSX, type ReactNode } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Sun, Moon, Laptop, X, KeyRound } from 'lucide-react';
-import { getDefaultLocale, setDefaultLocale, getLogLevels, setGlobalLogLevel, rotateAdminToken, getCoreDenies, setCoreDenies, getCoreConfigDiagnostics, pruneCoreConfig, type GlobalLogLevel } from '../api/admin';
+import { getDefaultLocale, setDefaultLocale, getLogLevels, setGlobalLogLevel, rotateAdminToken, getCoreDenies, setCoreDenies, getCoreConfigDiagnostics, pruneCoreConfig, getCoreSleep, setCoreSleep, type CoreSleep, type GlobalLogLevel } from '../api/admin';
 import { useUI } from '../i18n/UI';
 import { useUISettings } from '../shell/settings';
 import { Link } from '../shell/router';
@@ -23,6 +23,11 @@ export function SettingsPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const writing = useRef(false);
+  const [sleep, setSleep] = useState<CoreSleep | null>(null);
+  const [sleepDraft, setSleepDraft] = useState<Pick<CoreSleep, 'mode' | 'idle_timeout'> | null>(null);
+  const [sleepReadError, setSleepReadError] = useState<string | null>(null);
+  const [sleepSaved, setSleepSaved] = useState(false);
+  const sleepValue = sleepDraft ?? sleep;
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState(false);
   const [identity, setIdentity] = useState('');
@@ -31,22 +36,30 @@ export function SettingsPage(): JSX.Element {
   const [token, setToken] = useState('');
   const [rotateError, setRotateError] = useState<string | null>(null);
   const [rotating, setRotating] = useState(false);
+  const refreshSettings = async () => {
+    try { const next = await readSettings(); setData(next); setCoreLocale(next.locale); }
+    catch (error) { setData(null); throw error; }
+  };
+  const refreshSleep = async () => {
+    try { setSleep(await getCoreSleep()); setSleepReadError(null); }
+    catch (error) { setSleepReadError(error instanceof Error ? error.message : String(error)); throw error; }
+  };
   const load = async () => {
     setLoading(true); setError(null);
-    try { const next = await readSettings(); setData(next); setCoreLocale(next.locale); }
-    catch (error) { setData(null); setError(error instanceof Error ? error.message : String(error)); }
-    finally { setLoading(false); }
+    const results = await Promise.allSettled([refreshSettings(), refreshSleep()]);
+    const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason instanceof Error ? result.reason.message : String(result.reason)] : []);
+    setError(errors.length ? errors.join('\n') : null); setLoading(false);
   };
   useEffect(() => { void load(); }, []);
   // 写入后始终核对有效快照，覆盖设置已提交但通知失败及禁止表部分提交的路径。
-  const mutate = async (action: () => Promise<unknown>) => {
+  const mutate = async (action: () => Promise<unknown>, refresh = refreshSettings) => {
     if (writing.current) return;
     writing.current = true; setBusy(true); setError(null);
     const errors: string[] = [];
     try { await action(); }
     catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
-    try { const next = await readSettings(); setData(next); setCoreLocale(next.locale); }
-    catch (error) { setData(null); errors.push(error instanceof Error ? error.message : String(error)); }
+    try { await refresh(); }
+    catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
     setError(errors.length ? errors.join('\n') : null);
     writing.current = false; setBusy(false);
     return errors.length === 0;
@@ -54,27 +67,44 @@ export function SettingsPage(): JSX.Element {
   const closeRotate = () => { if (!rotating) { setRotateOpen(false); setToken(''); setRotateError(null); } };
   const matches = (value: string) => value.toLowerCase().includes(query.toLowerCase());
   const roster = (values: string[], remove: (value: string) => void) => <div className="admins-list">{values.filter(matches).map(value => <div key={value} className="admin-chip"><code>{value}</code><button type="button" className="chip-remove-btn" aria-label={`${ui.removeRow} ${value}`} onClick={() => remove(value)}><X size={14} /></button></div>)}</div>;
+  const displayedError = [error, sleepReadError && !error?.includes(sleepReadError) ? sleepReadError : null].filter(Boolean).join('\n');
   return <div className="settings-page">
     <div className="settings-header"><button type="button" className="settings-logout" onClick={() => void logout().catch(error => setError(error instanceof Error ? error.message : String(error)))}>{ui.logout}</button></div>
-    {error && <div className="plugins-error-banner" role="alert">{error}<button type="button" disabled={busy || loading} onClick={() => void load()}>{ui.refresh}</button></div>}
+    {displayedError && <div className="plugins-error-banner settings-error" role="alert">{displayedError}<button type="button" disabled={busy || loading} onClick={() => void load()}>{ui.refresh}</button></div>}
     {loading && <p role="status">{ui.loading}</p>}
     <section className="settings-card"><h2 className="settings-card-title">{ui.general}</h2>
       <SettingsRow title={ui.uiLanguage} description={ui.uiLanguageDesc}><select aria-label={ui.uiLanguage} value={locale} onChange={event => setLocale(event.target.value)}><option value="zh-CN">{ui.languageChinese}</option><option value="en-US">{ui.languageEnglish}</option></select></SettingsRow>
       <SettingsRow title={ui.themeMode} description={ui.themeModeDesc}><div className="theme-toggle-group">{([{ value: 'light', label: ui.themeLight, Icon: Sun }, { value: 'dark', label: ui.themeDark, Icon: Moon }, { value: 'system', label: ui.themeSystem, Icon: Laptop }] as const).map(({ value, label, Icon }) => <button key={value} type="button" className={`theme-toggle-btn ${theme === value ? 'is-active' : ''}`} aria-pressed={theme === value} onClick={() => setTheme(value)}><Icon size={14} />{label}</button>)}</div></SettingsRow>
     </section>
-    <fieldset className="settings-fields" disabled={!data || busy || loading}>
+    <fieldset className="settings-fields" disabled={busy || loading}>
       <section className="settings-card"><h2 className="settings-card-title">{ui.security}</h2>
+        <fieldset className="settings-fields" disabled={!data}>
         <SettingsRow title={ui.rotateToken} description={ui.rotateTokenDesc}><button type="button" onClick={() => { setToken(''); setRotateError(null); setRotateOpen(true); }}><KeyRound size={14} />{ui.rotateTokenButton}</button></SettingsRow>
         <SettingsRow title={ui.accessControl}><Link to="/permissions/users" className="dialog-button">{ui.manageUsers}</Link></SettingsRow>
         <details className="settings-access"><summary>{ui.deniedChats}</summary>
         <input aria-label={ui.filterIdentities} placeholder={ui.filterIdentities} value={query} onChange={event => setQuery(event.target.value)} />
         <SettingsRow title={ui.deniedChats}>{data && roster(data.denies.chats, chat => void mutate(async () => { const current = await getCoreDenies(); await setCoreDenies({ users: current.users, chats: current.chats.filter(value => value !== chat) }); }))}<button type="button" onClick={() => { setIdentity(''); setAdding(true); }}>{ui.addChat}</button></SettingsRow>
         </details>
+        </fieldset>
       </section>
       <section className="settings-card"><h2 className="settings-card-title">{ui.system}</h2>
+        <fieldset className="settings-fields" disabled={!data}>
         <SettingsRow title={ui.globalLogLevel} description={ui.globalLogLevelDesc}><select aria-label={ui.globalLogLevel} value={data?.logs.global ?? ''} onChange={event => void mutate(() => setGlobalLogLevel(event.target.value as GlobalLogLevel))}>{(['debug', 'info', 'warn', 'error', 'critical'] as const).map(level => <option key={level} value={level}>{({ debug: ui.logDebug, info: ui.logInfo, warn: ui.logWarn, error: ui.logError, critical: ui.logCritical })[level]}</option>)}</select></SettingsRow>
         <SettingsRow title={ui.coreDefaultLocale} description={ui.coreDefaultLocaleDesc}><form className="settings-input-row" onSubmit={event => { event.preventDefault(); void mutate(() => setDefaultLocale(coreLocale)); }}><input aria-label={ui.coreDefaultLocale} value={coreLocale} required onChange={event => setCoreLocale(event.target.value)} /><button type="submit" disabled={coreLocale === data?.locale}>{ui.save}</button></form></SettingsRow>
         {data && (data.diagnostics.corrections.length > 0 || data.diagnostics.unknown.length > 0) && <SettingsRow title={ui.corrections}><ul>{data.diagnostics.corrections.map((entry, index) => <li key={index}><code>{entry.path}</code>: {ui[entry.reason]}{Object.hasOwn(entry, 'original') && <pre>{JSON.stringify(entry.original)}</pre>}</li>)}</ul><ul>{data.diagnostics.unknown.map(path => <li key={path}><code>{path}</code></li>)}</ul>{data.diagnostics.unknown.length > 0 && <button type="button" onClick={() => setPruneOpen(true)}>{ui.pruneConfig}</button>}</SettingsRow>}
+        </fieldset>
+        {sleep && <form className="settings-sleep-form" onSubmit={async event => {
+          event.preventDefault(); setSleepSaved(false);
+          if (await mutate(() => setCoreSleep(sleepValue!), refreshSleep)) { setSleepDraft(null); setSleepSaved(true); }
+        }}>
+          <fieldset className="settings-fields" disabled={sleepReadError !== null}>
+            <SettingsRow title={ui.sleepMode}><select aria-label={ui.sleepMode} value={sleepValue!.mode} onChange={event => { setSleepDraft({ ...sleepValue!, mode: event.target.value as CoreSleep['mode'] }); setSleepSaved(false); }}><option value="always_on">{ui.sleepModeAlwaysOn}</option><option value="component_idle">{ui.sleepModeComponentIdle}</option></select></SettingsRow>
+            <SettingsRow title={ui.sleepGlobalTimeout} description={ui.sleepGlobalTimeoutDesc}><div className="settings-sleep-timeout"><input aria-label={ui.sleepGlobalTimeout} aria-describedby="sleep-global-timeout-hint" required value={sleepValue!.idle_timeout} onChange={event => { setSleepDraft({ ...sleepValue!, idle_timeout: event.target.value }); setSleepSaved(false); }} /><p id="sleep-global-timeout-hint">{ui.sleepDurationHint}</p></div></SettingsRow>
+            {sleepDraft && <div className="sleep-form-actions"><button type="button" onClick={() => { setSleepDraft(null); setSleepSaved(false); }}>{ui.discard}</button><button type="submit" className="save-button">{ui.save}</button></div>}
+          </fieldset>
+          {sleepDraft && <dl className="sleep-policy-summary"><div><dt>{ui.sleepSavedSettings}</dt><dd>{sleep.mode === 'always_on' ? ui.sleepModeAlwaysOn : ui.sleepModeComponentIdle} · {sleep.idle_timeout}</dd></div></dl>}
+          {sleepSaved && <p role="status">{ui.saveSuccess}</p>}
+        </form>}
       </section>
     </fieldset>
     <Dialog.Root open={adding} onOpenChange={open => { if (!open && !busy) { setAdding(false); setIdentity(''); } }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content" aria-describedby={undefined}><Dialog.Title>{ui.addChat}</Dialog.Title>
