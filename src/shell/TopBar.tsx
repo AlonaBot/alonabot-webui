@@ -10,6 +10,7 @@ interface TopBarProps {
   title?: string;
   searchItems?: SearchItem[];
   onLogout?: () => void;
+  openRequest?: number;
   children?: React.ReactNode;
 }
 
@@ -18,7 +19,7 @@ interface TopBarProps {
  * 桌面端右端常驻可自适应展开的全局搜索；移动端包含标志与当前页面名称，且可从标志菜单登出。
  */
 export function TopBar(props: TopBarProps): JSX.Element {
-  const { title, searchItems = [], onLogout, children } = props;
+  const { title, searchItems = [], onLogout, openRequest, children } = props;
   const ui = useUI();
 
   return (
@@ -49,7 +50,7 @@ export function TopBar(props: TopBarProps): JSX.Element {
         {children ? <div className="topbar-content-slot">{children}</div> : null}
       </div>
       <div className="topbar-right">
-        <GlobalSearch items={searchItems} />
+        <GlobalSearch items={searchItems} openRequest={openRequest} />
       </div>
     </header>
   );

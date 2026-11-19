@@ -1,4 +1,4 @@
-import type { Field, Template } from '../schema/model';
+import type { Field, ReplyExample, Template } from '../schema/model';
 
 const sourceLocale = 'en-US';
 
@@ -43,4 +43,60 @@ export function templateText(locale: Record<string, unknown>, template: Template
     name: (translated.name as string | undefined) ?? template.name ?? template.key,
     hint: (translated.hint as string | undefined) ?? template.hint,
   };
+}
+
+/** fieldExamples 沿 schemaPath 读取 example 翻译，按源示例/片段位置合并，缺项回退源值。 */
+export function fieldExamples(locale: Record<string, unknown>, field: Field): ReplyExample[] {
+  if (!field.examples || field.examples.length === 0) return [];
+  const translated = overrides(locale, field.schemaPath);
+  let translatedExamples: unknown[] = [];
+  if (Array.isArray(translated.example)) {
+    translatedExamples = translated.example;
+  } else if (translated.example !== null && typeof translated.example === 'object') {
+    translatedExamples = [translated.example];
+  }
+
+  return field.examples.map((srcEx, index) => {
+    const transEx = translatedExamples[index];
+    if (transEx === null || typeof transEx !== 'object' || Array.isArray(transEx)) {
+      return { ...srcEx };
+    }
+    const transObj = transEx as Record<string, unknown>;
+    const input = typeof transObj.input === 'string' ? transObj.input : srcEx.input;
+    let reply = srcEx.reply;
+    if (typeof srcEx.reply === 'string') {
+      if (typeof transObj.reply === 'string') {
+        reply = transObj.reply;
+      }
+    } else if (Array.isArray(srcEx.reply)) {
+      const transReply = transObj.reply;
+      if (Array.isArray(transReply)) {
+        reply = srcEx.reply.map((srcSeg, segIdx) => {
+          const transSeg = transReply[segIdx];
+          if (transSeg === null || typeof transSeg !== 'object' || Array.isArray(transSeg)) {
+            return { ...srcSeg };
+          }
+          const transSegObj = transSeg as Record<string, unknown>;
+          if ('text' in srcSeg) {
+            return {
+              text: typeof transSegObj.text === 'string' ? transSegObj.text : srcSeg.text,
+            };
+          }
+          return {
+            image: srcSeg.image,
+            ...(typeof transSegObj.alt === 'string'
+              ? { alt: transSegObj.alt }
+              : srcSeg.alt !== undefined
+                ? { alt: srcSeg.alt }
+                : {}),
+          };
+        });
+      }
+    }
+    return {
+      input,
+      reply,
+      ...(srcEx.condition ? { condition: srcEx.condition } : {}),
+    };
+  });
 }

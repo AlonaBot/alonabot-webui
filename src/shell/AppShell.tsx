@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { useUI } from '../i18n/UI';
 import { routes } from '../routes';
-import { useTheme } from '../theme/theme';
 import { listPackages, onPackagesChanged } from '../api/admin';
 import { MobileTabBar } from './MobileTabBar';
 import { navigate, usePath } from './router';
@@ -24,9 +23,6 @@ export function AppShell(props: {
   const { version, onLogout, coreUpdate, coreUpdateFailed, children } = props;
   const currentPath = usePath();
   const ui = useUI();
-
-  // 初始化主题 Hook 并同步 data-theme
-  useTheme();
 
   // Agent 组件安装状态感知（明确为 false 时模型入口置灰并从搜索排除）
   const [agentInstalled, setAgentInstalled] = useState<boolean | undefined>(undefined);
@@ -57,6 +53,7 @@ export function AppShell(props: {
 
   // 搜索项管理：合并系统路由项与动态注册项
   const [registeredItems, setRegisteredItems] = useState<SearchItem[]>([]);
+  const [openRequest, setOpenRequest] = useState(0);
 
   const register = useCallback((newItems: SearchItem[]) => {
     setRegisteredItems(prev => [...prev, ...newItems]);
@@ -65,7 +62,11 @@ export function AppShell(props: {
     };
   }, []);
 
-  const searchContextValue = useMemo(() => ({ register }), [register]);
+  const open = useCallback(() => {
+    setOpenRequest(prev => prev + 1);
+  }, []);
+
+  const searchContextValue = useMemo(() => ({ register, open }), [register, open]);
 
   // 将当前路由表默认注册为搜索项（section: '页面' / localized pageSection）
   // 当明确为 agentInstalled === false 时，搜索省略模型路由
@@ -105,7 +106,7 @@ export function AppShell(props: {
         />
 
         <div className="shell-main">
-          <TopBar title={currentTitle} searchItems={allSearchItems} onLogout={onLogout} />
+          <TopBar title={currentTitle} searchItems={allSearchItems} onLogout={onLogout} openRequest={openRequest} />
           {agentCheckError ? (
             <div className="plugins-error-banner" role="alert">
               <span>{agentCheckError}</span>

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import * as Dialog from '@radix-ui/react-dialog';
 import { LanguageSwitch } from './components/LanguageSwitch';
 import { UIContext } from './i18n/UI';
 import { pickLocale } from './i18n/catalog';
@@ -8,7 +9,16 @@ import chinese from '../i18n/zh-CN.json';
 import { routes, setCachedCore } from './routes';
 import { AppShell } from './shell/AppShell';
 import { navigate, usePath } from './shell/router';
-import { AdminAPIError, getCore, logout, onSessionExpired, restoreSession, type CoreInfo } from './api/admin';
+import { UISettingsContext, type UISettings } from './shell/settings';
+import {
+  AdminAPIError,
+  getCore,
+  logout,
+  onSessionExpired,
+  restoreSession,
+  setClientLocale,
+  type CoreInfo,
+} from './api/admin';
 import { LoginPage } from './pages/LoginPage';
 import { PluginDetailPage } from './pages/PluginDetailPage';
 import { getLatestRelease, type LatestRelease } from './api/webui';
@@ -21,10 +31,12 @@ const languageStorageKey = 'alonabot.webui.locale';
 const catalogs = { 'en-US': english, 'zh-CN': chinese };
 
 function AdminApp() {
-  useTheme();
+  const [theme, setTheme] = useTheme();
   const [locale, setLocale] = useState(() => {
     const saved = localStorage.getItem(languageStorageKey);
-    return pickLocale(Object.keys(catalogs), saved ? [saved] : navigator.languages);
+    const initial = pickLocale(Object.keys(catalogs), saved ? [saved] : navigator.languages);
+    setClientLocale(initial);
+    return initial;
   });
   const ui = catalogs[locale as keyof typeof catalogs].messages;
   const currentPath = usePath();
@@ -36,6 +48,11 @@ function AdminApp() {
   const [latestCore, setLatestCore] = useState<LatestRelease | null>(null);
   const [showCoreContent, setShowCoreContent] = useState(true);
   const [appError, setAppError] = useState<string | null>(null);
+
+  // 令牌轮换后持有结果对话框，独立于已认证页面展示
+  const [rotatedToken, setRotatedToken] = useState<string | null>(null);
+  const [tokenCopied, setTokenCopied] = useState(false);
+  const [tokenCopyError, setTokenCopyError] = useState<string | null>(null);
 
   const restore = async () => {
     setSessionState('checking');
@@ -106,6 +123,7 @@ function AdminApp() {
   // 设置页面语言与标题
   useEffect(() => {
     document.documentElement.lang = locale;
+    setClientLocale(locale);
     const labels = ui as Record<string, string>;
     if (currentPath === '/login') {
       document.title = `${ui.loginTitle} · AlonaBot`;
@@ -124,7 +142,7 @@ function AdminApp() {
     navigate('/overview', { replace: true });
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await logout();
       setCachedCore(null);
@@ -134,71 +152,169 @@ function AdminApp() {
     } catch (error) {
       setAppError(error instanceof Error ? error.message : String(error));
     }
-  };
+  }, []);
 
-  if (sessionState === 'checking' || sessionState === 'failed') {
-    return <UIContext value={ui}><div className="shell-empty-view">
-      {appError ? <><p role="alert">{appError}</p><button type="button" onClick={() => void restore()}>{ui.refresh}</button></> : <p role="status">{ui.loading}</p>}
-    </div></UIContext>;
-  }
+  const handleTokenRotated = useCallback((token: string) => {
+    setTokenCopied(false); setTokenCopyError(null);
+    setRotatedToken(token);
+    setCachedCore(null);
+    setCoreInfo(null);
+    setSessionState('unauthenticated');
+  }, []);
 
-  // 未登录时显示登录页（开发环境下允许直接查看 /dev/forms）
-  if (sessionState === 'unauthenticated' && !(import.meta.env.DEV && currentPath === '/dev/forms')) {
-    return (
-      <UIContext value={ui}>
+  const handleSetLocale = useCallback((tag: string) => {
+    localStorage.setItem(languageStorageKey, tag);
+    setClientLocale(tag);
+    setLocale(tag);
+  }, []);
+
+  const uiSettingsValue = useMemo<UISettings>(() => ({
+    locale,
+    setLocale: handleSetLocale,
+    theme,
+    setTheme,
+    logout: handleLogout,
+    tokenRotated: handleTokenRotated,
+  }), [locale, handleSetLocale, theme, setTheme, handleLogout, handleTokenRotated]);
+
+  const renderContent = () => {
+    if (sessionState === 'checking' || sessionState === 'failed') {
+      return (
+        <div className="shell-empty-view">
+          {appError ? (
+            <>
+              <p role="alert">{appError}</p>
+              <button type="button" onClick={() => void restore()}>{ui.refresh}</button>
+            </>
+          ) : (
+            <p role="status">{ui.loading}</p>
+          )}
+        </div>
+      );
+    }
+
+    // 未登录时显示登录页（开发环境下允许直接查看 /dev/forms）
+    if (sessionState === 'unauthenticated' && !(import.meta.env.DEV && currentPath === '/dev/forms')) {
+      return (
         <div className="login-wrapper">
           <div className="login-locale-bar">
             <LanguageSwitch
               value={locale}
-              onChange={tag => {
-                localStorage.setItem(languageStorageKey, tag);
-                setLocale(tag);
-              }}
+              onChange={handleSetLocale}
             />
           </div>
           <LoginPage onAuthenticated={handleAuthenticated} />
         </div>
-      </UIContext>
-    );
-  }
+      );
+    }
 
-  const matchedRoute = routes.find(r => r.path === currentPath);
-  const isComponentDetail = currentPath.startsWith('/components/');
-  const componentId = isComponentDetail ? decodeURIComponent(currentPath.slice('/components/'.length)) : '';
+    const matchedRoute = routes.find(r => r.path === currentPath);
+    const isComponentDetail = currentPath.startsWith('/components/');
+    const componentId = isComponentDetail ? decodeURIComponent(currentPath.slice('/components/'.length)) : '';
+
+    return (
+      <UISettingsContext.Provider value={uiSettingsValue}>
+        <AppShell
+          version={coreInfo?.version ?? ui.loading}
+          onLogout={handleLogout}
+          coreUpdateFailed={coreUpdateFailed}
+          coreUpdate={latestCore && coreInfo && compareVersions(latestCore.version, coreInfo.version) === 1 ? { version: latestCore.version, releaseURL: latestCore.release_url } : undefined}
+        >
+          {coreInfo && <ChangelogDialog component="core" version={coreInfo.version} open={showCoreContent} automatic onClose={() => setShowCoreContent(false)} />}
+          {appError && (
+            <div className="plugins-error-banner" role="alert">
+              <span>{appError}</span>
+              <button type="button" onClick={() => void loadCore()}>{ui.refresh}</button>
+            </div>
+          )}
+          {import.meta.env.DEV && matchedRoute?.id === 'dev-forms' ? (
+            <div className="dev-form-toolbar">
+              <LanguageSwitch
+                value={locale}
+                onChange={handleSetLocale}
+              />
+            </div>
+          ) : null}
+
+          {isComponentDetail && componentId ? (
+            <PluginDetailPage key={componentId} id={componentId} />
+          ) : matchedRoute ? (
+            matchedRoute.render()
+          ) : (
+            <div className="shell-empty-view">
+              <h2>AlonaBot WebUI</h2>
+              <p>{ui.pageUnavailable}</p>
+            </div>
+          )}
+        </AppShell>
+      </UISettingsContext.Provider>
+    );
+  };
 
   return (
     <UIContext value={ui}>
-      <AppShell
-        version={coreInfo?.version ?? ui.loading}
-        onLogout={handleLogout}
-        coreUpdateFailed={coreUpdateFailed}
-        coreUpdate={latestCore && coreInfo && compareVersions(latestCore.version, coreInfo.version) === 1 ? { version: latestCore.version, releaseURL: latestCore.release_url } : undefined}
-      >
-        {coreInfo && <ChangelogDialog component="core" version={coreInfo.version} open={showCoreContent} automatic onClose={() => setShowCoreContent(false)} />}
-        {appError && <div className="plugins-error-banner" role="alert"><span>{appError}</span><button type="button" onClick={() => void loadCore()}>{ui.refresh}</button></div>}
-        {import.meta.env.DEV && matchedRoute?.id === 'dev-forms' ? (
-          <div className="dev-form-toolbar">
-            <LanguageSwitch
-              value={locale}
-              onChange={tag => {
-                localStorage.setItem(languageStorageKey, tag);
-                setLocale(tag);
-              }}
-            />
-          </div>
-        ) : null}
+      {renderContent()}
 
-        {isComponentDetail && componentId ? (
-          <PluginDetailPage key={componentId} id={componentId} />
-        ) : matchedRoute ? (
-          matchedRoute.render()
-        ) : (
-          <div className="shell-empty-view">
-            <h2>AlonaBot WebUI</h2>
-            <p>{ui.pageUnavailable}</p>
-          </div>
-        )}
-      </AppShell>
+      {rotatedToken ? (
+        <Dialog.Root
+          open={true}
+          onOpenChange={open => {
+            if (!open) {
+              setRotatedToken(null);
+              navigate('/login', { replace: true });
+            }
+          }}
+        >
+          <Dialog.Portal>
+            <Dialog.Overlay className="dialog-overlay" />
+            <Dialog.Content className="dialog-content">
+              <Dialog.Title className="dialog-title">{ui.rotateTokenModalTitle}</Dialog.Title>
+              <Dialog.Description className="dialog-description">
+                {ui.rotateTokenModalWarning}
+              </Dialog.Description>
+              <div className="rotated-token-result">
+                <p>{ui.newTokenNotice}</p>
+                <div className="settings-input-row">
+                  <input
+                    type="text"
+                    readOnly
+                    value={rotatedToken}
+                    className="font-mono"
+                    onClick={e => (e.target as HTMLInputElement).select()}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(rotatedToken);
+                        setTokenCopied(true);
+                        setTokenCopyError(null);
+                      } catch (error) {
+                        setTokenCopyError(error instanceof Error ? error.message : String(error));
+                      }
+                    }}
+                  >
+                    {tokenCopied ? ui.copied : ui.copyCommand}
+                  </button>
+                </div>
+              </div>
+              {tokenCopyError && <p role="alert">{tokenCopyError}</p>}
+              <div className="dialog-actions">
+                <button
+                  type="button"
+                  className="save-button"
+                  onClick={() => {
+                    setRotatedToken(null);
+                    navigate('/login', { replace: true });
+                  }}
+                >
+                  {ui.done}
+                </button>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      ) : null}
     </UIContext>
   );
 }

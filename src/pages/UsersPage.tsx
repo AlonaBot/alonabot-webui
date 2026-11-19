@@ -1,11 +1,11 @@
 import { useContext, useEffect, useState, type JSX } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MoreHorizontal, Plus, RefreshCw, ShieldCheck } from 'lucide-react';
-import { changeCoreAdmin, getCoreAdmins, getCoreDenies, setCoreDenies } from '../api/admin';
-import { listSeenUsers } from '../api/webui';
+import { changeCoreAdmin, getCoreDenies, setCoreDenies } from '../api/admin';
 import { useUI } from '../i18n/UI';
 import { SearchContext } from '../shell/search';
-import { mergeUsers } from './users';
+import { loadUsers, mergeUsers } from './users';
+import { PermissionsTabs } from './PermissionsTabs';
 import { Pagination } from '../components/Pagination';
 import { ActionDialog } from '../components/ActionDialog';
 
@@ -26,8 +26,7 @@ export function UsersPage(): JSX.Element {
   async function load() {
     setLoading(true);
     try {
-      const [seen, admins, denies] = await Promise.all([listSeenUsers(), getCoreAdmins(), getCoreDenies()]);
-      setUsers(mergeUsers(seen, admins, denies.users));
+      setUsers(await loadUsers());
     } catch (err) { setError(String(err)); } finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
@@ -46,7 +45,7 @@ export function UsersPage(): JSX.Element {
   const pages = Math.max(1, Math.ceil(filtered.length / 20));
   const currentPage = Math.min(page, pages);
   return <div className="users-page">
-    <div className="detail-tabs"><span className="detail-tab-button is-active">{ui.users} <small>{users.length}</small></span></div>
+    <PermissionsTabs active="users" userCount={loading || error ? null : users.length} />
     <div className="data-toolbar">
       <div className="time-range-pills">{(['all', 'admin', 'denied'] as const).map(value => <button key={value} className={`time-range-pill ${filter === value ? 'is-active' : ''}`} onClick={() => { setFilter(value); setPage(1); }}>{({ all: ui.filterRoleAll, admin: ui.administrator, denied: ui.denied })[value]} <small>{users.filter(user => value === 'all' || (value === 'admin' ? user.admin : user.denied)).length}</small></button>)}</div>
       <select aria-label={ui.platform} value={adapter} onChange={e => { setAdapter(e.target.value); setPage(1); }}><option value="">{ui.allPlatforms}</option>{[...new Set(users.map(user => user.adapter))].map(value => <option key={value}>{value}</option>)}</select>

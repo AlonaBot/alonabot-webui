@@ -9,6 +9,7 @@ interface GlobalSearchProps {
   emptyText?: string;
   selectHint?: string;
   openHint?: string;
+  openRequest?: number;
 }
 
 /**
@@ -61,6 +62,14 @@ export function GlobalSearch(props: GlobalSearchProps): JSX.Element {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isFocused]);
+
+  // 外部请求打开搜索
+  useEffect(() => {
+    if (props.openRequest !== undefined && props.openRequest > 0) {
+      inputRef.current?.focus();
+      setIsFocused(true);
+    }
+  }, [props.openRequest]);
 
   // 点击外部收起
   useEffect(() => {

@@ -1,11 +1,134 @@
-import { useId, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, FormEvent, ReactNode } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { ChangeEvent, FormEvent, JSX, ReactNode } from 'react';
+import { Eye, EyeOff, Search, X } from 'lucide-react';
 import { fieldsFromSchema } from '../schema/model';
 import type { Field, Template } from '../schema/model';
 import { buildPatch, isSecretSet, MissingSecretsError } from '../schema/patch';
-import { fieldText, templateText } from '../i18n/catalog';
+import { fieldExamples, fieldText, templateText } from '../i18n/catalog';
 import { useUI } from '../i18n/UI';
+import { AdminAPIError, type ConfigOption, type OptionsPage } from '../api/admin';
+
+export type ConfigFormProps = {
+  schema: unknown;
+  value: unknown;
+  messages: Record<string, unknown>;
+  onSubmit: (patch: Record<string, unknown>) => void;
+  options?: {
+    list: (path: string, q: string) => Promise<OptionsPage>;
+    resolve: (path: string, values: string[]) => Promise<OptionsPage>;
+  };
+  exampleImageURL?: (image: string) => string;
+  commandPrefix?: string;
+  onDiscard?: () => void;
+  onReveal?: (path: string[]) => Promise<string>;
+  footer?: ReactNode;
+};
+
+interface FormContextValue {
+  options?: {
+    list: (path: string, q: string) => Promise<OptionsPage>;
+    resolve: (path: string, values: string[]) => Promise<OptionsPage>;
+  };
+  exampleImageURL?: (image: string) => string;
+  commandPrefix?: string;
+  onReveal?: (path: string[]) => Promise<string>;
+  rootEdited: Record<string, unknown>;
+  fields: Field[];
+  messages: Record<string, unknown>;
+}
+
+const FormContext = createContext<FormContextValue | null>(null);
+
+function getDraftValue(root: Record<string, unknown>, pathStr: string): unknown {
+  if (pathStr.endsWith('.$key')) {
+    const parentPath = pathStr.slice(0, -5);
+    const parentVal = getDraftValue(root, parentPath);
+    if (parentVal && typeof parentVal === 'object' && !Array.isArray(parentVal)) {
+      return Object.keys(parentVal)[0] ?? '';
+    }
+    return '';
+  }
+  const parts = pathStr.split('.');
+  let curr: unknown = root;
+  for (const part of parts) {
+    if (curr === null || typeof curr !== 'object' || !Object.hasOwn(curr as object, part)) {
+      return undefined;
+    }
+    curr = (curr as Record<string, unknown>)[part];
+  }
+  return curr;
+}
+
+function findFieldByPath(fields: Field[], pathStr: string): Field | undefined {
+  const parts = pathStr.split('.');
+  let currFields: Field[] = fields;
+  let result: Field | undefined;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const match = currFields.find(f => f.key === part);
+    if (!match) return undefined;
+    if (i === parts.length - 1) return match;
+    if (match.children) {
+      currFields = match.children;
+    } else if (match.templates) {
+      const nextPart = parts[++i];
+      const tmpl = match.templates.find(t => t.key === nextPart);
+      if (!tmpl) return undefined;
+      currFields = tmpl.children;
+    } else {
+      return undefined;
+    }
+  }
+  return result;
+}
+
+function formatPlaceholderValue(
+  value: unknown,
+  pathStr: string,
+  fields: Field[],
+  messages: Record<string, unknown>,
+): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'string') {
+    const targetField = findFieldByPath(fields, pathStr);
+    if (targetField && targetField.options) {
+      const idx = targetField.options.indexOf(value);
+      if (idx !== -1) {
+        const text = fieldText(messages, targetField);
+        return text.labels?.[idx] ?? targetField.labels?.[idx] ?? value;
+      }
+    }
+    return value;
+  }
+  return '';
+}
+
+function checkCondition(condition: Record<string, unknown> | undefined, root: Record<string, unknown>): boolean {
+  if (!condition) return true;
+  for (const [key, expected] of Object.entries(condition)) {
+    const actual = getDraftValue(root, key);
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function replacePlaceholders(
+  text: string,
+  root: Record<string, unknown>,
+  fields: Field[],
+  messages: Record<string, unknown>,
+): string {
+  const sentinels = text.replaceAll('{{', '\uE000').replaceAll('}}', '\uE001');
+  const replaced = sentinels.replace(/\{([A-Za-z0-9_.\-$]+)\}/g, (_, fieldPath) => {
+    const val = getDraftValue(root, fieldPath);
+    return formatPlaceholderValue(val, fieldPath, fields, messages);
+  });
+  return replaced.replaceAll('\uE000', '{').replaceAll('\uE001', '}');
+}
 
 // 原值跟随编辑对象身份，数组删行或控件隐藏重挂载后仍能找到同一行。
 const originalValues = new WeakMap<object, Record<string, unknown> | undefined>();
@@ -67,15 +190,134 @@ type FieldProps = {
   onChange: (value: unknown) => void;
 };
 
+function optionsPath(path: string[]): string {
+  return path.filter((_, index) => index % 2 === 0).join('.');
+}
+
+function OptionsFromControl({ field, value, onChange, attributes, optionsAPI }: {
+  field: Field; value: unknown; onChange: (value: unknown) => void;
+  attributes: Record<string, unknown>; optionsAPI: NonNullable<ConfigFormProps['options']>;
+}) {
+  const ui = useUI();
+  const many = field.type === 'list';
+  const selected = many ? (value ?? []) as string[] : typeof value === 'string' && value ? [value] : [];
+  const selectedKey = JSON.stringify(selected);
+  const path = optionsPath(field.schemaPath);
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [page, setPage] = useState<OptionsPage>({ options: [], more: false });
+  const [resolved, setResolved] = useState<ConfigOption[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [degraded, setDegraded] = useState(false);
+  useEffect(() => { setDegraded(false); setError(null); }, [optionsAPI, path]);
+  useEffect(() => {
+    let active = true;
+    setResolved(null);
+    setResolveError(null);
+    const values = JSON.parse(selectedKey) as string[];
+    if (values.length) void optionsAPI.resolve(path, values).then(result => {
+      if (active) setResolved(result.options);
+    }).catch((caught: unknown) => {
+      if (!active) return;
+      setResolveError(caught instanceof Error ? caught.message : String(caught));
+      if (caught instanceof AdminAPIError && caught.code === 'UNAVAILABLE') setDegraded(true);
+    });
+    return () => { active = false; };
+  }, [optionsAPI, path, selectedKey]);
+  useEffect(() => {
+    if (!open || degraded) return;
+    let active = true;
+    setLoading(true);
+    setError(null);
+    setPage({ options: [], more: false });
+    void optionsAPI.list(path, query).then(result => {
+      if (active) setPage(result);
+    }).catch((caught: unknown) => {
+      if (!active) return;
+      setError(caught instanceof Error ? caught.message : String(caught));
+      if (caught instanceof AdminAPIError && caught.code === 'UNAVAILABLE') setDegraded(true);
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [open, query, optionsAPI, path, degraded]);
+  function choose(next: string) {
+    onChange(many ? selected.includes(next) ? selected.filter(entry => entry !== next) : [...selected, next] : next);
+    if (!many) setOpen(false);
+    setQuery('');
+  }
+  function label(stored: string) {
+    if (!resolved) return stored;
+    const option = resolved.find(entry => entry.value === stored);
+    return option ? option.label : `${ui.optionNotFound}: ${stored}`;
+  }
+  return <div className="options-from-control">
+    {resolveError && <p role="alert">{degraded && `${ui.degradedToText}: `}{resolveError}</p>}
+    {error && <p role="alert">{degraded && `${ui.degradedToText}: `}{error}</p>}
+    {degraded ? many ? <div className="list-control">
+      {selected.map((entry, index) => <div className="collection-row" key={index}>
+        <input aria-label={ui.value} value={entry} onChange={event => onChange(selected.map((old, at) => index === at ? event.currentTarget.value : old))} />
+        <button type="button" onClick={() => onChange(selected.filter((_, at) => index !== at))}>{ui.removeRow}</button>
+      </div>)}
+      <button type="button" onClick={() => onChange([...selected, ''])}>{ui.addRow}</button>
+    </div> : <input {...attributes} required={field.required} value={selected[0] ?? ''} onChange={event => onChange(event.currentTarget.value)} /> : <>
+      {many ? <div className="options-chips-list">{selected.map(entry => <span className="option-chip" key={entry}>
+        {label(entry)}<button type="button" aria-label={`${ui.removeRow} ${entry}`} onClick={() => choose(entry)}><X size={14} /></button>
+      </span>)}</div> : <div className="option-current">{selected.map(entry => <span key={entry}>{label(entry)}</span>)}</div>}
+      <div className="options-input-row">
+        <input {...attributes} required={field.required && selected.length === 0} value={query} placeholder={ui.searchOptions}
+          onFocus={() => setOpen(true)} onChange={event => { setQuery(event.currentTarget.value); setOpen(true); }} />
+        <button type="button" aria-label={ui.searchOptions} aria-expanded={open} onClick={() => setOpen(!open)}><Search size={16} /></button>
+      </div>
+      {open && <div className="options-dropdown">
+        {loading && <p role="status">{ui.loading}</p>}
+        {page.options.map(option => <button type="button" key={option.value} className="option-item" aria-pressed={selected.includes(option.value)} onClick={() => choose(option.value)}>
+          <span>{option.label}</span>{option.description && <small>{option.description}</small>}
+        </button>)}
+        {!loading && page.options.length === 0 && <p>{ui.noMatches}</p>}
+        {page.more && <p>{ui.searchMoreOptions}</p>}
+        {query && !page.options.some(option => option.value === query) && <button type="button" onClick={() => choose(query)}>{ui.customValue}: <code>{query}</code></button>}
+      </div>}
+    </>}
+  </div>;
+}
+
+function ExampleImage({ src, image, alt }: { src?: string; image: string; alt?: string }) {
+  const ui = useUI();
+  const [failed, setFailed] = useState(false);
+  if (!src) return <span className="example-image-alt">{alt ?? image}</span>;
+  return !failed ? <img src={src} alt={alt ?? ''} className="example-image" onError={() => setFailed(true)} />
+    : <span className="example-image-alt" role="status">{ui.imageLoadFailed}: {alt ?? image}</span>;
+}
+
 function FieldControl({ field, value, original, path, messages, missing, onChange }: FieldProps) {
   const ui = useUI();
   const id = useId();
+  const formContext = useContext(FormContext);
   const [editingSecret, setEditingSecret] = useState(value === undefined);
   const [showSecret, setShowSecret] = useState(false);
+  const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
+  const [revealing, setRevealing] = useState(false);
+  const [revealError, setRevealError] = useState<string | null>(null);
+
   const text = fieldText(messages, field);
   const missingValue = missing.includes(valuePath(path));
   const attributes = { id, 'aria-describedby': text.hint ? `${id}-hint` : undefined, 'aria-invalid': missingValue || undefined };
   let control;
+
+  const handleReveal = async () => {
+    if (!formContext?.onReveal) return;
+    setRevealing(true);
+    setRevealError(null);
+    try {
+      const plaintext = await formContext.onReveal(path);
+      setRevealedSecret(plaintext);
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === 'AbortError')) setRevealError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRevealing(false);
+    }
+  };
 
   if (value === null) {
     control = <div className="default-pending" role="status">
@@ -86,13 +328,25 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
     const set = isSecretSet(value) || (typeof value === 'string' && value.length > 0);
     control = <div className="secret-control">
       <span role="status">{set ? ui.secretSet : ui.secretUnset}</span>
-      {!editingSecret && <button type="button" onClick={() => { setShowSecret(false); setEditingSecret(true); }}>{ui.modify}</button>}
+      {!editingSecret && <button type="button" onClick={() => { setShowSecret(false); setRevealedSecret(null); setEditingSecret(true); }}>{ui.modify}</button>}
+      {set && formContext?.onReveal && !revealedSecret && (
+        <button type="button" onClick={handleReveal} disabled={revealing}>
+          {revealing ? ui.loading : ui.revealSecret}
+        </button>
+      )}
+      {revealedSecret !== null && (
+        <div className="revealed-secret">
+          <code>{revealedSecret}</code>
+          <button type="button" onClick={() => setRevealedSecret(null)}>{ui.hideSecret}</button>
+        </div>
+      )}
+      {revealError && <p role="alert" className="form-error-inline">{revealError}</p>}
       {editingSecret && <><input {...attributes} type={showSecret ? 'text' : 'password'} autoComplete="new-password"
         required={field.required} value={typeof value === 'string' ? value : ''}
-        onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.value)} />
+        onChange={(event: ChangeEvent<HTMLInputElement>) => { setRevealedSecret(null); onChange(event.currentTarget.value); }} />
         <button type="button" aria-label={showSecret ? ui.hideSecret : ui.showSecret} aria-pressed={showSecret}
           onClick={() => setShowSecret(!showSecret)}>{showSecret ? <EyeOff size={18} /> : <Eye size={18} />}</button></>}
-      <button type="button" onClick={() => { setEditingSecret(false); setShowSecret(false); onChange(null); }}>{ui.clear}</button>
+      <button type="button" onClick={() => { setEditingSecret(false); setShowSecret(false); setRevealedSecret(null); onChange(null); }}>{ui.clear}</button>
     </div>;
   } else {
     switch (field.type) {
@@ -125,11 +379,18 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
         break;
       case 'string':
       case 'text':
-        if (field.editorMode || field.type === 'text') {
+        if (field.type === 'string' && field.optionsFrom && formContext?.options) {
+          control = <OptionsFromControl
+            field={field}
+            value={value}
+            onChange={onChange}
+            attributes={attributes}
+            optionsAPI={formContext.options}
+          />;
+        } else if (field.editorMode || field.type === 'text') {
           control = <div>
             {field.editorMode && <span className="editor-language">{ui.codeLanguage}: {field.editorLanguage}</span>}
             <textarea {...attributes} className={field.editorMode ? 'code-editor' : undefined}
-              style={field.editorMode ? { fontFamily: 'monospace' } : undefined}
               required={field.required} value={typeof value === 'string' ? value : ''} spellCheck={!field.editorMode}
               onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.currentTarget.value)} />
           </div>;
@@ -149,16 +410,56 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
     }
   }
 
+  const rawExamples = formContext ? fieldExamples(messages, field) : [];
+  const visibleExamples = rawExamples.filter(ex => checkCondition(ex.condition, formContext?.rootEdited ?? {}));
+
   const title = <>{text.description}{field.required && <span className="required-mark"> · {ui.required}</span>}</>;
   const body = <>
     {field.type === 'object' && <legend>{title}</legend>}
     <div className="field-heading">
       {field.type !== 'object' && <label htmlFor={id}>{title}</label>}
-      <button type="button" onClick={() => { setEditingSecret(false); onChange(null); }}>{ui.restoreDefault}</button>
+      <button type="button" onClick={() => { setEditingSecret(false); setRevealedSecret(null); setShowSecret(false); onChange(null); }}>{ui.restoreDefault}</button>
     </div>
     {text.hint && <p id={`${id}-hint`} className={field.obviousHint ? 'field-hint obvious-hint' : 'field-hint'}
-      style={field.obviousHint ? { fontWeight: 700 } : undefined}>{text.hint}</p>}
+>{text.hint}</p>}
     {control}
+    {visibleExamples.length > 0 && (
+      <div className="field-examples" aria-label={ui.examples}>
+        {visibleExamples.map((ex, index) => {
+          const formattedInput = replacePlaceholders(ex.input, formContext?.rootEdited ?? {}, formContext?.fields ?? [], messages);
+          const fullInput = `${formContext?.commandPrefix ?? ''}${formattedInput}`;
+          return (
+            <div key={index} className="field-example-item">
+              <div className="example-input">
+                <span className="example-prompt">&gt;</span>
+                <code>{fullInput}</code>
+              </div>
+              <div className="example-reply">
+                {typeof ex.reply === 'string' ? (
+                  <div className="example-text">
+                    {replacePlaceholders(ex.reply, formContext?.rootEdited ?? {}, formContext?.fields ?? [], messages)}
+                  </div>
+                ) : Array.isArray(ex.reply) ? (
+                  <div className="example-segments">
+                    {ex.reply.map((seg, segIdx) => {
+                      if ('text' in seg) {
+                        return (
+                          <div key={segIdx} className="example-text">
+                            {replacePlaceholders(seg.text, formContext?.rootEdited ?? {}, formContext?.fields ?? [], messages)}
+                          </div>
+                        );
+                      }
+                      const imageSrc = formContext?.exampleImageURL ? formContext.exampleImageURL(seg.image) : '';
+                      return <ExampleImage key={`${segIdx}:${imageSrc}`} src={imageSrc} image={seg.image} alt={seg.alt} />;
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
     {missingValue && <p role="alert">{ui.missingSecrets} {valuePath(path)}</p>}
   </>;
   return field.type === 'object' ? <fieldset className="config-group">{body}</fieldset> : <div className="config-field">{body}</div>;
@@ -185,16 +486,8 @@ function Fields({ fields, value = {}, original, path, messages, missing, onChang
       }} />)}</>;
 }
 
-type ConfigFormProps = {
-  schema: unknown;
-  value: unknown;
-  messages: Record<string, unknown>;
-  onSubmit: (patch: Record<string, unknown>) => void;
-  footer?: ReactNode;
-};
-
 /** ConfigForm 将完整编辑状态绑定到当前读取的配置和 Schema。 */
-export function ConfigForm(props: ConfigFormProps) {
+export function ConfigForm(props: ConfigFormProps): JSX.Element {
   const [source, setSource] = useState({ value: props.value, schema: props.schema, revision: 0 });
   if (source.value !== props.value || source.schema !== props.schema) {
     // 输入快照变化时在渲染子控件前切换版本，避免旧行与新补丁基线配对。
@@ -208,7 +501,19 @@ function FormEditor(props: ConfigFormProps) {
   const fields = useMemo(() => fieldsFromSchema(props.schema), [props.schema]);
   const [edited, setEdited] = useState(() => editableValue(props.value) as Record<string, unknown>);
   const [error, setError] = useState<Error | null>(null);
+  const [resetVersion, setResetVersion] = useState(0);
   const missing = error instanceof MissingSecretsError ? error.paths : [];
+  const isDirty = useMemo(() => JSON.stringify(edited) !== JSON.stringify(props.value), [edited, props.value]);
+
+  const formContextValue = useMemo<FormContextValue>(() => ({
+    options: props.options,
+    exampleImageURL: props.exampleImageURL,
+    commandPrefix: props.commandPrefix,
+    onReveal: props.onReveal,
+    rootEdited: edited,
+    fields,
+    messages: props.messages,
+  }), [props.options, props.exampleImageURL, props.commandPrefix, props.onReveal, edited, fields, props.messages]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -225,24 +530,63 @@ function FormEditor(props: ConfigFormProps) {
     props.onSubmit(patch);
   }
 
-  return <form onSubmit={submit} onInvalidCapture={event => {
-    let details = (event.target as HTMLElement).closest('details');
-    while (details) {
-      details.open = true;
-      details = details.parentElement?.closest('details') ?? null;
-    }
-  }}>
-    <Fields fields={fields} value={edited} original={props.value as Record<string, unknown>}
-      path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
-    {error && <div role="alert" className="form-error">
-      <p>{error instanceof MissingSecretsError ? ui.missingSecrets : ui.patchError}</p>
-      <pre>{error.message}</pre>
-    </div>}
-    {props.footer ?? <button type="submit" className="save-button">{ui.save}</button>}
-  </form>;
+  return (
+    <FormContext.Provider value={formContextValue}>
+      <form onSubmit={submit} onInvalidCapture={event => {
+        let details = (event.target as HTMLElement).closest('details');
+        while (details) {
+          details.open = true;
+          details = details.parentElement?.closest('details') ?? null;
+        }
+      }}>
+        <Fields key={resetVersion} fields={fields} value={edited} original={props.value as Record<string, unknown>}
+          path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
+        {error && <div role="alert" className="form-error">
+          <p>{error instanceof MissingSecretsError ? ui.missingSecrets : ui.patchError}</p>
+          <pre>{error.message}</pre>
+        </div>}
+        {props.onDiscard ? (isDirty && (
+          <div className="config-form-actions">
+            <button
+              type="button"
+              className="discard-button"
+              disabled={!isDirty}
+              onClick={() => {
+                setEdited(editableValue(props.value) as Record<string, unknown>);
+                setError(null);
+                setResetVersion(version => version + 1);
+                props.onDiscard!();
+              }}
+            >
+              {ui.discard}
+            </button>
+            <button type="submit" className="save-button" disabled={!isDirty}>
+              {ui.save}
+            </button>
+          </div>
+        )) : (
+          props.footer ?? <button type="submit" className="save-button">{ui.save}</button>
+        )}
+      </form>
+    </FormContext.Provider>
+  );
 }
 
 function ListControl(props: FieldProps & { id: string }) {
+  const formContext = useContext(FormContext);
+  if (props.field.optionsFrom && formContext?.options) {
+    return <OptionsFromControl
+      field={props.field}
+      value={props.value}
+      onChange={props.onChange}
+      attributes={{ id: props.id }}
+      optionsAPI={formContext.options}
+    />;
+  }
+  return <StaticListControl {...props} />;
+}
+
+function StaticListControl(props: FieldProps & { id: string }) {
   const ui = useUI();
   const values = (props.value ?? []) as unknown[];
   const serial = useRef(0);

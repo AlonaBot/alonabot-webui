@@ -1,6 +1,6 @@
 import { useState, type JSX } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { ShieldCheck, Bot, Box, LayoutDashboard, Puzzle, ScrollText, SlidersHorizontal } from 'lucide-react';
+import { ShieldCheck, Bot, Box, LayoutDashboard, MessageSquare, Puzzle, ScrollText, Settings, Shield, SlidersHorizontal } from 'lucide-react';
 import { ConfigForm } from './components/ConfigForm';
 import { useUI } from './i18n/UI';
 import { type CoreInfo } from './api/admin';
@@ -8,6 +8,9 @@ import { OverviewPage } from './pages/OverviewPage';
 import { PluginsPage } from './pages/PluginsPage';
 import { UsersPage } from './pages/UsersPage';
 import { AccountsPage } from './pages/AccountsPage';
+import { PermissionsPage } from './pages/PermissionsPage';
+import { ConversationsPage } from './pages/ConversationsPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ModelsPage } from './pages/ModelsPage';
 import { LogsPage } from './pages/LogsPage';
 import chinese from '../i18n/zh-CN.json';
@@ -24,6 +27,7 @@ export type RouteEntry = {
   label: string; /* 文案键 */
   icon: LucideIcon;
   group: 'main' | 'bottom';
+  navigation?: boolean;
   render: () => JSX.Element;
 };
 
@@ -149,7 +153,32 @@ export const routes: RouteEntry[] = [
     group: 'main',
     render: () => <AccountsPage />,
   },
-  { id: 'users', path: '/permissions/users', label: 'users', icon: ShieldCheck, group: 'main', render: () => <UsersPage /> },
+  {
+    id: 'permissions',
+    path: '/permissions',
+    label: 'permissions',
+    icon: Shield,
+    group: 'main',
+    render: () => <PermissionsPage />,
+  },
+  {
+    id: 'conversations',
+    path: '/conversations',
+    label: 'conversations',
+    icon: MessageSquare,
+    group: 'main',
+    render: () => <ConversationsPage />,
+  },
+  {
+    id: 'settings',
+    path: '/settings',
+    label: 'settings',
+    icon: Settings,
+    group: 'bottom',
+    render: () => <SettingsPage />,
+  },
+  { id: 'tool-policies', path: '/permissions/tools', label: 'tabTools', icon: Shield, group: 'main', navigation: false, render: () => <PermissionsPage tab="tools" /> },
+  { id: 'users', path: '/permissions/users', label: 'users', icon: ShieldCheck, group: 'main', navigation: false, render: () => <UsersPage /> },
   {
     id: 'models',
     path: '/models',

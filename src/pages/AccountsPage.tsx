@@ -4,7 +4,7 @@ import { Bot, Check, Eye, Plus, RefreshCw, Send, Trash2, X } from 'lucide-react'
 import {
   assignInstanceProfile, changeInstance, createInstance, getInstanceConfig, getInstanceSchema,
   getProfileAssignments, isConfirmationError, listChats, listInstances, listPackages, listProfiles,
-  type AdapterInstance, type Chat, type Package, type Profile, type ProfileAssignments,
+  pruneInstanceConfig, type AdapterInstance, type Chat, type Correction, type Package, type Profile, type ProfileAssignments,
 } from '../api/admin';
 import { ConfigForm } from '../components/ConfigForm';
 import { useUI } from '../i18n/UI';
@@ -45,6 +45,12 @@ export function AccountsPage(): JSX.Element {
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [inspectingConfig, setInspectingConfig] = useState<Record<string, unknown> | null>(null);
   const [inspectingInstanceID, setInspectingInstanceID] = useState('');
+  const [inspectingAdapterID, setInspectingAdapterID] = useState('');
+  const [inspectingCorrections, setInspectingCorrections] = useState<Correction[]>([]);
+  const [inspectingUnknown, setInspectingUnknown] = useState<string[]>([]);
+  const [confirmPrune, setConfirmPrune] = useState(false);
+  const [pruning, setPruning] = useState(false);
+  const [pruneError, setPruneError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{ affected: string[]; creation: Creation } | null>(null);
   const [chatInstance, setChatInstance] = useState<AdapterInstance | null>(null);
   const [chatQuery, setChatQuery] = useState('');
@@ -136,8 +142,27 @@ export function AccountsPage(): JSX.Element {
       const result = await getInstanceConfig(instance.adapter_id, instance.instance_id);
       setInspectingConfig(result.config);
       setInspectingInstanceID(instance.instance_id);
+      setInspectingAdapterID(instance.adapter_id);
+      setInspectingCorrections(result.corrections);
+      setInspectingUnknown(result.unknown);
       setConfigModalOpen(true);
     } catch (error) { setErrorBanner(error instanceof Error ? error.message : String(error)); }
+  };
+
+  const handlePruneInstanceConfig = async () => {
+    if (!inspectingAdapterID || !inspectingInstanceID) return;
+    setPruning(true); setPruneError(null);
+    try {
+      await pruneInstanceConfig(inspectingAdapterID, inspectingInstanceID);
+      const refreshed = await getInstanceConfig(inspectingAdapterID, inspectingInstanceID);
+      setInspectingConfig(refreshed.config);
+      setInspectingCorrections(refreshed.corrections);
+      setInspectingUnknown(refreshed.unknown);
+    } catch (error) {
+      setPruneError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setPruning(false);
+    }
   };
 
   const adapterName = (adapterID: string) => adapterID === 'telegram' ? ui.adapterTelegram : adapterID === 'onebot11' ? ui.adapterOneBot : adapterID;
@@ -224,6 +249,7 @@ export function AccountsPage(): JSX.Element {
             <label className="dialog-form-field">{ui.instanceName}<input value={instanceName} placeholder={ui.instanceNamePlaceholder} disabled={busy} onChange={event => setInstanceName(event.target.value)} /></label>
             <div className="dialog-schema-form-box">
               {loadingSchema ? <p role="status">{ui.loadingSchema}</p> : instanceSchema ? <fieldset disabled={busy}>
+                {/* 实例选项端点要求实例已存在，创建前沿用表单的普通文本输入。 */}
                 <ConfigForm schema={instanceSchema} value={emptyConfig} messages={instanceMessages} onSubmit={patch => { if (selectedAdapter && instanceName.trim()) void submitCreate({ input: { package_id: selectedAdapter.ID, instance_id: instanceName.trim(), config: patch }, profile: selectedProfile }); }}
                   footer={<>
                     <label className="dialog-form-field">{ui.configProfile}<select value={selectedProfile} disabled={profiles.length === 0} onChange={event => setSelectedProfile(event.target.value)}>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profileName(profile.id)}</option>)}</select></label>
@@ -245,9 +271,58 @@ export function AccountsPage(): JSX.Element {
         </Dialog.Content></Dialog.Portal>
       </Dialog.Root>
 
-      <Dialog.Root open={configModalOpen} onOpenChange={open => { setConfigModalOpen(open); if (!open) setInspectingConfig(null); }}>
+      <Dialog.Root open={confirmPrune} onOpenChange={setConfirmPrune}>
+        <Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content">
+          <Dialog.Title>{ui.pruneConfig}</Dialog.Title><Dialog.Description>{ui.pruneConfigConfirm}</Dialog.Description>
+          <ul>{inspectingUnknown.map(path => <li key={path}><code>{path}</code></li>)}</ul>
+          <div className="dialog-actions"><button type="button" onClick={() => setConfirmPrune(false)}>{ui.cancel}</button><button type="button" onClick={() => { setConfirmPrune(false); void handlePruneInstanceConfig(); }}>{ui.confirm}</button></div>
+        </Dialog.Content></Dialog.Portal>
+      </Dialog.Root>
+
+      <Dialog.Root open={configModalOpen} onOpenChange={open => {
+        setConfigModalOpen(open);
+        if (!open) {
+          setInspectingConfig(null);
+          setInspectingCorrections([]);
+          setInspectingUnknown([]);
+        }
+      }}>
         <Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content accounts-dialog-content" aria-describedby={undefined}>
           <div className="dialog-header"><Dialog.Title className="dialog-title">{ui.configTitle}: {inspectingInstanceID}</Dialog.Title><Dialog.Close asChild><button type="button" className="dialog-close-button" aria-label={ui.close}><X size={16} /></button></Dialog.Close></div>
+
+          {pruneError && <p role="alert">{pruneError}</p>}
+          {inspectingCorrections.length > 0 && (
+            <div className="config-diagnostics-alert is-warning">
+              <p><strong>{ui.corrections}</strong> ({inspectingCorrections.length})</p>
+              <ul className="diagnostics-list font-mono">
+                {inspectingCorrections.map((c, i) => (
+                  <li key={i}>{c.path}: {ui[c.reason]}{c.original !== undefined ? ` (${JSON.stringify(c.original)})` : ''}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {inspectingUnknown.length > 0 && (
+            <div className="config-diagnostics-alert is-danger">
+              <div className="config-diagnostics-heading">
+                <p><strong>{ui.unknownKeys}</strong> ({inspectingUnknown.length})</p>
+                <button
+                  type="button"
+                  className="dialog-button is-primary"
+                  disabled={pruning}
+                  onClick={() => setConfirmPrune(true)}
+                >
+                  {pruning ? ui.loading : ui.pruneConfig}
+                </button>
+              </div>
+              <ul className="diagnostics-list font-mono">
+                {inspectingUnknown.map((k, i) => (
+                  <li key={i}>{k}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <pre className="inspect-config-pre font-mono">{JSON.stringify(inspectingConfig, (_key, value: unknown) => isSecretSet(value) ? ui.secretSet : value, 2)}</pre>
         </Dialog.Content></Dialog.Portal>
       </Dialog.Root>

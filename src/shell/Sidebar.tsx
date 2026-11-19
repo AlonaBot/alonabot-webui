@@ -166,7 +166,7 @@ export function Sidebar(props: SidebarProps): JSX.Element {
   const labels: Record<string, string> = ui;
   const currentPath = usePath();
 
-  const mainRoutes = routes.filter(r => r.group === 'main');
+  const mainRoutes = routes.filter(r => r.group === 'main' && r.navigation !== false);
   const bottomRoutes = routes.filter(r => r.group === 'bottom');
   const availableMainIds = mainRoutes.map(r => r.id);
 
@@ -332,7 +332,8 @@ export function Sidebar(props: SidebarProps): JSX.Element {
                       collapsed={state.collapsed}
                       isActive={
                         currentPath === entry.path ||
-                        (entry.path === '/components' && currentPath.startsWith('/components/'))
+                        (entry.path === '/components' && currentPath.startsWith('/components/')) ||
+                        (entry.path === '/permissions' && currentPath.startsWith('/permissions/'))
                       }
                       disabled={isDisabled}
                       onContextMenu={handleContextMenu}

@@ -45,7 +45,11 @@ export function filterSearch(items: SearchItem[], query: string): SearchItem[] {
   return results;
 }
 
-/** 提供页面动态注册搜索项能力的 Context。 */
-export const SearchContext = createContext<{ register(items: SearchItem[]): () => void }>({
+/** 提供页面动态注册搜索项与主动打开能力的 Context。 */
+export const SearchContext = createContext<{
+  register(items: SearchItem[]): () => void;
+  open(): void;
+}>({
   register: () => () => {},
+  open: () => {},
 });

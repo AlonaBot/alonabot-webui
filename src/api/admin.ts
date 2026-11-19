@@ -45,7 +45,7 @@ export type Package = {
   Active: string;
   State: string;
   Warnings?: string[];
-  pages?: unknown[];
+  pages?: { path: string; title: string }[];
 };
 
 export type Generation = {
@@ -55,6 +55,63 @@ export type Generation = {
   active: boolean;
   has_db: boolean;
 };
+
+export type ConfigOption = { value: string; label: string; description?: string };
+export type OptionsPage = { options: ConfigOption[]; more: boolean };
+
+export type Correction = { path: string; reason: 'converted' | 'reset' | 'removed'; original?: unknown };
+export type ConfigDiagnostics = { corrections: Correction[]; unknown: string[] };
+export type PendingConfig = { base_generation: string; config: Record<string, unknown> };
+export type ConfigSnapshot = ConfigDiagnostics & {
+  active_generation: string;
+  active: Record<string, unknown>;
+  pending: PendingConfig | null;
+  schema: unknown;
+  i18n: Record<string, Record<string, unknown>>;
+  messages: Record<string, Record<string, unknown>>;
+};
+
+export type CommandScope = { kind: 'plugin' } | { kind: 'group'; group: string[] } | { kind: 'route'; route_id: string };
+export type CommandOverride = { scope: CommandScope; permissions: string[] | null; enabled: boolean | null };
+export type InvalidCommandName = { route_id: string; name: string[] | null; reason: 'declared' | 'unregistered' };
+export type CommandPolicy = {
+  route_id: string;
+  descriptions?: Record<string, string>;
+  enabled: boolean;
+  permissions: string[] | null;
+  declared_names: string[][];
+  effective_names: string[][];
+  has_names_override: boolean;
+  invalid_names: InvalidCommandName[];
+};
+export type CommandReference = { plugin_id: string; route_id: string };
+export type PluginPolicies = {
+  default_locale?: string;
+  overrides: CommandOverride[];
+  commands: CommandPolicy[];
+  shadows: { path: string[]; winner: CommandReference; shadowed: CommandReference[] }[];
+  invalid_names: InvalidCommandName[];
+};
+
+export type ToolPolicyValue = 'allow' | 'confirm' | 'deny' | 'inherit';
+export type ToolPolicy = {
+  plugin_id: string;
+  service: string;
+  default: ToolPolicyValue;
+  override: ToolPolicyValue;
+  effect: 'read_only' | 'write' | 'destructive' | 'unspecified';
+};
+export type ToolPolicyUpdate = { plugin_id: string; service: string; policy: ToolPolicyValue };
+
+export type AllowedInstances = { all: boolean; instances: string[] };
+export type PluginJob = {
+  job_id: string;
+  trigger: string;
+  paused: boolean;
+  last_run_at?: string;
+  next_run_at?: string;
+};
+export type GlobalLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'critical';
 
 export type SourceLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'critical' | 'off' | 'inherit';
 
@@ -234,9 +291,26 @@ export async function getCore(): Promise<CoreInfo> {
   return request<CoreInfo>('/api/v1/core');
 }
 
+let currentClientLocale = 'zh-CN';
+
+export function setClientLocale(locale: string): void {
+  currentClientLocale = locale;
+}
+
+export function getClientLocale(): string {
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem('alonabot.webui.locale');
+    if (saved) return saved;
+  }
+  return currentClientLocale;
+}
+
 /** 获取全部组件包列表。 */
 export async function listPackages(): Promise<Package[]> {
-  return request<Package[]>('/api/v1/packages');
+  const lang = getClientLocale();
+  return request<Package[]>('/api/v1/packages', {
+    headers: { 'Accept-Language': lang },
+  });
 }
 
 /** 返回组件图标的绝对路径 URL。 */
@@ -365,8 +439,8 @@ export async function getInstanceSchema(adapterID: string): Promise<unknown> {
 export async function getInstanceConfig(
   adapterID: string,
   instanceID: string,
-): Promise<{ config: Record<string, unknown> }> {
-  return request<{ config: Record<string, unknown> }>(
+): Promise<ConfigDiagnostics & { config: Record<string, unknown> }> {
+  return request<ConfigDiagnostics & { config: Record<string, unknown> }>(
     `/api/v1/adapters/${encodeURIComponent(adapterID)}/instances/${encodeURIComponent(instanceID)}`,
   );
 }
@@ -470,53 +544,9 @@ export function renamePluginFile(id: string, from: string, to: string): Promise<
 export function deletePluginFile(id: string, path: string, recursive: boolean): Promise<void> { return request(`${pluginPath(id)}/data/files/delete`, jsonBody({ path, recursive })); }
 export function exportPluginData(id: string): Promise<Blob> { return request(`${pluginPath(id)}/data/export`, { response: 'blob' }); }
 export function clearPluginData(id: string, confirm: true): Promise<void> { return request(`${pluginPath(id)}/data/clear`, jsonBody({ confirm })); }
-export function getCoreAdmins(): Promise<string[]> { return request('/api/v1/admins'); }
-export function changeCoreAdmin(action: 'add' | 'remove', user: string): Promise<void> { return request(`/api/v1/admins/${action}`, jsonBody({ user })); }
-export function getCoreDenies(): Promise<{ users: string[]; chats: string[] }> { return request('/api/v1/core/denies'); }
-export function setCoreDenies(value: { users: string[]; chats: string[] }): Promise<void> { return request('/api/v1/core/denies', jsonBody(value, 'PUT')); }
-export function listPluginConversations(id: string): Promise<{ key: string; entries: number; updated_at: string }[]> { return request(`${pluginPath(id)}/conversations`); }
-export function clearPluginConversation(id: string, key: string): Promise<void> { return request(`${pluginPath(id)}/conversations/${encodeURIComponent(key)}`, { method: 'DELETE' }); }
 export type Changelog = { locale: string; entries: { version: string; date?: string; markdown: string }[] };
 export function getPackageChangelog(id: string, locale: string): Promise<Changelog> { return request(`/api/v1/packages/${encodeURIComponent(id)}/changelog`, { headers: { 'Accept-Language': locale } }); }
 export function getCoreChangelog(locale: string): Promise<Changelog> { return request('/api/v1/core/changelog', { headers: { 'Accept-Language': locale } }); }
-
-// ----------------------------------------------------------------------------
-// 插件配置与代次 API
-// ----------------------------------------------------------------------------
-
-export type PendingConfig = {
-  base_generation: string;
-  config: Record<string, unknown>;
-};
-
-export type ConfigSnapshot = {
-  active_generation: string;
-  active: Record<string, unknown>;
-  pending: PendingConfig | null;
-  schema: unknown;
-  i18n: Record<string, Record<string, unknown>>;
-};
-
-/** 读取指定插件的配置快照（包含 active、pending、schema、i18n）。 */
-export async function getPluginConfig(id: string): Promise<ConfigSnapshot> {
-  return request<ConfigSnapshot>(`/api/v1/plugins/${encodeURIComponent(id)}/config`);
-}
-
-/** 提交插件配置 Merge Patch，返回更新后的脱敏 Pending 配置。 */
-export async function patchPluginConfig(
-  id: string,
-  baseGeneration: string,
-  patch: Record<string, unknown>,
-): Promise<PendingConfig> {
-  return request<PendingConfig>(`/api/v1/plugins/${encodeURIComponent(id)}/config/pending`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      base_generation: baseGeneration,
-      patch,
-    }),
-  });
-}
 
 // ----------------------------------------------------------------------------
 // Agent 模型管理路由 API
@@ -797,4 +827,378 @@ export async function assignInstanceProfile(instanceID: string, profile: string)
   await request('/api/v1/profiles/assignments/instances/' + encodeURIComponent(instanceID), {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile }),
   });
+}
+
+// ----------------------------------------------------------------------------
+// 插件配置与诊断 API
+// ----------------------------------------------------------------------------
+
+export async function getPluginConfig(id: string): Promise<ConfigSnapshot> {
+  return request<ConfigSnapshot>(`/api/v1/plugins/${encodeURIComponent(id)}/config`);
+}
+
+export async function patchPluginConfig(
+  id: string,
+  baseGeneration: string,
+  patch: Record<string, unknown>,
+): Promise<PendingConfig> {
+  return request<PendingConfig>(`/api/v1/plugins/${encodeURIComponent(id)}/config/pending`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base_generation: baseGeneration, patch }),
+  });
+}
+
+export async function discardPluginConfig(id: string): Promise<void> {
+  await request<void>(`/api/v1/plugins/${encodeURIComponent(id)}/config/pending`, {
+    method: 'DELETE',
+  });
+}
+
+export async function prunePluginConfig(id: string): Promise<PendingConfig> {
+  return request<PendingConfig>(`/api/v1/plugins/${encodeURIComponent(id)}/config/prune`, {
+    method: 'POST',
+  });
+}
+
+export async function getCoreConfigDiagnostics(): Promise<ConfigDiagnostics> {
+  return request<ConfigDiagnostics>('/api/v1/core/settings/corrections');
+}
+
+export async function pruneCoreConfig(): Promise<void> {
+  await request<void>('/api/v1/core/settings/prune', {
+    method: 'POST',
+  });
+}
+
+export async function pruneInstanceConfig(adapterID: string, instanceID: string): Promise<void> {
+  await request<void>(
+    `/api/v1/adapters/${encodeURIComponent(adapterID)}/instances/${encodeURIComponent(instanceID)}/prune`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+/** 将实际值路径逐段将 ~ 转成 ~0、. 转成 ~1 后用点连接。数组下标占一段（§12.2）。 */
+export function encodeSecretPath(segments: (string | number)[]): string {
+  return segments.map(s => String(s).replace(/~/g, '~0').replace(/\./g, '~1')).join('.');
+}
+
+export async function revealPluginSecret(id: string, path: string, token: string): Promise<{ value: string }> {
+  return request<{ value: string }>(`/api/v1/secrets/${encodeURIComponent(id)}/${encodeURIComponent(path)}/reveal`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+  });
+}
+
+// ----------------------------------------------------------------------------
+// 选项查询与示例 API
+// ----------------------------------------------------------------------------
+
+export async function listConfigOptions(
+  id: string,
+  path: string,
+  q: string,
+  locale: string,
+): Promise<OptionsPage> {
+  const query = new URLSearchParams({ path, q });
+  return request<OptionsPage>(`/api/v1/plugins/${encodeURIComponent(id)}/config/options?${query.toString()}`, {
+    headers: { 'Accept-Language': locale },
+  });
+}
+
+export async function resolveConfigOptions(
+  id: string,
+  path: string,
+  values: string[],
+  locale: string,
+): Promise<OptionsPage> {
+  return request<OptionsPage>(`/api/v1/plugins/${encodeURIComponent(id)}/config/options/resolve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept-Language': locale,
+    },
+    body: JSON.stringify({ path, values }),
+  });
+}
+
+export async function listInstanceOptions(
+  adapterID: string,
+  instanceID: string,
+  path: string,
+  q: string,
+  locale: string,
+): Promise<OptionsPage> {
+  const query = new URLSearchParams({ path, q });
+  return request<OptionsPage>(
+    `/api/v1/adapters/${encodeURIComponent(adapterID)}/instances/${encodeURIComponent(instanceID)}/options?${query.toString()}`,
+    {
+      headers: { 'Accept-Language': locale },
+    },
+  );
+}
+
+export async function resolveInstanceOptions(
+  adapterID: string,
+  instanceID: string,
+  path: string,
+  values: string[],
+  locale: string,
+): Promise<OptionsPage> {
+  return request<OptionsPage>(
+    `/api/v1/adapters/${encodeURIComponent(adapterID)}/instances/${encodeURIComponent(instanceID)}/options/resolve`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Language': locale,
+      },
+      body: JSON.stringify({ path, values }),
+    },
+  );
+}
+
+function buildFilterParams(params: URLSearchParams, filter: Record<string, string>): void {
+  for (const [k, v] of Object.entries(filter)) {
+    params.set(`filter[${k}]`, v);
+  }
+}
+
+export async function listCoreOptions(
+  source: 'core.chats' | 'core.adapter_instances',
+  q: string,
+  filter: Record<string, string>,
+  locale: string,
+): Promise<OptionsPage> {
+  const params = new URLSearchParams({ q });
+  buildFilterParams(params, filter);
+  return request<OptionsPage>(`/api/v1/core/options/${encodeURIComponent(source)}?${params.toString()}`, {
+    headers: { 'Accept-Language': locale },
+  });
+}
+
+export async function resolveCoreOptions(
+  source: 'core.chats' | 'core.adapter_instances',
+  values: string[],
+  filter: Record<string, string>,
+  locale: string,
+): Promise<OptionsPage> {
+  const params = new URLSearchParams();
+  buildFilterParams(params, filter);
+  const qs = params.toString();
+  const url = `/api/v1/core/options/${encodeURIComponent(source)}/resolve${qs ? `?${qs}` : ''}`;
+  return request<OptionsPage>(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept-Language': locale,
+    },
+    body: JSON.stringify({ values }),
+  });
+}
+
+export function pluginExampleURL(id: string, image: string): string {
+  const stripped = image.startsWith('examples/') ? image.slice('examples/'.length) : image;
+  const encodedSegments = stripped
+    .split('/')
+    .filter(Boolean)
+    .map(seg => encodeURIComponent(seg))
+    .join('/');
+  return `/api/v1/packages/${encodeURIComponent(id)}/examples/${encodedSegments}`;
+}
+
+// ----------------------------------------------------------------------------
+// 命令权限与名称 API
+// ----------------------------------------------------------------------------
+
+export async function getPluginPolicies(id: string): Promise<PluginPolicies> {
+  return request<PluginPolicies>(`/api/v1/plugins/${encodeURIComponent(id)}/policies`);
+}
+
+export async function setPluginPolicy(id: string, override: CommandOverride): Promise<void> {
+  await request<void>(`/api/v1/plugins/${encodeURIComponent(id)}/policies`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(override),
+  });
+}
+
+export async function setCommandNames(id: string, routeID: string, names: string[][]): Promise<void> {
+  await request<void>(
+    `/api/v1/plugins/${encodeURIComponent(id)}/commands/${encodeURIComponent(routeID)}/names`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ names }),
+    },
+  );
+}
+
+export async function resetCommandNames(id: string, routeID: string): Promise<void> {
+  await request<void>(
+    `/api/v1/plugins/${encodeURIComponent(id)}/commands/${encodeURIComponent(routeID)}/names`,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
+// ----------------------------------------------------------------------------
+// 工具、发信许可、会话与静态任务 API
+// ----------------------------------------------------------------------------
+
+export async function getToolPolicies(): Promise<{ policies: ToolPolicy[] }> {
+  return request<{ policies: ToolPolicy[] }>('/api/v1/tools/policies');
+}
+
+export async function setToolPolicy(item: ToolPolicyUpdate): Promise<void> {
+  await request<void>('/api/v1/tools/policies', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item),
+  });
+}
+
+export async function setToolPolicies(items: ToolPolicyUpdate[]): Promise<void> {
+  await request<void>('/api/v1/tools/policies', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+}
+
+export async function getAllowedInstances(id: string): Promise<AllowedInstances> {
+  return request<AllowedInstances>(`/api/v1/plugins/${encodeURIComponent(id)}/allowed-instances`);
+}
+
+export async function setAllowedInstances(id: string, value: AllowedInstances): Promise<void> {
+  await request<void>(`/api/v1/plugins/${encodeURIComponent(id)}/allowed-instances`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(value),
+  });
+}
+
+export async function listPluginConversations(
+  id: string,
+): Promise<{ key: string; entries: number; updated_at: string }[]> {
+  return request<{ key: string; entries: number; updated_at: string }[]>(
+    `/api/v1/plugins/${encodeURIComponent(id)}/conversations`,
+  );
+}
+
+export async function clearPluginConversation(id: string, key: string): Promise<void> {
+  await request<void>(
+    `/api/v1/plugins/${encodeURIComponent(id)}/conversations/${encodeURIComponent(key)}`,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
+export async function listPluginJobs(id: string): Promise<{ jobs: PluginJob[] }> {
+  return request<{ jobs: PluginJob[] }>(`/api/v1/plugins/${encodeURIComponent(id)}/jobs`);
+}
+
+export async function changePluginJob(
+  id: string,
+  jobID: string,
+  action: 'pause' | 'resume',
+): Promise<void> {
+  await request<void>(
+    `/api/v1/plugins/${encodeURIComponent(id)}/jobs/${encodeURIComponent(jobID)}/${action}`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Core 设置与管理认证 API
+// ----------------------------------------------------------------------------
+
+export async function getCoreAdmins(): Promise<string[]> {
+  return request<string[]>('/api/v1/admins');
+}
+
+export async function changeCoreAdmin(action: 'add' | 'remove', user: string): Promise<void> {
+  await request<void>(`/api/v1/admins/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user }),
+  });
+}
+
+export async function getCoreDenies(): Promise<{ users: string[]; chats: string[] }> {
+  return request<{ users: string[]; chats: string[] }>('/api/v1/core/denies');
+}
+
+export async function setCoreDenies(value: { users: string[]; chats: string[] }): Promise<void> {
+  await request<void>('/api/v1/core/denies', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(value),
+  });
+}
+
+export async function getDefaultLocale(): Promise<{ default_locale: string }> {
+  return request<{ default_locale: string }>('/api/v1/core/default-locale');
+}
+
+export async function setDefaultLocale(locale: string): Promise<void> {
+  await request<void>('/api/v1/core/default-locale', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ default_locale: locale }),
+  });
+}
+
+export async function getDefaultPlatform(): Promise<{
+  command_prefixes: string[];
+  reply: { mention_sender: boolean; quote: boolean; prefix: string; forward_threshold: number };
+}> {
+  return request<{
+    command_prefixes: string[];
+    reply: { mention_sender: boolean; quote: boolean; prefix: string; forward_threshold: number };
+  }>('/api/v1/profiles/default/platform');
+}
+
+export async function setGlobalLogLevel(level: GlobalLogLevel): Promise<LogLevels> {
+  return request<LogLevels>('/api/v1/logs/levels', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ global: level }),
+  });
+}
+
+export async function rotateAdminToken(token: string): Promise<{ token: string }> {
+  const result = await request<{ token: string }>('/api/auth/token/rotate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  setCSRFToken(null);
+  return result;
+}
+
+// ----------------------------------------------------------------------------
+// 插件页面代理 API
+// ----------------------------------------------------------------------------
+
+export async function requestPluginPage(
+  id: string,
+  input: { method: string; path: string; headers?: Record<string, string>; body_base64?: string },
+): Promise<{ status: number; headers: Record<string, string>; body_base64: string }> {
+  const headers = new Headers(input.headers);
+  if (input.method !== 'GET' && input.method !== 'HEAD' && currentCSRFToken) headers.set('X-Alonabot-CSRF', currentCSRFToken);
+  const body = input.body_base64 === undefined ? undefined : Uint8Array.from(atob(input.body_base64), char => char.charCodeAt(0));
+  const response = await fetch(`/plugins/${encodeURIComponent(id)}/${input.path}`, {
+    method: input.method, headers, body, credentials: 'same-origin', redirect: 'error',
+  });
+  if (response.status === 401) notifySessionExpired();
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return { status: response.status, headers: Object.fromEntries(response.headers), body_base64: btoa(binary) };
 }

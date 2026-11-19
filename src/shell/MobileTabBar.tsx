@@ -25,9 +25,9 @@ export function MobileTabBar(props: MobileTabBarProps): JSX.Element {
   const visibleTabs = ['overview', 'plugins', 'profiles', 'logs']
     .map(id => routes.find(route => route.id === id && route.group === 'main'))
     .filter((route): route is RouteEntry => route !== undefined);
-  const allMoreTabs = routes.filter(route => !visibleTabs.includes(route));
+  const allMoreTabs = routes.filter(route => route.navigation !== false && !visibleTabs.includes(route));
 
-  const isMoreActive = allMoreTabs.some(r => r.path === currentPath);
+  const isMoreActive = allMoreTabs.some(r => r.path === currentPath || (r.id === 'permissions' && currentPath.startsWith('/permissions/')));
 
   return (
     <nav className="mobile-tabbar" aria-label={ui.mobileNavigation}>
@@ -70,7 +70,7 @@ export function MobileTabBar(props: MobileTabBarProps): JSX.Element {
               >
                 {allMoreTabs.map(tab => {
                   const TabIcon = tab.icon;
-                  const isActive = currentPath === tab.path;
+                  const isActive = currentPath === tab.path || (tab.id === 'permissions' && currentPath.startsWith('/permissions/'));
                   const isDisabled = tab.id === 'models' && agentInstalled === false;
                   if (isDisabled) {
                     return (

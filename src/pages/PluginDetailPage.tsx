@@ -2,8 +2,10 @@ import { useContext, useEffect, useState, type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
+  Calendar,
   ChevronRight,
   Database,
+  FileText,
   History,
   MoreHorizontal,
   Package as PackageIcon,
@@ -11,11 +13,13 @@ import {
   RefreshCw,
   RotateCcw,
   RotateCw,
+  ShieldAlert,
   Sliders,
   Trash2,
   X,
 } from 'lucide-react';
 import {
+  AdminAPIError,
   changePackage,
   getLogLevels,
   isConfirmationError,
@@ -25,10 +29,21 @@ import {
   rollbackPackage,
   setPackageLogLevel,
   uninstallPackage,
+  getAllowedInstances,
+  setAllowedInstances,
+  listInstances,
+  getPluginConfig,
+  patchPluginConfig,
   type Generation,
   type LogLevels,
   type Package,
   type SourceLogLevel,
+  type AllowedInstances,
+  type AdapterInstance,
+  type ConfigSnapshot,
+  listCoreOptions,
+  resolveCoreOptions,
+  type ConfigOption,
 } from '../api/admin';
 import { ChangelogDialog } from '../components/ChangelogDialog';
 import { StoragePanel } from './StoragePanel';
@@ -37,6 +52,11 @@ import { DatabasePanel } from './DatabasePanel';
 import { useUI } from '../i18n/UI';
 import { Link, navigate } from '../shell/router';
 import { SearchContext } from '../shell/search';
+import { PluginConfigPanel } from './PluginConfigPanel';
+import { PluginJobsPanel } from './PluginJobsPanel';
+import { useUISettings } from '../shell/settings';
+import { rawConfigPatch } from './rawConfig';
+import { PluginPageFrame } from '../components/PluginPageFrame';
 
 /** PluginDetailPage 展示保留代次、回退确认及组件高级设置。 */
 export function PluginDetailPage(props: {
@@ -45,6 +65,7 @@ export function PluginDetailPage(props: {
 }): JSX.Element {
   const { id, generations } = props;
   const ui = useUI();
+  const { locale } = useUISettings();
   const { register } = useContext(SearchContext);
 
   const [showChangelog, setShowChangelog] = useState(false);
@@ -59,7 +80,27 @@ export function PluginDetailPage(props: {
     `${generation.id} ${generation.version}`.toLowerCase().includes(generationQuery.toLowerCase()),
   );
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'versions' | 'advanced' | 'data'>('versions');
+  const [activeTab, setActiveTab] = useState<'config' | `page:${string}` | 'jobs' | 'data' | 'versions' | 'advanced'>('config');
+
+  // 发信许可与实例
+  const [allowedInstances, setAllowedInstancesState] = useState<AllowedInstances | null>(null);
+  const [allAdapterInstances, setAllAdapterInstances] = useState<AdapterInstance[]>([]);
+  const [savingAllowed, setSavingAllowed] = useState(false);
+  const [allowedSaved, setAllowedSaved] = useState(false);
+
+  const [allowedQuery, setAllowedQuery] = useState('');
+  const [allowedOptions, setAllowedOptions] = useState<ConfigOption[]>([]);
+  const [allowedMore, setAllowedMore] = useState(false);
+
+  // 原始 JSON 配置
+  const [rawSnapshot, setRawSnapshot] = useState<ConfigSnapshot | null>(null);
+  const [configAvailable, setConfigAvailable] = useState(true);
+  const [configRevision, setConfigRevision] = useState(0);
+  const [rawConflict, setRawConflict] = useState<ConfigSnapshot | null>(null);
+  const [rawJsonText, setRawJsonText] = useState('{}');
+  const [savingRawJson, setSavingRawJson] = useState(false);
+  const [rawJsonSaved, setRawJsonSaved] = useState(false);
+  const [rawJsonError, setRawJsonError] = useState<string | null>(null);
   const [dataView, setDataView] = useState<'database' | 'storage' | 'conversations'>('database');
 
   // 日志级别状态
@@ -89,19 +130,84 @@ export function PluginDetailPage(props: {
         const found = packages.find(item => item.ID === id && !item.Uninstalled);
         setPkg(found ?? null);
         if (!found) setErrorBanner(ui.packageNotFound);
+
       }).catch(report),
       getLogLevels().then(setLogLevels).catch(report),
       generations === undefined ? listGenerations(id).then(setRetained).catch(error => {
         setRetained([]);
         setGenerationError(error instanceof Error ? error.message : String(error));
       }) : Promise.resolve(),
+      getAllowedInstances(id).then(setAllowedInstancesState).catch(report),
+      listInstances().then(setAllAdapterInstances).catch(report),
+      getPluginConfig(id).then(cfg => {
+        setConfigAvailable(true);
+        setRawSnapshot(cfg);
+        const raw = cfg.pending ? cfg.pending.config : cfg.active;
+        setRawJsonText(JSON.stringify(raw, null, 2));
+      }).catch(error => {
+        if (error instanceof AdminAPIError && error.status === 400 && error.message === 'webui has no config') { setConfigAvailable(false); setActiveTab(previous => previous === 'config' ? 'versions' : previous); }
+        else report(error);
+      }),
     ]);
+    setConfigRevision(value => value + 1);
     setLoading(false);
+  };
+
+  const handleSaveAllowedInstances = async (value: AllowedInstances) => {
+    setSavingAllowed(true);
+    setAllowedSaved(false);
+    try {
+      await setAllowedInstances(id, value);
+      setAllowedInstancesState(await getAllowedInstances(id));
+      setAllowedSaved(true);
+      setTimeout(() => setAllowedSaved(false), 3000);
+    } catch (err: unknown) {
+      setErrorBanner(err instanceof Error ? err.message : String(err));
+      try { setAllowedInstancesState(await getAllowedInstances(id)); } catch (error) { setErrorBanner(previous => `${previous}\n${error instanceof Error ? error.message : String(error)}`); setAllowedInstancesState(null); }
+    } finally {
+      setSavingAllowed(false);
+    }
+  };
+
+  const handleSaveRawJson = async () => {
+    setSavingRawJson(true);
+    setRawJsonError(null);
+    setRawJsonSaved(false);
+    try {
+      const parsed: unknown = JSON.parse(rawJsonText);
+      const snapshot = rawSnapshot!;
+      await patchPluginConfig(id, snapshot.active_generation, rawConfigPatch(snapshot.pending?.config ?? snapshot.active, parsed));
+      setRawJsonSaved(true);
+      await loadData();
+    } catch (error) {
+      setRawJsonError(error instanceof Error ? error.message : String(error));
+      if (error instanceof AdminAPIError && error.status === 409 && error.code === 'FAILED_PRECONDITION') {
+        try { setRawConflict(await getPluginConfig(id)); }
+        catch (refreshError) { setRawJsonError(previous => `${previous}\n${refreshError instanceof Error ? refreshError.message : String(refreshError)}`); }
+      }
+    } finally {
+      setSavingRawJson(false);
+    }
   };
 
   useEffect(() => {
     loadData();
   }, [id]);
+
+  useEffect(() => {
+    let active = true;
+    listPackages().then(values => { if (active) setPkg(values.find(value => value.ID === id && !value.Uninstalled) ?? null); })
+      .catch(error => { if (active) setErrorBanner(error instanceof Error ? error.message : String(error)); });
+    return () => { active = false; };
+  }, [id, locale]);
+  useEffect(() => {
+    if (activeTab !== 'advanced' || !allowedInstances) return;
+    let active = true;
+    Promise.all([listCoreOptions('core.adapter_instances', allowedQuery, {}, locale), resolveCoreOptions('core.adapter_instances', allowedInstances.instances, {}, locale)]).then(([page, resolved]) => {
+      if (active) { setAllowedOptions([...resolved.options, ...page.options.filter(option => !resolved.options.some(value => value.value === option.value))]); setAllowedMore(page.more); }
+    }).catch(error => { if (active) setErrorBanner(error instanceof Error ? error.message : String(error)); });
+    return () => { active = false; };
+  }, [activeTab, allowedQuery, locale, allowedInstances]);
 
   // 注册全局搜索项
   useEffect(() => {
@@ -383,8 +489,43 @@ export function PluginDetailPage(props: {
         </div>
       ) : null}
 
-      {/* 两个功能标签：版本记录 / 高级 */}
+      {/* 功能标签栏 */}
       <div className="detail-tabs">
+        {configAvailable && (
+          <button
+            type="button"
+            className={`detail-tab-button ${activeTab === 'config' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('config')}
+          >
+            <Sliders size={16} />
+            <span>{ui.tabConfig}</span>
+          </button>
+        )}
+
+        {!isWebUI &&
+          pkg?.pages?.map(p => (
+            <button
+              key={p.path}
+              type="button"
+              className={`detail-tab-button ${activeTab === `page:${p.path}` ? 'is-active' : ''}`}
+              onClick={() => setActiveTab(`page:${p.path}`)}
+            >
+              <FileText size={16} />
+              <span>{p.title}</span>
+            </button>
+          ))}
+
+        {!isWebUI && (
+          <button
+            type="button"
+            className={`detail-tab-button ${activeTab === 'jobs' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('jobs')}
+          >
+            <Calendar size={16} />
+            <span>{ui.tabJobs}</span>
+          </button>
+        )}
+
         <button type="button" className={`detail-tab-button ${activeTab === 'data' ? 'is-active' : ''}`} onClick={() => setActiveTab('data')}><Database size={16} />{ui.dataTab}</button>
         <button
           type="button"
@@ -394,18 +535,30 @@ export function PluginDetailPage(props: {
           <History size={16} />
           <span>{ui.tabVersionHistory}</span>
         </button>
+
         <button
           type="button"
           className={`detail-tab-button ${activeTab === 'advanced' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('advanced')}
         >
-          <Sliders size={16} />
+          <ShieldAlert size={16} />
           <span>{ui.tabAdvanced}</span>
         </button>
       </div>
 
       <div className="detail-tab-content">
-        {activeTab === 'data' ? (
+        {configAvailable && activeTab === 'config' && <PluginConfigPanel key={configRevision} id={id} />}
+
+        {!isWebUI &&
+          pkg?.pages?.map(p =>
+            activeTab === `page:${p.path}` ? (
+              <PluginPageFrame key={p.path} id={id} path={p.path} title={p.title} />
+            ) : null,
+          )}
+
+        {!isWebUI && activeTab === 'jobs' && <PluginJobsPanel id={id} />}
+
+        {activeTab === 'data' && (
           <>
             <div className="time-range-pills data-view-tabs">
               <button className={`time-range-pill ${dataView === 'database' ? 'is-active' : ''}`} onClick={() => setDataView('database')}>{ui.database}</button>
@@ -414,7 +567,9 @@ export function PluginDetailPage(props: {
             </div>
             {dataView === 'database' ? <>{generationError && <pre role="alert" className="form-error">{generationError}</pre>}<DatabasePanel id={id} generations={generations ?? retained} /></> : dataView === 'storage' ? <StoragePanel id={id} /> : <ConversationsPanel id={id} />}
           </>
-        ) : activeTab === 'versions' ? (
+        )}
+
+        {activeTab === 'versions' && (
           <div className="versions-tab-pane">
             <button onClick={() => setShowChangelog(true)}>{ui.viewChangelog}</button>
             <div className="current-version-card">
@@ -489,7 +644,9 @@ export function PluginDetailPage(props: {
               </div>
             )}
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'advanced' && (
           <div className="advanced-tab-pane">
             {/* 日志级别设置 */}
             <div className="advanced-card">
@@ -510,16 +667,131 @@ export function PluginDetailPage(props: {
                     <option value="inherit">
                       {ui.logLevelInherit.replace('{level}', logLevels?.global ?? ui.loading)}
                     </option>
-                    <option value="debug">debug</option>
-                    <option value="info">info</option>
-                    <option value="warn">warn</option>
-                    <option value="error">error</option>
-                    <option value="critical">critical</option>
-                    <option value="off">off</option>
+                    <option value="debug">{ui.logDebug}</option>
+                    <option value="info">{ui.logInfo}</option>
+                    <option value="warn">{ui.logWarn}</option>
+                    <option value="error">{ui.logError}</option>
+                    <option value="critical">{ui.logCritical}</option>
+                    <option value="off">{ui.logOff}</option>
                   </select>
                 </div>
               </div>
             </div>
+
+            {/* 发信许可 / Allowed Instances */}
+            {!isWebUI && allowedInstances && (
+              <div className="advanced-card">
+                <div className="advanced-card-header">
+                  <h3 className="advanced-card-title">{ui.allowedInstances}</h3>
+                  {allowedSaved && <span className="log-saved-pill">{ui.saved}</span>}
+                </div>
+                <div className="advanced-card-body">
+                  <p className="field-hint">{ui.allowedInstancesDesc}</p>
+                  <div className="allowed-mode-controls">
+                    <label >
+                      <input
+                        type="radio"
+                        name="allowedMode"
+                        disabled={savingAllowed}
+                        checked={allowedInstances?.all ?? true}
+                        onChange={() => {
+                          const updated: AllowedInstances = { all: true, instances: [] };
+                          setAllowedInstancesState(updated);
+                          void handleSaveAllowedInstances(updated);
+                        }}
+                      />
+                      <span>{ui.allInstancesAllowed}</span>
+                    </label>
+                    <label >
+                      <input
+                        type="radio"
+                        name="allowedMode"
+                        disabled={savingAllowed}
+                        checked={!(allowedInstances?.all ?? true)}
+                        onChange={() => {
+                          const updated: AllowedInstances = { all: false, instances: allowedInstances?.instances ?? [] };
+                          setAllowedInstancesState(updated);
+                          void handleSaveAllowedInstances(updated);
+                        }}
+                      />
+                      <span>{ui.selectAllowedInstances}</span>
+                    </label>
+                  </div>
+
+                  {allowedInstances && !allowedInstances.all && (
+                    <div><input aria-label={ui.searchInstances} placeholder={ui.searchInstances} value={allowedQuery} onChange={event => setAllowedQuery(event.target.value)} />
+                    {allowedMore && <p>{ui.searchMoreOptions}</p>}
+                    <div className="allowed-instances-list">
+                      {allAdapterInstances.length === 0 && allowedInstances.instances.length === 0 && allowedOptions.length === 0 ? (
+                        <p className="text-muted">{ui.noInstances}</p>
+                      ) : (
+                        [...new Set([...allAdapterInstances.map(instance => instance.instance_id), ...allowedInstances.instances, ...allowedOptions.map(option => option.value)])].filter(value => value.toLowerCase().includes(allowedQuery.toLowerCase()) || allowedOptions.some(option => option.value === value && option.label.toLowerCase().includes(allowedQuery.toLowerCase()))).map(instanceID => {
+                          const inst = allAdapterInstances.find(instance => instance.instance_id === instanceID);
+                          const option = allowedOptions.find(option => option.value === instanceID);
+                          const checked = allowedInstances.instances.includes(instanceID);
+                          return (
+                            <label key={instanceID} >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={savingAllowed}
+                                onChange={e => {
+                                  const prev = allowedInstances.instances;
+                                  const next = e.target.checked
+                                    ? [...prev, instanceID]
+                                    : prev.filter(x => x !== instanceID);
+                                  const updated: AllowedInstances = { all: false, instances: next };
+                                  setAllowedInstancesState(updated);
+                                  void handleSaveAllowedInstances(updated);
+                                }}
+                              />
+                              <span className="font-mono">{option?.label ?? instanceID}{!inst && !option && ` (${ui.optionNotFound})`}</span>
+                              {inst && <span className="text-muted">({inst.adapter_id})</span>}
+                            </label>
+                          );
+                        })
+                      )}
+                    </div></div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 完整 JSON 配置编辑 */}
+            {configAvailable && (
+              <div className="advanced-card">
+                <div className="advanced-card-header">
+                  <h3 className="advanced-card-title">{ui.rawJsonEdit}</h3>
+                  {rawJsonSaved && <span className="log-saved-pill">{ui.saved}</span>}
+                </div>
+                <div className="advanced-card-body">
+                  <p className="field-hint">{ui.rawConfigDesc}</p>
+                  {rawJsonError && (
+                    <div className="plugins-error-banner" role="alert">
+                      <span>{rawJsonError}</span>
+                    </div>
+                  )}
+                  {rawConflict && <div className="config-pending-banner"><span>{ui.configConflict}</span><button type="button" onClick={() => { setRawSnapshot(rawConflict); setRawJsonText(JSON.stringify(rawConflict.pending?.config ?? rawConflict.active, null, 2)); setRawConflict(null); }}>{ui.useLatestConfig}</button></div>}
+                  <textarea
+                    className="code-editor"
+                    value={rawJsonText}
+                    onChange={e => setRawJsonText(e.target.value)}
+                    rows={12}
+
+                  />
+                  <div className="config-json-actions">
+                    <button
+                      type="button"
+                      className="save-button"
+                      disabled={savingRawJson || !rawSnapshot || rawConflict !== null}
+                      onClick={handleSaveRawJson}
+                    >
+                      {savingRawJson ? ui.loading : ui.save}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 卸载危险区 */}
             <div className="advanced-card is-danger-card">
