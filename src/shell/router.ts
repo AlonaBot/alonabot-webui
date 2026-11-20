@@ -44,6 +44,7 @@ export function navigate(path: string, options?: { replace?: boolean }): void {
 interface LinkProps {
   to: string;
   className?: string;
+  'aria-label'?: string;
   children: React.ReactNode;
 }
 
@@ -72,6 +73,7 @@ export function Link(props: LinkProps): JSX.Element {
     {
       href: props.to,
       className: props.className,
+      'aria-label': props['aria-label'],
       onClick: handleClick,
     },
     props.children,

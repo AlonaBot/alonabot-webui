@@ -31,6 +31,7 @@ export function ModelsPage(): JSX.Element {
   const [tests, setTests] = useState<Record<string, TestState>>({});
   const [type, setType] = useState('all');
   const [providerDialog, setProviderDialog] = useState<{ provider?: ConfiguredProvider } | null>(null);
+  const [editingProviders, setEditingProviders] = useState(false);
   const [editing, setEditing] = useState<ConfiguredModel | null>(null);
   const [deleting, setDeleting] = useState<ConfiguredModel | null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,7 +50,7 @@ export function ModelsPage(): JSX.Element {
       setAgent(installed);
       if (snapshotAgent.current !== (installed?.ID ?? null)) {
         snapshotAgent.current = installed?.ID ?? null;
-        setSnapshot(null); setProviderDialog(null); setEditing(null); setDeleting(null);
+        setSnapshot(null); setEditingProviders(false); setProviderDialog(null); setEditing(null); setDeleting(null);
       }
       if (!installed) { setSnapshot(null); setTests({}); return; }
       const next = await getPluginConfig(installed.ID);
@@ -76,7 +77,7 @@ export function ModelsPage(): JSX.Element {
 
   useEffect(() => {
     void load();
-    const unsubscribe = onPackagesChanged(() => { setProviderDialog(null); setEditing(null); setDeleting(null); void load(); });
+    const unsubscribe = onPackagesChanged(() => { setEditingProviders(false); setProviderDialog(null); setEditing(null); setDeleting(null); void load(); });
     return () => { unsubscribe(); ++requestRevision.current; ++testRevision.current; };
   }, [load]);
 
@@ -114,7 +115,7 @@ export function ModelsPage(): JSX.Element {
       if (Object.keys(patch).length === 0) return;
       const next = await saveModelConfig(agent.ID, snapshot, patch, saved => {
         // PATCH 已持久化即卸载含明文的表单；候选失败仍能显示 Pending。
-        setProviderDialog(null); setEditing(null); setDeleting(null);
+        setEditingProviders(false); setProviderDialog(null); setEditing(null); setDeleting(null);
         setSnapshot(previous => previous && (previous.active_generation.startsWith('dev:')
           ? { ...previous, active: saved.config, pending: null }
           : { ...previous, pending: saved }));
@@ -123,7 +124,7 @@ export function ModelsPage(): JSX.Element {
       setMessage(ui.modelsConfigSaved);
     } catch (caught) {
       const reason = caught instanceof Error ? caught.message : String(caught);
-      if (isGenerationConflict(caught)) { setProviderDialog(null); setEditing(null); setDeleting(null); }
+      if (isGenerationConflict(caught)) { setEditingProviders(false); setProviderDialog(null); setEditing(null); setDeleting(null); }
       setError(isGenerationConflict(caught) ? `${ui.staleGenerationConflict}\n${reason}` : reason);
     } finally { await load(); setBusy(false); }
   };
@@ -168,6 +169,7 @@ export function ModelsPage(): JSX.Element {
       <div className="models-tabs" role="group" aria-label={ui.modelType}>
         {(['all', ...MODEL_TYPES] as const).map(key => <button key={key} type="button" aria-pressed={type === key} className={`models-tab ${type === key ? 'is-active' : ''}`} onClick={() => setType(key)}>{labels[key]}<span className="models-tab-count font-mono">{key === 'all' ? models.length : models.filter(model => model.type === key).length}</span></button>)}
       </div>
+      <button type="button" className="dialog-button" disabled={busy || loading || !schema.providers} onClick={() => { setError(null); setEditingProviders(true); }}>{ui.editProviders}</button>
       <button type="button" className="dialog-button is-primary" disabled={busy || loading || !schema.providers} onClick={() => { setError(null); setProviderDialog({}); }}>{ui.addProvider}</button>
     </div>
     {banners}
@@ -201,6 +203,13 @@ export function ModelsPage(): JSX.Element {
         </div>
       </div>;
     })}</div>}
+    <Dialog.Root open={editingProviders} onOpenChange={open => { if (!busy) setEditingProviders(open); }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content provider-dialog-content" aria-describedby={undefined}>
+      <div className="dialog-header"><Dialog.Title className="dialog-title">{ui.editProviders}</Dialog.Title><Dialog.Close asChild><button type="button" className="dialog-close-button" disabled={busy} aria-label={ui.close}><X size={16} /></button></Dialog.Close></div>
+      {error && <p className="plugins-error-banner" role="alert">{error}</p>}
+      <fieldset disabled={busy || loading} className="models-config-fieldset dialog-schema-form-box">
+        <ConfigForm schema={{ providers: schema.providers }} value={{ providers: formValue.providers }} messages={messages} onSubmit={patch => void save(patch)} />
+      </fieldset>
+    </Dialog.Content></Dialog.Portal></Dialog.Root>
     {providerDialog && <ProviderDialog key={agent.ID} agentId={agent.ID} snapshot={snapshot} messages={messages} provider={providerDialog.provider} busy={busy} error={error} onClose={() => setProviderDialog(null)} onSave={save} />}
     {editing && <ModelDialog key={editing.name} model={editing} snapshot={snapshot} busy={busy} error={error} onClose={() => setEditing(null)} onSave={save} />}
     <Dialog.Root open={deleting !== null} onOpenChange={open => { if (!open && !busy) setDeleting(null); }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content model-delete-dialog" aria-describedby={undefined}>

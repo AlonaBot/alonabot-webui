@@ -292,6 +292,7 @@
     "tabEmbedding": "向量",
     "tabRerank": "重排",
     "tabDecision": "决策",
+    "editProviders": "编辑提供商",
     "addProvider": "添加提供商",
     "noAgentInstalled": "未安装 Agent 组件",
     "noAgentDesc": "请先安装 Agent 组件以管理大模型连接与配置。",

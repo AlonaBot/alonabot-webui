@@ -91,12 +91,13 @@ function SortableNavItem(props: SortableNavItemProps): JSX.Element {
         <span
           className="sidebar-nav-link is-disabled"
           aria-disabled="true"
+          aria-label={label}
           tabIndex={-1}
         >
           {linkContent}
         </span>
       ) : (
-        <Link to={entry.path} className="sidebar-nav-link">
+        <Link to={entry.path} className="sidebar-nav-link" aria-label={label}>
           {linkContent}
         </Link>
       )}
@@ -408,7 +409,7 @@ export function Sidebar(props: SidebarProps): JSX.Element {
                 key={entry.id}
                 className={`sidebar-nav-item ${currentPath === entry.path ? 'is-active' : ''}`}
               >
-                <Link to={entry.path} className="sidebar-nav-link">
+                <Link to={entry.path} className="sidebar-nav-link" aria-label={labels[entry.label]}>
                   <BottomIcon className="sidebar-nav-icon" size={18} aria-hidden="true" />
                   {!state.collapsed ? <span className="sidebar-nav-label">{labels[entry.label]}</span> : null}
                 </Link>

@@ -292,6 +292,7 @@
     "tabEmbedding": "Embedding",
     "tabRerank": "Rerank",
     "tabDecision": "Decision",
+    "editProviders": "Edit providers",
     "addProvider": "Add Provider",
     "noAgentInstalled": "No Agent component installed",
     "noAgentDesc": "Please install an Agent component first to manage model connections and configurations.",
