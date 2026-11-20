@@ -2,7 +2,7 @@
 id: alonabot-webui-admin
 name: AlonaBot Admin
 version: 0.1.0
-source: https://github.com/AlonaBot/alonabot-webui
+source: github.com/AlonaBot/alonabot-webui
 role: webui
 assets: dist
 admin_api_min_major: 1
