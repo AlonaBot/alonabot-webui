@@ -1,0 +1,31 @@
+# 验证独立组件的格式、真实 Go 测试与构建。
+name: Component quality
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  go:
+    name: Go component
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - name: 检查格式
+        shell: bash
+        run: test -z "$(gofmt -l .)"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version-file: package.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: go test -race ./...
+      - run: CGO_ENABLED=0 go build ./...

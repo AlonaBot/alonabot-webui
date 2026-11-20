@@ -1,5 +1,6 @@
 # AlonaBot 官方 WebUI
 
+[![Go component](https://github.com/AlonaBot/alonabot-webui/actions/workflows/ci.yml/badge.svg)](https://github.com/AlonaBot/alonabot-webui/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
 官方 WebUI通过 AlonaBot SDK 与 Core 通信，独立安装、升级和替换。组件版本为 `0.1.0`。
