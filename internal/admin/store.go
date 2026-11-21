@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,7 @@ const (
 )
 
 type catalog struct{ client *http.Client }
+
 type storeEntry struct {
 	Repo        string   `json:"repo"`
 	Role        string   `json:"role"`
@@ -60,6 +62,30 @@ type storePage struct {
 	Error     string       `json:"error,omitempty"`
 	Items     []storeEntry `json:"items"`
 	Total     int          `json:"total"`
+	Counts    storeCounts  `json:"counts"`
+}
+
+// storeCounts 按当前搜索统计各角色条目数，与角色过滤无关。
+type storeCounts struct {
+	All     int `json:"all"`
+	Plugin  int `json:"plugin"`
+	Adapter int `json:"adapter"`
+	Agent   int `json:"agent"`
+	WebUI   int `json:"webui"`
+}
+
+// storeCheck 是发布插件表单在提交前的只读检查结果。
+// 标签不在其中：它们由发布者显式填写，不从缺失字段推测。
+type storeCheck struct {
+	Repo        string   `json:"repo"`
+	Role        string   `json:"role"`
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Version     string   `json:"version"`
+	ReleaseURL  string   `json:"release_url"`
+	Description string   `json:"description,omitempty"`
+	Author      string   `json:"author,omitempty"`
+	Warnings    []string `json:"warnings"`
 }
 type latestRelease struct {
 	Repo       string `json:"repo"`
@@ -192,14 +218,13 @@ func (c *catalog) download(ctx context.Context, repo, address string) ([]byte, e
 }
 
 // cached 在刷新成功后发布完整结果；刷新失败保留上一次成功结果的时间和原错误。
+// 不做整次刷新聚合期限：每个 HTTP 请求各自受 remoteFetchTimeout 约束，刷新仍随调用 ctx 取消。
 func (c *catalog) cached(ctx context.Context, key string, fetch func(context.Context) ([]byte, error)) (raw []byte, at string, stale bool, fetchErr error, err error) {
 	db, err := sqlitedb.Open(ctx)
 	if err != nil {
 		return nil, "", false, nil, err
 	}
-	fetchCtx, cancel := context.WithTimeout(ctx, remoteFetchTimeout)
-	raw, fetchErr = fetch(fetchCtx)
-	cancel()
+	raw, fetchErr = fetch(ctx)
 	if fetchErr == nil {
 		at = time.Now().Format(time.RFC3339Nano)
 		_, err = db.ExecContext(ctx, "INSERT INTO fetch_cache(key,body,fetched_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET body=excluded.body,fetched_at=excluded.fetched_at", key, raw, at)
@@ -213,6 +238,47 @@ func (c *catalog) cached(ctx context.Context, key string, fetch func(context.Con
 		return nil, "", false, fetchErr, errors.Join(fetchErr, err)
 	}
 	return raw, at, true, fetchErr, nil
+}
+
+// refreshStore 抓取索引与每个条目的展示快照并序列化，作为一次成功刷新的完整结果。
+func (c *catalog) refreshStore(ctx context.Context, source string) ([]byte, error) {
+	// Contents API 省略 ref，读取仓库默认分支；把索引与完整展示快照一起发布。
+	indexRaw, err := c.get(ctx, "https://api.github.com/repos/"+source+"/contents/index.json", "application/vnd.github.raw+json")
+	if err != nil {
+		return nil, err
+	}
+	index, err := pluginindex.Parse(indexRaw)
+	if err != nil {
+		return nil, err
+	}
+	items := []storeEntry{}
+	for _, entry := range index.Plugins {
+		value, err := c.entry(ctx, entry)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", entry.Repo, err)
+		}
+		items = append(items, value)
+	}
+	return json.Marshal(struct {
+		Index json.RawMessage `json:"index"`
+		Items []storeEntry    `json:"items"`
+	}{indexRaw, items})
+}
+
+// snapshot 只读已持久化的成功快照；没有记录时 found 为 false，不触发任何远端请求。
+func (c *catalog) snapshot(ctx context.Context, key string) (raw []byte, at string, found bool, err error) {
+	db, err := sqlitedb.Open(ctx)
+	if err != nil {
+		return nil, "", false, err
+	}
+	err = db.QueryRowContext(ctx, "SELECT body,fetched_at FROM fetch_cache WHERE key=?", key).Scan(&raw, &at)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, "", false, nil
+	}
+	if err != nil {
+		return nil, "", false, err
+	}
+	return raw, at, true, nil
 }
 
 func (c *catalog) publication(ctx context.Context, repo string) (githubRelease, error) {
@@ -295,29 +361,48 @@ func (c *catalog) storeHTTP(w http.ResponseWriter, r *http.Request) {
 		invalid(w, errors.New("unknown component role"))
 		return
 	}
-	raw, at, stale, fetchErr, err := c.cached(r.Context(), "store:"+strings.ToLower(source), func(ctx context.Context) ([]byte, error) {
-		// Contents API 省略 ref，读取仓库默认分支；把索引与完整展示快照一起发布。
-		indexRaw, err := c.get(ctx, "https://api.github.com/repos/"+source+"/contents/index.json", "application/vnd.github.raw+json")
+	// sort 缺省与空串都是 stars，其余只接受 name。
+	order := q.Get("sort")
+	switch order {
+	case "", "stars", "name":
+	default:
+		invalid(w, errors.New("sort must be stars or name"))
+		return
+	}
+	// refresh 只接受字面量 true/false；省略等价于 true，空串是非法值。
+	// refresh=false 有成功快照时直接在该快照上筛选，不发远端请求。
+	key := "store:" + strings.ToLower(source)
+	var raw []byte
+	var at string
+	var stale bool
+	var fetchErr error
+	// 省略与 true 等价；"refresh=" 这类空串是非法值，因此要先看参数是否出现。
+	refresh, present := q["refresh"]
+	if !present {
+		refresh = []string{"true"}
+	}
+	switch refresh[0] {
+	case "true":
+		if raw, at, stale, fetchErr, err = c.cached(r.Context(), key, func(ctx context.Context) ([]byte, error) { return c.refreshStore(ctx, source) }); err != nil {
+			break
+		}
+	case "false":
+		// 快照读取不刷新：命中即用原 fetched_at，不会产生远端请求，也不带刷新错误。
+		var found bool
+		raw, at, found, err = c.snapshot(r.Context(), key)
 		if err != nil {
-			return nil, err
+			respond(w, nil, err)
+			return
 		}
-		index, err := pluginindex.Parse(indexRaw)
-		if err != nil {
-			return nil, err
+		if found {
+			break
 		}
-		items := []storeEntry{}
-		for _, entry := range index.Plugins {
-			value, err := c.entry(ctx, entry)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", entry.Repo, err)
-			}
-			items = append(items, value)
-		}
-		return json.Marshal(struct {
-			Index json.RawMessage `json:"index"`
-			Items []storeEntry    `json:"items"`
-		}{indexRaw, items})
-	})
+		// 尚无成功快照时执行正常首次抓取，与 refresh=true 相同。
+		raw, at, stale, fetchErr, err = c.cached(r.Context(), key, func(ctx context.Context) ([]byte, error) { return c.refreshStore(ctx, source) })
+	default:
+		invalid(w, errors.New("refresh must be true or false"))
+		return
+	}
 	if err != nil {
 		var upstream *upstreamError
 		if errors.As(err, &upstream) && upstream.status == http.StatusNotFound && strings.HasSuffix(upstream.address, "/contents/index.json") {
@@ -338,18 +423,8 @@ func (c *catalog) storeHTTP(w http.ResponseWriter, r *http.Request) {
 		respond(w, nil, err)
 		return
 	}
-	items := []storeEntry{}
-	search := strings.ToLower(q.Get("q"))
-	for _, entry := range snapshot.Items {
-		if role != "" && entry.Role != role {
-			continue
-		}
-		if !strings.Contains(strings.ToLower(entry.Name+" "+entry.Description+" "+entry.Repo+" "+entry.Author), search) {
-			continue
-		}
-		items = append(items, entry)
-	}
-	total := len(items)
+	// 1. 先按搜索词与角色过滤，计数与总数都取自这一份结果。
+	items, total, counts := selectStoreEntries(snapshot.Items, role, q.Get("q"), order)
 	if offset > total {
 		offset = total
 	}
@@ -357,11 +432,52 @@ func (c *catalog) storeHTTP(w http.ResponseWriter, r *http.Request) {
 	if limit < total-offset {
 		end = offset + limit
 	}
-	value := storePage{Source: source, FetchedAt: at, Stale: stale, Items: items[offset:end], Total: total}
+	value := storePage{Source: source, FetchedAt: at, Stale: stale, Items: items[offset:end], Total: total, Counts: counts}
 	if fetchErr != nil {
 		value.Error = fetchErr.Error()
 	}
 	respond(w, value, nil)
+}
+
+// selectStoreEntries 按搜索词、角色与排序返回待分页的完整结果，以及过滤后的总数与角色计数。
+// 标签一并参与搜索，因此名称、描述、仓库、作者与标签共享同一子串匹配。
+func selectStoreEntries(entries []storeEntry, role, query, order string) ([]storeEntry, int, storeCounts) {
+	search := strings.ToLower(query)
+	counts := storeCounts{}
+	items := []storeEntry{}
+	for _, entry := range entries {
+		fields := append([]string{entry.Name, entry.Description, entry.Repo, entry.Author}, entry.Tags...)
+		if !strings.Contains(strings.ToLower(strings.Join(fields, " ")), search) {
+			continue
+		}
+		counts.All++
+		switch entry.Role {
+		case "plugin":
+			counts.Plugin++
+		case "adapter":
+			counts.Adapter++
+		case "agent":
+			counts.Agent++
+		case "webui":
+			counts.WebUI++
+		}
+		if role != "" && entry.Role != role {
+			continue
+		}
+		items = append(items, entry)
+	}
+	// 排序在角色过滤之后；stars 缺失排队尾，名称按不区分大小写的升序。
+	sort.SliceStable(items, func(i, j int) bool {
+		if order == "name" {
+			return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
+		}
+		left, right := items[i].Stars, items[j].Stars
+		if left == nil || right == nil {
+			return right == nil && left != nil
+		}
+		return *left > *right
+	})
+	return items, len(items), counts
 }
 
 func (c *catalog) entry(ctx context.Context, entry pluginindex.Plugin) (storeEntry, error) {
@@ -370,35 +486,7 @@ func (c *catalog) entry(ctx context.Context, entry pluginindex.Plugin) (storeEnt
 	if value.Tags == nil {
 		value.Tags = []string{}
 	}
-	publication, err := c.publication(ctx, entry.Repo)
-	if err != nil {
-		return value, err
-	}
-	var releaseURL string
-	for _, asset := range publication.Assets {
-		if asset.Name == "release.json" {
-			releaseURL = asset.URL
-			break
-		}
-	}
-	if releaseURL == "" {
-		return value, errors.New("release.json asset is missing")
-	}
-	raw, err := c.download(ctx, entry.Repo, releaseURL)
-	if err != nil {
-		return value, err
-	}
-	releaseManifest, err := release.Verify(raw, nil, nil)
-	if err != nil {
-		return value, err
-	}
-	if !strings.EqualFold(releaseManifest.Source, "github.com/"+entry.Repo) {
-		return value, fmt.Errorf("release source %q does not match %s", releaseManifest.Source, entry.Repo)
-	}
-	if releaseManifest.Version != strings.TrimPrefix(publication.Tag, "v") {
-		return value, errors.New("release version does not match GitHub tag")
-	}
-	archive, err := c.download(ctx, entry.Repo, releaseManifest.Assets[0].URL)
+	_, releaseManifest, archive, err := c.packageArchive(ctx, entry.Repo)
 	if err != nil {
 		return value, err
 	}
@@ -406,20 +494,23 @@ func (c *catalog) entry(ctx context.Context, entry pluginindex.Plugin) (storeEnt
 	if err != nil {
 		return value, err
 	}
-	if declaration.ID != releaseManifest.PluginID || declaration.Version != releaseManifest.Version || declaration.Role != entry.Role {
-		return value, errors.New("package identity does not match index and release.json")
+	if err := identify(declaration.Manifest, releaseManifest); err != nil {
+		return value, err
+	}
+	if declaration.Manifest.Role != entry.Role {
+		return value, errors.New("package role does not match the index entry")
 	}
 	// 2. 名称与图标来自包内声明，星数单独读取 GitHub 仓库信息。
-	value.ID = declaration.ID
-	value.Name = declaration.Name
-	value.Description = declaration.Description
-	value.Author = declaration.Author
-	value.Version = declaration.Version
+	value.ID = declaration.Manifest.ID
+	value.Name = declaration.Manifest.Name
+	value.Description = declaration.Manifest.Description
+	value.Author = declaration.Manifest.Author
+	value.Version = declaration.Manifest.Version
 	if icon != nil {
-		mime := map[string]string{".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp"}[path.Ext(declaration.Icon)]
+		mime := map[string]string{".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp"}[path.Ext(declaration.Manifest.Icon)]
 		value.IconURL = "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(icon)
 	}
-	raw, err = c.get(ctx, "https://api.github.com/repos/"+entry.Repo, "application/vnd.github+json")
+	raw, err := c.get(ctx, "https://api.github.com/repos/"+entry.Repo, "application/vnd.github+json")
 	if err != nil {
 		return value, err
 	}
@@ -433,7 +524,111 @@ func (c *catalog) entry(ctx context.Context, entry pluginindex.Plugin) (storeEnt
 	return value, nil
 }
 
-func readManifest(archive []byte) (*manifest.Manifest, []byte, error) {
+// 未发布 Release 由 latest 端点的 404 表示；其他 404（release.json、归档等）是坏资产，保留原错误。
+func (c *catalog) checkHTTP(w http.ResponseWriter, r *http.Request) {
+	repo := r.URL.Query().Get("repo")
+	if !validRepo(repo) {
+		invalid(w, errors.New("repo must be owner/repo"))
+		return
+	}
+	value, err := c.inspect(r.Context(), repo)
+	var upstream *upstreamError
+	if errors.As(err, &upstream) && upstream.status == http.StatusNotFound && strings.HasSuffix(upstream.address, "/releases/latest") {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		respond(w, map[string]string{"code": "NO_RELEASE", "safe_message": "No release published"}, nil)
+		return
+	}
+	if err != nil {
+		respond(w, nil, err)
+		return
+	}
+	respond(w, value, nil)
+}
+
+// inspect 返回发布前检查所需的展示身份；只读取最新 Release 与包内声明。
+// 不做验签与归档摘要比对：这些属于 Core 的安装预检，后台只结论“身份自洽”。
+func (c *catalog) inspect(ctx context.Context, repo string) (storeCheck, error) {
+	value := storeCheck{Repo: repo, Warnings: []string{}}
+	publication, releaseManifest, archive, err := c.packageArchive(ctx, repo)
+	if err != nil {
+		return value, err
+	}
+	declaration, _, err := readManifest(archive)
+	if err != nil {
+		return value, err
+	}
+	if err := identify(declaration.Manifest, releaseManifest); err != nil {
+		return value, err
+	}
+	value.Role = declaration.Manifest.Role
+	// 仓库名用已验证来源的规范大小写：安装请求带的 Source 会被 Core 精确比较。
+	value.Repo = strings.TrimPrefix(releaseManifest.Source, "github.com/")
+	value.ID = declaration.Manifest.ID
+	value.Name = declaration.Manifest.Name
+	value.Version = declaration.Manifest.Version
+	value.ReleaseURL = publication.URL
+	value.Description = declaration.Manifest.Description
+	value.Author = declaration.Manifest.Author
+	if declaration.Warnings != nil {
+		value.Warnings = declaration.Warnings
+	}
+	return value, nil
+}
+
+// identify 核对包内声明与 release.json 的身份，规则与 Core 安装预检一致：
+// 插件 ID、版本与来源必须相同，来源决定这个包实际属于哪个仓库。
+func identify(declaration *manifest.Manifest, publication *release.Release) error {
+	switch {
+	case declaration.ID != publication.PluginID:
+		return errors.New("package ID does not match release.json")
+	case declaration.Version != publication.Version:
+		return errors.New("package version does not match release.json")
+	case declaration.Source != publication.Source:
+		return fmt.Errorf("package source %q does not match release.json source %q", declaration.Source, publication.Source)
+	}
+	return nil
+}
+
+// packageArchive 读取最新 Release 的 release.json 与首个平台归档，核对来源声明与版本对齐。
+// release.Verify 在无签名时只做字段层面的解析与校验，不验签、不比对归档摘要。
+func (c *catalog) packageArchive(ctx context.Context, repo string) (githubRelease, *release.Release, []byte, error) {
+	publication, err := c.publication(ctx, repo)
+	if err != nil {
+		return githubRelease{}, nil, nil, err
+	}
+	var releaseURL string
+	for _, asset := range publication.Assets {
+		if asset.Name == "release.json" {
+			releaseURL = asset.URL
+			break
+		}
+	}
+	if releaseURL == "" {
+		return publication, nil, nil, errors.New("release.json asset is missing")
+	}
+	raw, err := c.download(ctx, repo, releaseURL)
+	if err != nil {
+		return publication, nil, nil, err
+	}
+	releaseManifest, err := release.Verify(raw, nil, nil)
+	if err != nil {
+		return publication, nil, nil, err
+	}
+	if !strings.EqualFold(releaseManifest.Source, "github.com/"+repo) {
+		return publication, nil, nil, fmt.Errorf("release source %q does not match %s", releaseManifest.Source, repo)
+	}
+	if releaseManifest.Version != strings.TrimPrefix(publication.Tag, "v") {
+		return publication, nil, nil, errors.New("release version does not match GitHub tag")
+	}
+	archive, err := c.download(ctx, repo, releaseManifest.Assets[0].URL)
+	if err != nil {
+		return publication, nil, nil, err
+	}
+	return publication, releaseManifest, archive, nil
+}
+
+func readManifest(archive []byte) (*manifest.Result, []byte, error) {
 	declaration, err := archiveFile(archive, "plugin.yaml", manifestBytes)
 	if err != nil {
 		return nil, nil, err
@@ -443,10 +638,10 @@ func readManifest(archive []byte) (*manifest.Manifest, []byte, error) {
 		return nil, nil, err
 	}
 	if parsed.Manifest.Icon == "" {
-		return parsed.Manifest, nil, nil
+		return parsed, nil, nil
 	}
 	icon, err := archiveFile(archive, parsed.Manifest.Icon, iconBytes)
-	return parsed.Manifest, icon, err
+	return parsed, icon, err
 }
 
 // archiveFile 每轮只保留一个目标文件；第二轮按声明取图标，避免缓存全部图片。

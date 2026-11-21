@@ -1505,10 +1505,12 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   margin-right: 6px;
 }
 
-.search-filter-box input.search-filter-input {
-  border: none;
+/* 全局 input 重置的选择器比单个类更强，这里按同等强度覆盖，避免框内再画一道边框。 */
+.search-filter-box input.search-filter-input:not([type=checkbox]):not([type=range]):not([type=radio]) {
+  border: 0;
   background: none;
   padding: 0;
+  min-width: 0;
   height: 100%;
   font-size: var(--text-xs);
   color: var(--color-ink);
@@ -2736,7 +2738,27 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .store-tags span { background: var(--color-surface-2); border-radius: var(--radius-sm); padding: 1px 6px; }
 .store-card footer { display: flex; align-items: center; gap: 12px; margin-top: auto; padding-top: 4px; font-size: var(--text-xs); color: var(--color-ink-muted); }
 .store-card footer > span { display: inline-flex; gap: 4px; align-items: center; }
-.store-card footer button { margin-left: auto; font-size: var(--text-xs); }
+.store-card footer button { font-size: var(--text-xs); }
+.store-toolbar { align-items: center; }
+.store-card-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.store-card-actions button { font-size: var(--text-xs); }
+.store-source-picker { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); }
+.store-source-picker select { width: auto; max-width: 220px; }
+.store-role-pills { flex-wrap: nowrap; }
+.store-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-left: auto; }
+.store-actions .search-filter-box { width: 220px; }
+.store-role-badge { margin-left: auto; font-size: var(--text-xs); color: var(--color-ink-muted); background: var(--color-surface-2); border-radius: var(--radius-sm); padding: 1px 6px; white-space: nowrap; }
+.store-notice { color: var(--color-accent); font-size: var(--text-sm); margin: 0 0 12px; }
+.store-manage-link { display: block; margin: 20px auto 0; background: none; border: 0; color: var(--color-accent); font-size: var(--text-sm); cursor: pointer; text-decoration: underline; }
+.publish-dialog { max-width: 560px; }
+.publish-repo-row { display: flex; align-items: flex-end; gap: 10px; margin: 16px 0; }
+.publish-repo-row .dialog-field-label { flex: 1; min-width: 0; }
+.publish-repo-row .dialog-field-label input { width: 100%; }
+.publish-result { display: grid; gap: 12px; }
+.publish-result dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: var(--text-sm); }
+.publish-result dt { color: var(--color-ink-muted); }
+.publish-result dd { margin: 0; overflow-wrap: anywhere; }
+.publish-preview { margin: 0; padding: 12px; background: var(--color-surface-2); border-radius: var(--radius); font-size: var(--text-xs); overflow: auto; }
 .statistics-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
 .stats-messages { grid-column: span 2; }
 .stats-errors { grid-column: span 2; }
@@ -2788,7 +2810,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .database-field > label > select { margin-left: auto; }
 .database-field textarea { width: 100%; min-height: 60px; }
 @media (max-width: 1100px) { .store-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .statistics-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .stats-messages { grid-column: span 2; } .stats-errors { grid-column: auto; } }
-@media (max-width: 767px) { .store-grid, .statistics-grid { grid-template-columns: 1fr; } .stats-messages, .stats-errors { grid-column: auto; } .data-toolbar input { max-width: none; } .store-toolbar .time-range-pills { overflow-x: auto; max-width: 100%; } .data-table-wrap { padding: 8px; } .statistics-grid .overview-chart-card { padding: 16px; } .storage-row { padding: 16px; } }
+@media (max-width: 767px) { .store-grid, .statistics-grid { grid-template-columns: 1fr; } .stats-messages, .stats-errors { grid-column: auto; } .data-toolbar input { max-width: none; } .store-toolbar .time-range-pills, .store-role-pills { overflow-x: auto; max-width: 100%; } .store-actions { margin-left: 0; width: 100%; } .store-actions .search-filter-box { width: 100%; } .publish-repo-row { flex-direction: column; align-items: stretch; } .data-table-wrap { padding: 8px; } .statistics-grid .overview-chart-card { padding: 16px; } .storage-row { padding: 16px; } }
 
 /* 模型页：复用外壳间距、主题令牌与管理对话框。 */
 .models-page { font-family: var(--font-sans); font-size: var(--text-sm); line-height: 1.5; }
