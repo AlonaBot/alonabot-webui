@@ -1,0 +1,71 @@
+# 从已审查 tag 构建并签名，发行正文直接读取 changelog。
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 已存在的发行 tag
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version-file: package.json
+      - run: npm ci && npm run typecheck && npm run build
+      - name: 核对版本并准备打包器
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sed -n 's/^version: //p' plugin.yaml)" = "${TAG#v}"
+          go build -mod=mod -o "$RUNNER_TEMP/alonabot" github.com/AlonaBot/AlonaBot/cmd/alonabot
+          "$RUNNER_TEMP/alonabot" check .
+      - name: 构建签名的五平台包
+        env:
+          RELEASE_KEY: ${{ secrets.ALONABOT_RELEASE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          key="$RUNNER_TEMP/release.key"
+          trap 'rm -f "$key"' EXIT
+          printf '%s' "$RELEASE_KEY" > "$key"
+          unset RELEASE_KEY
+          "$RUNNER_TEMP/alonabot" pack . --key "$key" --out release-assets \
+            --target linux/amd64 --target linux/arm64 --target windows/amd64 \
+            --target darwin/amd64 --target darwin/arm64
+      - name: 核对官方公钥与许可证
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmp .github/release.pub release-assets/release.pub
+          for package in release-assets/*.tar.gz; do tar -tzf "$package" | grep -qx LICENSE; done
+      - name: 生成正文并发布资产
+        shell: bash
+        run: |
+          set -euo pipefail
+          notes="$RUNNER_TEMP/release-notes.md"
+          { cat "changelog/${TAG#v}/en-US.md"; printf '\n\n---\n\n'; cat "changelog/${TAG#v}/zh-CN.md"; } > "$notes"
+          gh release create "$TAG" --verify-tag --draft --title "$TAG" --notes-file "$notes" release-assets/*
+          gh release edit "$TAG" --draft=false --latest
