@@ -3,8 +3,10 @@ name: Component quality
 on:
   push:
     branches: [main]
+    paths-ignore: ['**/*.md', '.github/**', 'changelog/**']
   pull_request:
     branches: [main]
+    paths-ignore: ['**/*.md', '.github/**', 'changelog/**']
 permissions:
   contents: read
 jobs:
