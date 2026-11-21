@@ -1,0 +1,6 @@
+# 关闭空白 issue，并把使用问题引导到文档。
+blank_issues_enabled: false
+contact_links:
+  - name: 文档 / Documentation
+    url: https://github.com/AlonaBot/AlonaBot/blob/main/docs/index.md
+    about: 使用问题请先查阅文档。Please check the documentation for usage questions.

@@ -4,7 +4,7 @@ go 1.27.1
 
 tool google.golang.org/protobuf/cmd/protoc-gen-go
 
-require github.com/AlonaBot/AlonaBot v0.0.0-20261120143159-a9c9e4d5812e
+require github.com/AlonaBot/AlonaBot v0.0.0-20261121011820-c3006b954c6f
 
 require (
 	github.com/dustin/go-humanize v1.1.0 // indirect
@@ -21,5 +21,3 @@ require (
 	modernc.org/memory v1.12.1 // indirect
 	modernc.org/sqlite v1.61.0 // indirect
 )
-
-replace gorm.io/gorm => github.com/AlonaBot/gorm v1.31.3-0.20261120022453-34b98340007d

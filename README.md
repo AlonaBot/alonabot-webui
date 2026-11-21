@@ -6,7 +6,7 @@
 官方 WebUI通过 AlonaBot SDK 与 Core 通信，独立安装、升级和替换。组件版本为 `0.1.0`。
 ## 开发
 
-需要 Go 1.27.1。SDK 版本固定在 `go.mod`，GORM 补丁来源沿用 Core 已批准版本。
+需要 Go 1.27.1。SDK 版本固定在 `go.mod`；GORM 使用上游正式版本。
 先执行 `npm ci`、`npm run typecheck`、`npm run build`，再构建 Go 后台。前端入口位于 `src/`，翻译位于 `i18n/`。
 
 ```sh
@@ -31,3 +31,11 @@ alonabot pack . --target linux/amd64 --out bin
 ## 许可
 
 采用 [GNU AGPL-3.0-only](LICENSE)。
+
+## 目录
+
+根包提供公开构造入口，`internal/admin/` 保存组件实现。`plugin.yaml`、Schema 与 i18n 是工程打包入口。
+
+## 安装与发行
+
+在运行中的 Core 上执行 `alonabot install --source AlonaBot/alonabot-webui --yes`。发行资产包含五平台包、`release.json`、签名和公钥。版本说明维护在 `changelog/<版本>/`。
