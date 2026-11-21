@@ -3454,3 +3454,6 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
   .sleep-policy-summary > div, .sleep-runtime-records > div { grid-template-columns: 1fr; gap: 4px; }
   .settings-sleep-timeout { width: 100%; }
 }
+
+.login-bootstrap h2, .login-bootstrap p { margin: 0; }
+.login-bootstrap textarea { resize: none; }

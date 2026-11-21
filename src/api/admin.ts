@@ -215,7 +215,7 @@ async function request<T = unknown>(
   const method = options.method || 'GET';
   const headers: Record<string, string> = { ...(options.headers || {}) };
   const isMutating = method !== 'GET' && method !== 'HEAD';
-  const isLogin = path === '/api/auth/login';
+  const isLogin = path === '/api/auth/login' || path === '/api/auth/bootstrap';
 
   // 受保护的变更请求携带内存中的 X-Alonabot-CSRF
   if (isMutating && !isLogin && currentCSRFToken) {
@@ -270,12 +270,12 @@ export async function login(token: string): Promise<void> {
 }
 
 /** 页面加载或刷新后取回已有管理会话与固定过期时间。 */
-export async function restoreSession(): Promise<{ expires_at_unix_ms: number }> {
-  const result = await request<{ csrf_token: string; expires_at_unix_ms: number }>('/api/auth/session', {
+export async function restoreSession(): Promise<{ expires_at_unix_ms: number; bootstrap_pending?: boolean }> {
+  const result = await request<{ csrf_token: string; expires_at_unix_ms: number; bootstrap_pending?: boolean }>('/api/auth/session', {
     method: 'GET',
   });
   setCSRFToken(result.csrf_token);
-  return { expires_at_unix_ms: result.expires_at_unix_ms };
+  return { expires_at_unix_ms: result.expires_at_unix_ms, bootstrap_pending: result.bootstrap_pending };
 }
 
 /** 登出并撤销管理会话，清空本地 CSRF。 */
@@ -1343,4 +1343,22 @@ export async function setPluginSleepPolicy(id: string, policy: string | null): P
 /** getPluginRuntime 只读运行状态与实际事件时间。 */
 export function getPluginRuntime(id: string): Promise<PluginRuntime> {
   return request<PluginRuntime>(`${pluginPath(id)}/runtime`);
+}
+
+/** 本机领取待确认凭据，沿用管理 Cookie 与内存 CSRF。 */
+export async function bootstrap(): Promise<string | null> {
+  try {
+    const result = await request<{ token: string; csrf_token: string }>('/api/auth/bootstrap', { method: 'POST' });
+    setCSRFToken(result.csrf_token);
+    return result.token;
+  } catch (error) {
+    // 旧版 Core 无此接口；远程连接和已确认代次沿用普通登录。
+    if (error instanceof AdminAPIError && [401, 403, 404, 409].includes(error.status)) return null;
+    throw error;
+  }
+}
+
+/** 保存当前代次的领取确认，成功后由页面清空明文。 */
+export async function confirmBootstrap(): Promise<void> {
+  await request<void>('/api/auth/bootstrap/confirm', { method: 'POST' });
 }
