@@ -65,6 +65,7 @@ func Register(p *sdk.Plugin) {
 	p.OnStop(func(context.Context) error { client.CloseIdleConnections(); return nil })
 	store := &catalog{client: client}
 	p.Route("GET", "/store").HandleFunc(store.storeHTTP)
+	p.Route("GET", "/store/check").HandleFunc(store.checkHTTP)
 	p.Route("GET", "/updates").HandleFunc(store.updatesHTTP)
 }
 

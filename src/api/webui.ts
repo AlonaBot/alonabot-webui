@@ -6,12 +6,16 @@ export type HourBucket = { hour: string; incoming: number; outgoing: number; sen
 export type Statistics = { timezone: string; observed_since: string; buckets: HourBucket[] };
 export type SeenUser = { user: string; display_name: string; first_seen_at: string; last_seen_at: string };
 export type StoreEntry = { repo: string; role: string; tags: string[]; id: string; name: string; description?: string; version: string; author?: string; stars?: number; icon_url?: string };
-export type StorePage = { source: string; fetched_at: string; stale: boolean; error?: string; items: StoreEntry[]; total: number };
+export type StoreCounts = { all: number; plugin: number; adapter: number; agent: number; webui: number };
+export type StoreSort = 'stars' | 'name';
+export type StorePage = { source: string; fetched_at: string; stale: boolean; error?: string; items: StoreEntry[]; total: number; counts: StoreCounts };
+export type StoreCheck = { repo: string; role: string; id: string; name: string; version: string; release_url: string; description?: string; author?: string; warnings: string[] };
 export type LatestRelease = { repo: string; version: string; release_url: string; markdown: string; fetched_at: string; stale: boolean; error?: string };
 const root = '/plugins/alonabot-webui-admin';
 export function getStatistics(range: StatisticsRange): Promise<Statistics> { return adminRequest(`${root}/stats?${new URLSearchParams({ range })}`); }
 export function listSeenUsers(): Promise<SeenUser[]> { return adminRequest(`${root}/users`); }
-export function getStore(input: { source: string; role: string; q: string; offset: number; limit: number }): Promise<StorePage> { return adminRequest(`${root}/store?${new URLSearchParams({ ...input, offset: String(input.offset), limit: String(input.limit) })}`); }
+export function getStore(input: { source: string; role: string; q: string; sort: StoreSort; offset: number; limit: number; refresh: boolean }): Promise<StorePage> { return adminRequest(`${root}/store?${new URLSearchParams({ ...input, offset: String(input.offset), limit: String(input.limit), refresh: String(input.refresh) })}`); }
+export function checkStoreRepo(repo: string): Promise<StoreCheck> { return adminRequest(`${root}/store/check?${new URLSearchParams({ repo })}`); }
 export async function getLatestRelease(repo: string): Promise<LatestRelease | null> {
   try { return await adminRequest<LatestRelease>(`${root}/updates?${new URLSearchParams({ repo })}`); }
   catch (error) { if (error instanceof AdminAPIError && error.status === 404 && error.code === 'NO_RELEASE') return null; throw error; }

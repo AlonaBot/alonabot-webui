@@ -464,7 +464,7 @@ export function PluginsPage(): JSX.Element {
       </div>
 
       {activeTab === 'store' ? (
-        <StorePanel packages={packages} onInstalled={loadData} />
+        <StorePanel packages={packages} onInstalled={loadData} onManage={() => { navigate('/components', { replace: true }); setActiveTab('installed'); }} />
       ) : (
         <>
           {/* 筛选与搜索工具栏 */}
