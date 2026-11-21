@@ -60,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           cmp .github/release.pub release-assets/release.pub
-          for package in release-assets/*.tar.gz; do tar -tzf "$package" | grep -qx LICENSE; done
+          for package in release-assets/*.tar.gz; do tar -tzf "$package" | grep -x LICENSE; done
       - name: 生成正文并发布资产
         shell: bash
         run: |
