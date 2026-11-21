@@ -58,8 +58,8 @@ function AdminApp() {
     setSessionState('checking');
     setAppError(null);
     try {
-      await restoreSession();
-      setSessionState('authenticated');
+      const session = await restoreSession();
+      setSessionState(session.bootstrap_pending ? 'unauthenticated' : 'authenticated');
     } catch (error) {
       if (error instanceof AdminAPIError && error.status === 401) {
         setSessionState('unauthenticated');

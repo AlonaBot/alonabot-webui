@@ -1,7 +1,7 @@
-import React, { useState, type JSX } from 'react';
+import React, { useEffect, useState, type JSX } from 'react';
 import { Check, Copy, Eye, EyeOff, KeyRound } from 'lucide-react';
 import markSvg from '../assets/mark.svg?no-inline';
-import { login } from '../api/admin';
+import { bootstrap, confirmBootstrap, login } from '../api/admin';
 import { useUI } from '../i18n/UI';
 import { version } from '../../package.json';
 
@@ -10,10 +10,39 @@ export function LoginPage(props: { onAuthenticated: () => void }): JSX.Element {
   const { onAuthenticated } = props;
   const ui = useUI();
   const [token, setToken] = useState('');
+  const [claimedToken, setClaimedToken] = useState<string | null>(null);
+  const [checking, setChecking] = useState(true);
   const [showToken, setShowToken] = useState(false);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void bootstrap().then(value => { if (active) setClaimedToken(value); })
+      .catch(err => { if (active) setError(err instanceof Error ? err.message : String(err)); })
+      .finally(() => { if (active) setChecking(false); });
+    return () => { active = false; };
+  }, []);
+
+  const confirm = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await confirmBootstrap();
+      setClaimedToken(null);
+      onAuthenticated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally { setLoading(false); }
+  };
+
+  const copyToken = async () => {
+    try {
+      await navigator.clipboard.writeText(claimedToken!);
+      setCopied(true);
+    } catch (err) { setError(`${ui.copyFailed} ${err instanceof Error ? err.message : String(err)}`); }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +93,15 @@ export function LoginPage(props: { onAuthenticated: () => void }): JSX.Element {
             <img src={markSvg} alt="" width={36} height={40} className="login-brand-mark" />
             <h1 className="login-title">{ui.brandName}</h1>
           </div>
+          {claimedToken ? <div className="login-form login-bootstrap">
+            <h2>{ui.bootstrapTitle}</h2>
+            <p>{ui.bootstrapHelp}</p>
+            {error && <div className="login-error-banner" role="alert">{error}</div>}
+            <label htmlFor="bootstrap-token">{ui.adminToken}</label>
+            <textarea id="bootstrap-token" className="login-input font-mono" readOnly value={claimedToken} rows={3} />
+            <button type="button" className="login-submit-button" onClick={() => void copyToken()}>{copied ? ui.copied : ui.copyToken}</button>
+            <button type="button" className="login-submit-button" disabled={loading} onClick={() => void confirm()}>{ui.tokenSaved}</button>
+          </div> : <>
           <form onSubmit={handleSubmit} className="login-form">
             {error && <div className="login-error-banner" role="alert">{error}</div>}
             <div className="login-field">
@@ -77,7 +115,7 @@ export function LoginPage(props: { onAuthenticated: () => void }): JSX.Element {
                   onClick={() => setShowToken(!showToken)}>{showToken ? <EyeOff size={18} /> : <Eye size={18} />}</button>
               </div>
             </div>
-            <button type="submit" className="login-submit-button" disabled={loading || !token.trim()}>{loading ? ui.loggingIn : ui.login}</button>
+            <button type="submit" className="login-submit-button" disabled={checking || loading || !token.trim()}>{loading ? ui.loggingIn : ui.login}</button>
           </form>
           <div className="login-token-help">
             <p>{ui.tokenHelp}</p>
@@ -86,6 +124,7 @@ export function LoginPage(props: { onAuthenticated: () => void }): JSX.Element {
             <span className="login-copy-status" role="status">{copied ? ui.copied : ''}</span>
             <p>{ui.tokenDockerHelp}</p>
           </div>
+          </>}
         </div>
         <p className="login-version" aria-label={ui.webuiVersion}>{`v${version}`}</p>
       </div>
