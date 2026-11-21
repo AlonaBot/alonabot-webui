@@ -23,4 +23,4 @@ go run github.com/AlonaBot/AlonaBot/cmd/alonabot check .
 go run github.com/AlonaBot/AlonaBot/cmd/alonabot pack . --target linux/amd64 --out /tmp/alonabot-package
 ```
 
-代码采用 AGPL-3.0-only，见 [LICENSE](LICENSE)。
+代码采用 MIT，见 [LICENSE](LICENSE)。
