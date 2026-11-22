@@ -900,6 +900,22 @@
     "messagesUnit": "messages",
     "commandTriggers": "Command triggers",
     "chartAgentUsage": "Agent usage",
-    "noUsageToday": "No model calls today"
+    "noUsageToday": "No model calls today",
+    "manageModels": "Manage models",
+    "editConnection": "Edit connection",
+    "deleteProvider": "Delete provider",
+    "deleteProviderConfirm": "Delete",
+    "deleteProviderHint": "Delete provider \"{name}\" and its {count} models? Settings that use these models are cleared.",
+    "providerKeyRequired": "Re-enter the API key to change this connection.",
+    "secretKeep": "Set; re-enter to change",
+    "pickAll": "Select all",
+    "pickNone": "Select none",
+    "pickInvert": "Invert",
+    "searchModels": "Search model IDs",
+    "selectedCount": "{selected} of {total} selected",
+    "modelCount": "{count} models",
+    "addedBadge": "Added",
+    "removeReferencedWarning": "Some unchecked models are in use. Saving clears these settings:",
+    "providerNoModels": "No models yet. Choose them with Manage models."
   }
 }

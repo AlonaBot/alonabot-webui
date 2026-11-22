@@ -2,8 +2,9 @@ import type { JSX, ReactElement, ReactNode } from 'react';
 import * as RadixTooltip from '@radix-ui/react-tooltip';
 import styles from './Tooltip.module.css';
 
-/** 悬停或聚焦时的说明，取代 title 属性；child 必须能接收 ref（按钮、链接等）。 */
+/** 悬停或聚焦时的说明，取代 title 属性；child 必须能接收 ref（按钮、链接等）。content 为空时原样返回 child。 */
 export function Tooltip({ content, side = 'top', children }: { content: ReactNode; side?: 'top' | 'right' | 'bottom' | 'left'; children: ReactElement }): JSX.Element {
+  if (content === undefined || content === null || content === '') return children;
   return <RadixTooltip.Root>
     <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
     <RadixTooltip.Portal>

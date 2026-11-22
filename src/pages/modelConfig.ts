@@ -85,9 +85,10 @@ export function groupModelsByProvider(models: ConfiguredModel[]): Map<string, Co
   return grouped;
 }
 
+/** 选用模型的全部引用位置：默认对话模型、识图模型与备用对话模型。 */
 export function checkModelReferences(name: string, config: Record<string, unknown>): string[] {
   const locations: string[] = [];
-  if (config.chat_model === name) locations.push('chat_model');
+  for (const key of ['chat_model', 'image_caption_model']) if (config[key] === name) locations.push(key);
   (config.fallback_chat_models as string[] | undefined)?.forEach((model, index) => {
     if (model === name) locations.push(`fallback_chat_models[${index}]`);
   });
@@ -95,16 +96,23 @@ export function checkModelReferences(name: string, config: Record<string, unknow
 }
 
 export function buildDeleteModelPatch(snapshot: ConfigSnapshot, name: string): Record<string, unknown> {
-  const original = editingConfig(snapshot);
-  return buildPatch(original, { models: parseModels(original).filter(model => model.name !== name) }, fieldsFromSchema(modelSchema(snapshot.schema)));
+  return buildReplaceModelsPatch(snapshot, parseModels(editingConfig(snapshot)).filter(model => model.name !== name));
 }
 
-export function buildAddModelsPatch(snapshot: ConfigSnapshot, models: Record<string, unknown>[], providers?: unknown[]): Record<string, unknown> {
+/**
+ * 整体替换 models（及可选的 providers）数组，并清掉指向已不存在模型的引用。
+ * providers 数组整体替换时，其它提供商被脱敏的密钥需要重新输入，缺失时抛 MissingSecretsError。
+ */
+export function buildReplaceModelsPatch(snapshot: ConfigSnapshot, models: readonly object[], providers?: unknown[]): Record<string, unknown> {
   const original = editingConfig(snapshot);
-  return buildPatch(original, {
-    models: [...parseModels(original), ...models],
-    ...(providers ? { providers } : {}),
-  }, fieldsFromSchema(modelSchema(snapshot.schema)));
+  const patch = buildPatch(original, { models, ...(providers ? { providers } : {}) }, fieldsFromSchema(modelSchema(snapshot.schema)));
+  const kept = new Set(models.map(model => (model as ConfiguredModel).name));
+  for (const key of ['chat_model', 'image_caption_model']) {
+    if (typeof original[key] === 'string' && original[key] && !kept.has(original[key] as string)) patch[key] = '';
+  }
+  const fallback = original.fallback_chat_models as string[] | undefined;
+  if (fallback?.some(name => !kept.has(name))) patch.fallback_chat_models = fallback.filter(name => kept.has(name));
+  return patch;
 }
 
 export function isGenerationConflict(error: unknown): boolean {
