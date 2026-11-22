@@ -4,7 +4,7 @@ go 1.27.1
 
 tool google.golang.org/protobuf/cmd/protoc-gen-go
 
-require github.com/AlonaBot/AlonaBot v0.0.0-20261121011820-c3006b954c6f
+require github.com/AlonaBot/AlonaBot v0.1.2-0.20261122021903-2dbbded7184f
 
 require (
 	github.com/dustin/go-humanize v1.1.0 // indirect
@@ -13,6 +13,7 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/yuin/goldmark v1.7.16 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
