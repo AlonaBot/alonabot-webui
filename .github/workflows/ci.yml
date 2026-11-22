@@ -67,13 +67,13 @@ jobs:
           fi
           while IFS= read -r -d '' path; do
             case "$path" in
-              *.go|go.mod|go.sum|.github/workflows/ci.yml) has_go=true ;;
+              *.go|go.mod|go.sum|internal/admin/schema.sql|.github/workflows/ci.yml) has_go=true ;;
             esac
             case "$path" in
-              plugin.yaml|*schema*.json|i18n/*|changelog/*|CHANGELOG*|*.go|go.mod|go.sum|scripts/*|.github/workflows/*) has_component=true ;;
+              plugin.yaml|*schema*.json|i18n/*|changelog/*|CHANGELOG*|*.go|go.mod|go.sum|internal/admin/schema.sql|scripts/*|.github/workflows/*) has_component=true ;;
             esac
             case "$path" in
-              src/*|fixtures/*|i18n/*|package.json|package-lock.json|index.html|vite.config.*|tsconfig*.json|.github/workflows/ci.yml) has_frontend=true; has_component=true ;;
+              src/*|public/*|fixtures/*|i18n/*|package.json|package-lock.json|index.html|vite.config.*|tsconfig*.json|.github/workflows/ci.yml) has_frontend=true; has_component=true ;;
             esac
           done < "$RUNNER_TEMP/changed-files"
           {

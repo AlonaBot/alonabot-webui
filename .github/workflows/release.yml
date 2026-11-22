@@ -64,9 +64,11 @@ jobs:
               if [ "$locale" = en-US ]; then printf '## English\n\n'; else printf '\n## 简体中文\n\n'; fi
               awk '
                 /^ {0,3}(`{3,}|~{3,})/ {
-                  marker = $0; sub(/^ */, "", marker); sub(/[^`~].*$/, "", marker)
-                  if (!fence) { fence = substr(marker, 1, 1); width = length(marker) }
-                  else if (substr(marker, 1, 1) == fence && length(marker) >= width && $0 ~ /^ *[`~]+[[:space:]]*$/) { fence = "" }
+                  marker = $0; sub(/^ */, "", marker)
+                  character = substr(marker, 1, 1)
+                  sub(character == "`" ? "[^`].*$" : "[^~].*$", "", marker)
+                  if (!fence) { fence = character; width = length(marker) }
+                  else if (character == fence && length(marker) >= width && $0 ~ ("^ *" fence "+[[:space:]]*$")) { fence = "" }
                   print; next
                 }
                 !fence && !version && /^#{1,2} / { version = 1; next }
