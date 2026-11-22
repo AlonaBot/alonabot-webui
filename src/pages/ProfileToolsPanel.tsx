@@ -1,4 +1,6 @@
 import { useEffect, useState, type JSX } from 'react';
+import { toast } from '../ui/toast';
+import { Skeleton } from '../ui/EmptyState';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Plus, Trash2, X } from 'lucide-react';
 import { onPackagesChanged } from '../api/client';
@@ -16,7 +18,6 @@ export function ProfileToolsPanel({ profileID }: { profileID: string }): JSX.Ele
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('');
@@ -25,17 +26,16 @@ export function ProfileToolsPanel({ profileID }: { profileID: string }): JSX.Ele
     setGlobals(global.policies); setItems(saved.items); setPlugins(profilePlugins); setPackages(allPackages);
   }
   useEffect(() => {
-    const refresh = () => void load().catch(error => setError(error instanceof Error ? error.message : String(error))).finally(() => setLoading(false));
+    const refresh = () => void load().catch(error => toast.error(error)).finally(() => setLoading(false));
     refresh();
     return onPackagesChanged(refresh);
   }, [profileID]);
   async function save(item: ProfileToolPolicy, policy: ProfileToolPolicy['policy']) {
-    setBusy(true); setError(null);
-    const errors: string[] = [];
+    setBusy(true);     const errors: string[] = [];
     try { await putProfileTools(profileID, [{ ...item, policy }]); setOpen(false); }
     catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
     try { await load(); } catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
-    setError(errors.length ? errors.join('\n') : null); setBusy(false);
+    if (errors.length) toast.error(errors.join('\n')); setBusy(false);
   }
   const label = (policy: string) => policy === 'allow' ? ui.toolActionAllow : policy === 'confirm' ? ui.toolActionAsk : policy === 'deny' ? ui.toolActionDeny : ui.toolActionInherit;
   const matches = (item: ProfileToolPolicy, search: string) => {
@@ -49,8 +49,7 @@ export function ProfileToolsPanel({ profileID }: { profileID: string }): JSX.Ele
     return <div className="profile-tool-info"><span className="profile-tool-title">{name} <small>{kind === 'tool' ? ui.profileToolIdentity : ui.profileOperationIdentity}</small></span><span className="profile-tool-subtext">{pluginID}{global && ` · ${ui.toolGlobalPrefix.replace('{policy}', label(global.override === 'inherit' ? global.default : global.override))}`}{disabled && ` · ${ui.pluginDisabled}`}</span></div>;
   };
   return <div className="profile-tools-panel">
-    {error && <p className="plugins-error-banner" role="alert">{error}</p>}
-    {loading ? <p role="status">{ui.loading}</p> : <fieldset className="config-edit-fields" disabled={busy}>
+    {loading ? <Skeleton height={120} /> : <fieldset className="config-edit-fields" disabled={busy}>
       {items.length > 0 && <input aria-label={ui.searchTools} placeholder={ui.searchTools} value={filter} onChange={event => setFilter(event.target.value)} />}
       <div className="profile-card">{items.filter(item => item.policy !== 'inherit' && matches(item, filter)).map(item => <div className="profile-card-row profile-tool-row" key={profileToolKey(item)}>
         {detail(item)}<div className="profile-tool-actions"><div className="profile-tool-segmented" role="group" aria-label={profileToolKey(item)}>{(['allow', 'confirm', 'deny'] as const).map(policy => <button type="button" key={policy} className={`profile-segmented-btn ${item.policy === policy ? 'is-active' : ''}`} aria-pressed={item.policy === policy} onClick={() => void save(item, policy)}>{label(policy)}</button>)}</div><button type="button" className="profile-tool-remove-btn" aria-label={`${ui.toolActionInherit} ${profileToolKey(item)}`} onClick={() => void save(item, 'inherit')}><Trash2 size={16} /></button></div>

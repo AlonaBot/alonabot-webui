@@ -1,4 +1,5 @@
 import { useMemo, useState, type JSX } from 'react';
+import { Switch } from '../ui/Switch';
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import type { ConfigSnapshot } from '../api/config';
@@ -61,7 +62,7 @@ function AIForm({ form, snapshot, profileID, plugin }: { form: ConfigFormProps; 
           </Popover.Root>
           : field.key === 'triggers' ? <div className="profile-trigger-pills">{(['mention', 'wake_word', 'private'] as const).map((mode, index) => <button type="button" key={mode} aria-pressed={triggerValues.includes(mode)} className={`profile-trigger-pill ${triggerValues.includes(mode) ? 'is-active' : ''}`} onClick={() => change('triggers', triggerValues.includes(mode) ? triggerValues.filter(item => item !== mode) : [...triggerValues, mode])}>{[ui.triggerMention, ui.triggerWakeWords, ui.triggerDirect][index]}</button>)}</div>
           : field.key === 'wake_words' ? <div className="profile-tag-editor"><div className="profile-tags-list">{(value('wake_words') as string[]).map((entry, index) => <span className="profile-tag-pill" key={index}>{entry}<button type="button" aria-label={`${ui.removeRow} ${entry}`} onClick={() => change('wake_words', (value('wake_words') as string[]).filter((_, at) => at !== index))}><X size={12} /></button></span>)}</div><div className="profile-tag-input-box"><input aria-label={ui.addWakeWord} placeholder={ui.addWakeWord} value={word} onChange={event => setWord(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); if (word) { change('wake_words', [...value('wake_words') as string[], word]); setWord(''); } } }} /><button type="button" aria-label={ui.addWakeWord} disabled={!word} onClick={() => { change('wake_words', [...value('wake_words') as string[], word]); setWord(''); }}><Plus size={14} /></button></div></div>
-          : <label className="plugin-switch-label"><input type="checkbox" role="switch" aria-label={ui.memberSessions} checked={value('member_sessions') === true} onChange={event => change('member_sessions', event.target.checked)} /><span className="plugin-switch-slider" /></label>}
+          : <Switch aria-label={ui.memberSessions} checked={value('member_sessions') === true} onCheckedChange={checked => change('member_sessions', checked)} />}
       </div>)}
     </div></section>)}
     {Object.keys(patch).length > 0 && <div className="config-form-actions"><button type="button" onClick={() => { setPatch({}); form.onDiscard?.(); }}>{ui.discard}</button><button type="submit" className="save-button">{ui.save}</button></div>}

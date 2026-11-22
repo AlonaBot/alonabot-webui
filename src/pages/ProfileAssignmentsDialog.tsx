@@ -1,4 +1,8 @@
 import { useEffect, useState, type JSX } from 'react';
+import { Select } from '../ui/Select';
+import { toast } from '../ui/toast';
+import { Skeleton } from '../ui/EmptyState';
+import { Switch } from '../ui/Switch';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Plus, X } from 'lucide-react';
 import { listChats, type Chat } from '../api/conversations';
@@ -11,7 +15,6 @@ export function ProfileAssignmentsDialog({ profile, open, onOpenChange, onChange
   profile: Profile; open: boolean; onOpenChange: (open: boolean) => void; onChanged: () => void;
 }): JSX.Element {
   const ui = useUI();
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [instances, setInstances] = useState<AdapterInstance[]>([]);
   const [assignments, setAssignments] = useState<ProfileAssignments | null>(null);
@@ -27,15 +30,14 @@ export function ProfileAssignmentsDialog({ profile, open, onOpenChange, onChange
   }
   useEffect(() => {
     if (!open) return;
-    setAssignments(null); setError(null); setAdding(false); setQuery(''); setInstance(''); setSession('');
-    void load().catch(error => setError(error instanceof Error ? error.message : String(error)));
+    setAssignments(null); setAdding(false); setQuery(''); setInstance(''); setSession('');
+    void load().catch(error => toast.error(error));
   }, [open, profile.id]);
   async function mutate(action: () => Promise<void>) {
-    setBusy(true); setError(null);
-    const errors: string[] = [];
+    setBusy(true);     const errors: string[] = [];
     try { await action(); } catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
     try { await load(); onChanged(); } catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
-    setError(errors.length ? errors.join('\n') : null); setBusy(false);
+    if (errors.length) toast.error(errors.join('\n')); setBusy(false);
   }
   const matches = (text: string) => text.toLowerCase().includes(query.toLowerCase());
   const dedicated = assignments?.sessions.filter(item => item.profile === profile.id && matches(item.instance + item.session)) ?? [];
@@ -43,20 +45,19 @@ export function ProfileAssignmentsDialog({ profile, open, onOpenChange, onChange
   return <Dialog.Root open={open} onOpenChange={onOpenChange}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" />
     <Dialog.Content className="dialog-content profile-scope-dialog" aria-describedby={undefined}>
       <div className="dialog-header"><Dialog.Title className="dialog-title">{ui.scopeDialogTitle.replace('{name}', profile.name)}</Dialog.Title><Dialog.Close asChild><button type="button" aria-label={ui.close}><X size={18} /></button></Dialog.Close></div>
-      {error && <p role="alert" className="plugins-error-banner">{error}</p>}
-      {!assignments ? !error && <p role="status">{ui.loading}</p> : <fieldset className="config-edit-fields profile-scope-body" disabled={busy}>
+      {!assignments ? <Skeleton height={120} /> : <fieldset className="config-edit-fields profile-scope-body" disabled={busy}>
         <input aria-label={ui.searchScope} placeholder={ui.searchScope} value={query} onChange={event => setQuery(event.target.value)} />
         <section className="profile-scope-section"><h3 className="profile-scope-section-title">{ui.accountDefault}</h3><div className="profile-card">
           {instances.filter(inst => matches(inst.instance_id)).map(inst => {
             const assigned = assignments.instances[inst.instance_id];
             return <div key={inst.instance_id} className="profile-card-row"><div className="profile-instance-meta"><span>{inst.instance_id}</span><small>{ui.accountDefaultDesc.replace('{count}', String(chats.filter(chat => chat.instance_id === inst.instance_id).length)).replace('{profile}', profiles.find(p => p.id === (assigned ?? 'default'))?.name ?? assigned)}</small></div>
-              <label className="plugin-switch-label"><input type="checkbox" role="switch" aria-label={inst.instance_id} checked={assigned === profile.id} onChange={event => void mutate(() => assignInstanceProfile(inst.instance_id, event.target.checked ? profile.id : null))} /><span className="plugin-switch-slider" /></label></div>;
+              <Switch aria-label={inst.instance_id} checked={assigned === profile.id} onCheckedChange={checked => void mutate(() => assignInstanceProfile(inst.instance_id, checked ? profile.id : null))} /></div>;
           })}
           {instances.length === 0 && <p className="profile-scope-empty">{ui.noEntries}</p>}
         </div></section>
         <section className="profile-scope-section"><div className="profile-scope-section-header"><h3 className="profile-scope-section-title">{ui.dedicatedSessions}</h3><button type="button" className="profile-add-session-btn" onClick={() => setAdding(!adding)}><Plus size={14} />{ui.addSession}</button></div>
           {adding && <form className="profile-manual-session" onSubmit={event => { event.preventDefault(); void mutate(async () => { await assignSessionProfile({ instance, session, profile: profile.id }); setAdding(false); }); }}>
-            <label>{ui.accounts}<select required value={instance} onChange={event => { setInstance(event.target.value); setSession(''); }}><option value="">{ui.accounts}</option>{instances.map(inst => <option key={inst.instance_id} value={inst.instance_id}>{inst.instance_id}</option>)}</select></label>
+            <label>{ui.accounts}<Select variant="filled" aria-label={ui.accounts} placeholder={ui.accounts} value={instance} onValueChange={value => { setInstance(value); setSession(''); }} options={instances.map(inst => ({ value: inst.instance_id, label: inst.instance_id }))} /></label>
             <label>{ui.manualSession}<input required list="profile-session-directory" value={session} onChange={event => setSession(event.target.value)} /></label>
             <datalist id="profile-session-directory">{chats.filter(chat => chat.instance_id === instance).map(chat => <option key={chat.session} value={chat.session}>{chat.title}</option>)}</datalist>
             <button type="submit">{ui.addSession}</button>

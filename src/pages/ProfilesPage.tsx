@@ -1,4 +1,10 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type FormEvent, type JSX } from 'react';
+import { PageHeader } from '../shell/PageHeader';
+import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
+import { Skeleton } from '../ui/EmptyState';
+import { TabBar } from '../ui/Tabs';
+import { toast } from '../ui/toast';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
@@ -34,7 +40,6 @@ export function ProfilesPage(): JSX.Element {
   const [pluginsProfileID, setPluginsProfileID] = useState('');
   const [activeTab, setActiveTab] = useState<'ai' | 'platform' | 'plugins'>('ai');
   const [loading, setLoading] = useState(true);
-  const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
   // 对话框状态
   const [scopeDialogOpen, setScopeDialogOpen] = useState(false);
@@ -79,7 +84,6 @@ export function ProfilesPage(): JSX.Element {
   const loadData = useCallback(async () => {
     const version = ++requestVersion.current;
     setLoading(true);
-    setErrorBanner(null);
     try {
       const [profList, pkgList] = await Promise.all([
         listProfiles(),
@@ -92,7 +96,7 @@ export function ProfilesPage(): JSX.Element {
       setPluginsProfileID(targetID);
       if (targetID !== selectedProfileID) handleSelectProfile(targetID);
     } catch (err: unknown) {
-      if (version === requestVersion.current) setErrorBanner(err instanceof Error ? err.message : String(err));
+      if (version === requestVersion.current) toast.error(err);
     } finally {
       if (version === requestVersion.current) setLoading(false);
     }
@@ -216,14 +220,14 @@ export function ProfilesPage(): JSX.Element {
     }
   };
 
-  if (!currentProfile) return <div className="profiles-page">{errorBanner ? <p role="alert">{errorBanner}</p> : <p role="status">{ui.loading}</p>}</div>;
+  if (!currentProfile) return <div className="profiles-page"><Skeleton height={36} width={200} /><Skeleton height={200} /></div>;
 
-  const colorControl = <label className="dialog-form-field"><span>{ui.profileColor}</span><select aria-label={ui.profileColor} value={dialogColor} onChange={event => setDialogColor(event.target.value)}>{['teal', 'navy', 'amber', 'pink', 'green', 'purple', 'red', 'gray'].map(color => <option key={color} value={color}>{ui[`profileColor_${color}` as keyof typeof ui]}</option>)}</select></label>;
+  const colorControl = <label className="dialog-form-field"><span>{ui.profileColor}</span><Select variant="filled" aria-label={ui.profileColor} value={dialogColor} onValueChange={setDialogColor} options={['teal', 'navy', 'amber', 'pink', 'green', 'purple', 'red', 'gray'].map(color => ({ value: color, label: <><span className={`profile-dot profile-color-${color}`} style={{ display: 'inline-block', marginRight: 8 }} />{ui[`profileColor_${color}` as keyof typeof ui]}</> }))} /></label>;
   return (
     <div className="profiles-page">
       {/* 头部：● 名称 ⌄、会话数入口、⋯ 操作菜单 */}
-      <div className="profiles-header">
-        <div className="profiles-header-left">
+      <PageHeader
+        left={<div className="profiles-header-left">
           {/* 配置文件切换下拉菜单 */}
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
@@ -275,9 +279,8 @@ export function ProfilesPage(): JSX.Element {
           >
             {ui.sessionCount.replace('{count}', String(currentProfile.sessions))}
           </button>
-        </div>
-
-        <div className="profiles-header-right">
+        </div>}
+        right={<>
           {/* ⋯ 更多操作菜单 */}
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
@@ -328,50 +331,18 @@ export function ProfilesPage(): JSX.Element {
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
-        </div>
-      </div>
+        </>}
+      />
 
-      {errorBanner && (
-        <div className="plugins-error-banner" role="alert">
-          <span>{errorBanner}</span>
-          <button type="button" className="error-banner-close" aria-label={ui.close} onClick={() => setErrorBanner(null)}>
-            &times;
-          </button>
-        </div>
-      )}
-
-      {!agentPackage && !loading && <div className="profile-no-agent-banner"><span>{ui.noAgentInstalled}</span><button type="button" onClick={() => navigate('/components?tab=store')}>{ui.goToStore}</button></div>}
+      {!agentPackage && !loading && <div className="profile-no-agent-banner"><span>{ui.profileNeedsAgent}</span><Button size="sm" variant="soft" onClick={() => navigate('/models')}>{ui.setUpAgent}</Button></div>}
 
       {/* 子标签导航：AI / 平台与消息 / 插件 */}
-      <div className="profile-tabs">
-        {agentPackage && (
-          <button
-            type="button"
-            className={`profile-tab-btn ${activeTab === 'ai' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('ai')}
-          >
-            {ui.tabAI}
-          </button>
-        )}
-        <button
-          type="button"
-          className={`profile-tab-btn ${activeTab === 'platform' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('platform')}
-        >
-          {ui.tabPlatform}
-        </button>
-        <button
-          type="button"
-          className={`profile-tab-btn ${activeTab === 'plugins' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('plugins')}
-        >
-          {ui.tabPlugins}
-        </button>
-      </div>
+      <TabBar className="profile-tab-bar" value={activeTab} onValueChange={value => setActiveTab(value as typeof activeTab)} aria-label={ui.profiles}
+        items={[...(agentPackage ? [{ value: 'ai', label: ui.tabAI }] : []), { value: 'platform', label: ui.tabPlatform }, { value: 'plugins', label: ui.tabPlugins }]} />
 
       {/* 分区内容渲染 */}
       <div className="profile-tab-content" key={currentProfile.id}>
-        {pluginsProfileID !== currentProfile.id && <p role="status">{ui.loading}</p>}
+        {pluginsProfileID !== currentProfile.id && <Skeleton height={160} />}
         {pluginsProfileID === currentProfile.id && activeTab === 'ai' && agentPackage && agentProfilePlugin && (
           <ProfileAISection
             profileID={currentProfile.id}

@@ -1,4 +1,5 @@
 import { Edit2, RotateCcw } from 'lucide-react';
+import { Switch } from '../ui/Switch';
 import type { CommandOverride, CommandScope } from '../api/policies';
 import { useUI } from '../i18n/UI';
 import { commandOverride, permissionParent, permissionPreset } from './permissionState';
@@ -30,7 +31,7 @@ export function CommandPolicyControls({ overrides, scope, enabled, permissions, 
     {preset === 'custom' && <button type="button" className="detail-icon-button" aria-label={`${ui.customPermissions} ${label}`} disabled={busy} onClick={() => onCustom(override.permissions)}><Edit2 size={14} /></button>}</>}
     <div className="command-enabled-control">
       {!enabledOnly && override.enabled !== null && <button type="button" className="command-inherit-button" disabled={busy} title={ui.resetEnabled} aria-label={`${ui.resetEnabled} ${label}`} onClick={() => onChange({ enabled: null })}><RotateCcw size={12} /></button>}
-      <label className="plugin-switch-label"><input type="checkbox" role="switch" aria-label={`${ui.commandEnabled} ${label}`} title={override.enabled === null ? ui.commandInherit : undefined} checked={enabled} disabled={busy} onChange={event => onChange({ enabled: event.target.checked })} /><span className="plugin-switch-slider" /></label>
+      <Switch aria-label={`${ui.commandEnabled} ${label}`} checked={enabled} onCheckedChange={checked => onChange({ enabled: checked })} disabled={busy} />
     </div>
   </div>;
 }

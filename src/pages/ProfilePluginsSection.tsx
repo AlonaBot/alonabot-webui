@@ -1,4 +1,6 @@
 import { useEffect, useState, type JSX } from 'react';
+import { toast } from '../ui/toast';
+import { Switch } from '../ui/Switch';
 import { ChevronRight } from 'lucide-react';
 import { getPluginConfig, type ConfigSnapshot } from '../api/config';
 import { type Package } from '../api/packages';
@@ -15,7 +17,6 @@ export function ProfilePluginsSection({ profileID, packages, plugins, onChanged 
 }): JSX.Element {
   const ui = useUI();
   const { locale } = useUISettings();
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState('');
   const [snapshots, setSnapshots] = useState<Record<string, ConfigSnapshot>>({});
@@ -31,13 +32,13 @@ export function ProfilePluginsSection({ profileID, packages, plugins, onChanged 
         else errors.push(result.reason instanceof Error ? result.reason.message : String(result.reason));
       }
       setSnapshots(Object.fromEntries(entries));
-      if (errors.length) setError(errors.join('\n'));
+      if (errors.length) toast.error(errors.join('\n'));
     });
     return () => { active = false; };
   }, [summaryIDs]);
   async function mutate(action: () => Promise<unknown>) {
-    setError(null); setBusy(true);
-    try { await action(); } catch (error) { setError(error instanceof Error ? error.message : String(error)); }
+    setBusy(true);
+    try { await action(); } catch (error) { toast.error(error); }
     finally { await onChanged(); setBusy(false); }
   }
   function fieldLabel(pluginID: string, path: string) {
@@ -55,7 +56,6 @@ export function ProfilePluginsSection({ profileID, packages, plugins, onChanged 
     return field ? fieldText(messages, field).description : path;
   }
   return <div className="profile-plugins-section">
-    {error && <p role="alert" className="plugins-error-banner">{error}</p>}
     <input aria-label={ui.searchPlugins} placeholder={ui.searchPlugins} value={query} onChange={event => setQuery(event.target.value)} />
     <fieldset className="config-edit-fields" disabled={busy}><div className="profile-card">
       {plugins.filter(plugin => plugin.plugin_id.toLowerCase().includes(query.toLowerCase())).map(plugin => {
@@ -67,7 +67,7 @@ export function ProfilePluginsSection({ profileID, packages, plugins, onChanged 
             <span>{disabled ? ui.pluginDisabled : valid.length ? ui.overrideItemCount.replace('{count}', String(valid.length)).replace('{items}', valid.map(path => fieldLabel(plugin.plugin_id, path)).join(', ')) : ui.followDefault}</span>
             {plugin.invalid.length > 0 && <div className="profile-invalid-list">{plugin.invalid.map(invalid => <small key={invalid.path}><code>{invalid.path}</code>: {invalid.reason}</small>)}<button type="button" onClick={() => void mutate(() => pruneProfilePlugin(profileID, plugin.plugin_id))}>{ui.pruneOverrides}</button></div>}
           </div></div>
-          <div className="profile-plugin-controls"><label className="plugin-switch-label"><input type="checkbox" role="switch" aria-label={`${ui.actionEnable} ${plugin.plugin_id}`} disabled={disabled} checked={plugin.enabled} onChange={event => void mutate(() => patchProfilePlugin(profileID, plugin.plugin_id, { enabled: event.target.checked }))} /><span className="plugin-switch-slider" /></label><button type="button" className="profile-plugin-arrow-btn" disabled={disabled} aria-label={ui.pluginConfigAction.replace('{plugin}', plugin.plugin_id)} onClick={() => navigate(`/components/${encodeURIComponent(plugin.plugin_id)}?tab=config&profile=${encodeURIComponent(profileID)}`)}><ChevronRight size={18} /></button></div>
+          <div className="profile-plugin-controls"><Switch aria-label={`${ui.actionEnable} ${plugin.plugin_id}`} checked={plugin.enabled} onCheckedChange={checked => void mutate(() => patchProfilePlugin(profileID, plugin.plugin_id, { enabled: checked }))} disabled={disabled} /><button type="button" className="profile-plugin-arrow-btn" disabled={disabled} aria-label={ui.pluginConfigAction.replace('{plugin}', plugin.plugin_id)} onClick={() => navigate(`/components/${encodeURIComponent(plugin.plugin_id)}?tab=config&profile=${encodeURIComponent(profileID)}`)}><ChevronRight size={18} /></button></div>
         </div>;
       })}
       {plugins.length === 0 && <p className="profile-scope-empty">{ui.noEntries}</p>}
