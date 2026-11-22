@@ -17,7 +17,7 @@ go run github.com/AlonaBot/AlonaBot/cmd/alonabot check .
 
 涉及组件生成资源或运行协议时，在 Core 仓库同步 `components.lock.json` 并执行对应的跨组件整合测试。
 
-维护者在 `plugin.yaml` 和 `changelog/<版本>/en-US.md`、`zh-CN.md` 准备版本后，创建对应的 `v<版本>` tag。Release 工作流使用 `ALONABOT_RELEASE_KEY` 签名五平台包，并上传 `release.json`、签名、公钥与平台资产；正文由这两个 changelog 文件合成。私钥留在维护者备份和 GitHub secrets 中。本地打包使用：
+维护者在 `plugin.yaml` 和 `changelog/<版本>/en-US.md`、`zh-CN.md` 准备版本后，创建对应的 `v<版本>` tag。Release 工作流构建并上传五平台压缩包；正文由这两个 changelog 文件合成，源码下载由 GitHub 提供。本地打包使用：
 
 ```sh
 go run github.com/AlonaBot/AlonaBot/cmd/alonabot pack . --target linux/amd64 --out /tmp/alonabot-package

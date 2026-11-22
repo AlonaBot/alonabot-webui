@@ -121,9 +121,6 @@ export function PluginsPage(): JSX.Element {
   const [remoteSource, setRemoteSource] = useState('');
   const [replaceConflict, setReplaceConflict] = useState(false);
   const [archiveFile, setArchiveFile] = useState<File | null>(null);
-  const [releaseFile, setReleaseFile] = useState<File | null>(null);
-  const [signatureFile, setSignatureFile] = useState<File | null>(null);
-  const [publicKeyText, setPublicKeyText] = useState('');
 
   // 更新对话框
   const [previewReady, setPreviewReady] = useState(false);
@@ -312,9 +309,6 @@ export function PluginsPage(): JSX.Element {
     setPreviewReady(false);
     setUpdateMode('source');
     setArchiveFile(null);
-    setReleaseFile(null);
-    setSignatureFile(null);
-    setPublicKeyText('');
     setUpdateModalOpen(true);
   };
 
@@ -325,11 +319,11 @@ export function PluginsPage(): JSX.Element {
       if (updateMode === 'source') {
         res = await updatePackage(updatingPkg.ID, { confirm });
       } else {
-        if (!archiveFile || !releaseFile) {
+        if (!archiveFile) {
           setErrorBanner(ui.uploadFilesRequired);
           return;
         }
-        const formData = buildPackageUpload({ archive: archiveFile, release: releaseFile, signature: signatureFile, publicKey: publicKeyText, confirm });
+        const formData = buildPackageUpload({ archive: archiveFile, confirm });
         res = await updatePackage(updatingPkg.ID, formData);
       }
 
@@ -338,9 +332,6 @@ export function PluginsPage(): JSX.Element {
       setUpdateModalOpen(false);
       setUpdatingPkg(null);
       setArchiveFile(null);
-      setReleaseFile(null);
-      setSignatureFile(null);
-      setPublicKeyText('');
       if (res.warnings && res.warnings.length > 0) {
         setWarningsList(res.warnings);
       }
@@ -369,11 +360,11 @@ export function PluginsPage(): JSX.Element {
           Confirm: confirm,
         });
       } else {
-        if (!archiveFile || !releaseFile) {
+        if (!archiveFile) {
           setErrorBanner(ui.uploadFilesRequired);
           return;
         }
-        const formData = buildPackageUpload({ archive: archiveFile, release: releaseFile, signature: signatureFile, publicKey: publicKeyText, confirm, replace: replaceConflict });
+        const formData = buildPackageUpload({ archive: archiveFile, confirm, replace: replaceConflict });
         resultPkg = await installPackage(formData);
       }
 
@@ -381,9 +372,6 @@ export function PluginsPage(): JSX.Element {
       setRemoteSource('');
       setReplaceConflict(false);
       setArchiveFile(null);
-      setReleaseFile(null);
-      setSignatureFile(null);
-      setPublicKeyText('');
 
       if (resultPkg.Warnings && resultPkg.Warnings.length > 0) {
         setWarningsList(resultPkg.Warnings);
@@ -569,7 +557,7 @@ export function PluginsPage(): JSX.Element {
                 className="plugin-primary-button"
                 onClick={() => {
                   setErrorBanner(null);
-          setInstallModalOpen(true);
+                  setInstallModalOpen(true);
                   setInstallMode('remote');
                 }}
               >
@@ -856,40 +844,14 @@ export function PluginsPage(): JSX.Element {
             ) : (
               <div className="dialog-form-body">
                 <div className="dialog-form-field">
-                  <label className="dialog-form-label">{ui.archiveFile}</label>
+                  <label className="dialog-form-label" htmlFor="install-archive">{ui.archiveFile}</label>
                   <input
+                    key="install-archive"
+                    id="install-archive"
                     type="file"
                     accept=".tar.gz,.tgz"
                     className="dialog-file-input"
                     onChange={e => setArchiveFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-                <div className="dialog-form-field">
-                  <label className="dialog-form-label">{ui.releaseJSON}</label>
-                  <input
-                    type="file"
-                    accept=".json"
-                    className="dialog-file-input"
-                    onChange={e => setReleaseFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-                <div className="dialog-form-field">
-                  <label className="dialog-form-label">{ui.signatureFile}</label>
-                  <input
-                    type="file"
-                    accept=".sig"
-                    className="dialog-file-input"
-                    onChange={e => setSignatureFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-                <div className="dialog-form-field">
-                  <label className="dialog-form-label">{ui.publicKeyText}</label>
-                  <textarea
-                    className="dialog-textarea font-mono"
-                    placeholder={ui.publicKeyText}
-                    value={publicKeyText}
-                    onChange={e => setPublicKeyText(e.target.value)}
-                    rows={2}
                   />
                 </div>
                 <label className="dialog-checkbox-label">
@@ -916,7 +878,7 @@ export function PluginsPage(): JSX.Element {
                 type="button"
                 className="dialog-button is-primary"
                 onClick={() => executeInstall(false)}
-                disabled={installMode === 'remote' ? !remoteSource.trim() : !archiveFile || !releaseFile}
+                disabled={installMode === 'remote' ? !remoteSource.trim() : !archiveFile}
               >
                 {ui.confirm}
               </button>
@@ -970,40 +932,13 @@ export function PluginsPage(): JSX.Element {
             ) : (
               <div className="dialog-form-body">
                 <div className="dialog-form-field">
-                  <label className="dialog-form-label">{ui.archiveFile}</label>
+                  <label className="dialog-form-label" htmlFor="update-archive">{ui.archiveFile}</label>
                   <input
+                    id="update-archive"
                     type="file"
                     accept=".tar.gz,.tgz"
                     className="dialog-file-input"
                     onChange={e => setArchiveFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-                <div className="dialog-form-field">
-                  <label className="dialog-form-label">{ui.releaseJSON}</label>
-                  <input
-                    type="file"
-                    accept=".json"
-                    className="dialog-file-input"
-                    onChange={e => setReleaseFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-                <div className="dialog-form-field">
-                  <label className="dialog-form-label">{ui.signatureFile}</label>
-                  <input
-                    type="file"
-                    accept=".sig"
-                    className="dialog-file-input"
-                    onChange={e => setSignatureFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-                <div className="dialog-form-field">
-                  <label className="dialog-form-label">{ui.publicKeyText}</label>
-                  <textarea
-                    className="dialog-textarea font-mono"
-                    placeholder={ui.publicKeyText}
-                    value={publicKeyText}
-                    onChange={e => setPublicKeyText(e.target.value)}
-                    rows={2}
                   />
                 </div>
               </div>
@@ -1022,7 +957,7 @@ export function PluginsPage(): JSX.Element {
                 type="button"
                 className="dialog-button is-primary"
                 onClick={() => executeUpdate(false)}
-                disabled={updateMode === 'upload' ? (!archiveFile || !releaseFile) : !previewReady}
+                disabled={updateMode === 'upload' ? (!archiveFile) : !previewReady}
               >
                 {ui.confirm}
               </button>

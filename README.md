@@ -38,4 +38,4 @@ alonabot pack . --target linux/amd64 --out bin
 
 ## 安装与发行
 
-在运行中的 Core 上执行 `alonabot install --source AlonaBot/alonabot-webui --yes`。发行资产包含五平台包、`release.json`、签名和公钥。版本说明维护在 `changelog/<版本>/`。
+在运行中的 Core 上执行 `alonabot install --source AlonaBot/alonabot-webui --yes`。发行资产仅包含五平台压缩包，源码下载由 GitHub 提供。版本说明维护在 `changelog/<版本>/`。
