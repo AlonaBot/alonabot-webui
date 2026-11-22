@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ArrowUp, ArrowDown, GripVertical, Plus, X } from 'lucide-react';
 import { arrayMove } from '@dnd-kit/sortable';
-import type { CommandPolicy } from '../api/admin';
+import type { CommandPolicy } from '../api/policies';
 import { useUI } from '../i18n/UI';
 
 export type NamesDraft = { plugin: string; command: CommandPolicy; names: string[] };

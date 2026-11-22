@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Statistics } from '../api/webui';
-import type { Package } from '../api/admin';
+import type { Package } from '../api/packages';
 import { hasPackageProblem } from '../pages/packageState';
 import { useUI } from '../i18n/UI';
 import { groupStatistics, type LogRecord } from '../pages/statistics';

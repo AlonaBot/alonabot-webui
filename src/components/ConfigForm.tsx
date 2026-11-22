@@ -6,7 +6,8 @@ import type { Field, Template } from '../schema/model';
 import { buildPatch, isSecretSet, MissingSecretsError } from '../schema/patch';
 import { fieldExamples, fieldText, templateText } from '../i18n/catalog';
 import { useUI } from '../i18n/UI';
-import { AdminAPIError, type ConfigOption, type OptionsPage } from '../api/admin';
+import { AdminAPIError } from '../api/client';
+import { type ConfigOption, type OptionsPage } from '../api/config';
 
 export type ConfigFormProps = {
   schema: unknown;

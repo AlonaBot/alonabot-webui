@@ -1,5 +1,6 @@
 import type { HourBucket } from '../api/webui';
-import { adminRequest, type Package } from '../api/admin';
+import { adminRequest } from '../api/client';
+import { type Package } from '../api/packages';
 export type LogRecord = { time: string; level: string; source: string; message: string };
 export function groupStatistics(buckets: HourBucket[], packages: Package[]) {
   const accounts = new Map<string, number>();

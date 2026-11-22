@@ -1,10 +1,6 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent, type JSX } from 'react';
 import { Plus, X } from 'lucide-react';
-import {
-  getProfilePlatform,
-  putProfilePlatform,
-  type ProfilePlatform,
-} from '../api/admin';
+import { getProfilePlatform, putProfilePlatform, type ProfilePlatform } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 
 /** ProfilePlatformSection 负责展示与编辑配置文件的平台与消息设置。 */

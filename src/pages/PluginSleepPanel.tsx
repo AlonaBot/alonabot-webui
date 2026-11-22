@@ -1,6 +1,6 @@
 import { useId, useState, type JSX } from 'react';
 import { LockKeyhole } from 'lucide-react';
-import type { PluginRuntime, SleepPolicy } from '../api/admin';
+import type { PluginRuntime, SleepPolicy } from '../api/packages';
 import { useUI } from '../i18n/UI';
 import { Link } from '../shell/router';
 import { useUISettings } from '../shell/settings';

@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { RefreshCw, Edit2, ChevronDown, ChevronRight, Filter, RotateCcw } from 'lucide-react';
-import { listPackages, getPluginPolicies, setPluginPolicy, setCommandNames, resetCommandNames, getToolPolicies, setToolPolicy, setToolPolicies, packageIconURL, type Package, type PluginPolicies, type CommandPolicy, type CommandScope, type ToolPolicy, type ToolPolicyValue } from '../api/admin';
+import { listPackages, packageIconURL, type Package } from '../api/packages';
+import { getPluginPolicies, setPluginPolicy, setCommandNames, resetCommandNames, getToolPolicies, setToolPolicy, setToolPolicies, type PluginPolicies, type CommandPolicy, type CommandScope, type ToolPolicy, type ToolPolicyValue } from '../api/policies';
 import { useUI } from '../i18n/UI';
 import { useUISettings } from '../shell/settings';
 import { commandDescription, commandOverride, commandTree, matchesCommand, scopeEnabled, scopeKey, type CommandTree } from './permissionState';

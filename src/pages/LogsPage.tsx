@@ -15,16 +15,9 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useUI } from '../i18n/UI';
 import { SearchContext, type SearchItem } from '../shell/search';
-import {
-  getRecentLogs,
-  getLogHistory,
-  subscribeLogs,
-  listPackages,
-  listInstances,
-  type LogRecord,
-  type Package,
-  type AdapterInstance,
-} from '../api/admin';
+import { listInstances, type AdapterInstance } from '../api/instances';
+import { getRecentLogs, getLogHistory, subscribeLogs, type LogRecord } from '../api/logs';
+import { listPackages, type Package } from '../api/packages';
 import {
   type LogFilterState,
   type LogLevelKey,

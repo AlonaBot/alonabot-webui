@@ -1,10 +1,9 @@
 import { useEffect, useState, type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Plus, X } from 'lucide-react';
-import {
-  assignInstanceProfile, assignSessionProfile, getProfileAssignments, listChats, listInstances, listProfiles,
-  type AdapterInstance, type Chat, type Profile, type ProfileAssignments,
-} from '../api/admin';
+import { listChats, type Chat } from '../api/conversations';
+import { listInstances, type AdapterInstance } from '../api/instances';
+import { assignInstanceProfile, assignSessionProfile, getProfileAssignments, listProfiles, type Profile, type ProfileAssignments } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 import { chatProfile } from './accountState';
 

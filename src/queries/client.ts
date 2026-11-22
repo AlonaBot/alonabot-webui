@@ -1,5 +1,5 @@
 import { MutationCache, QueryClient } from '@tanstack/react-query';
-import { onPackagesChanged, onSessionExpired } from '../api/admin';
+import { onPackagesChanged, onSessionExpired } from '../api/client';
 import { toast } from '../ui/toast';
 
 declare module '@tanstack/react-query' {

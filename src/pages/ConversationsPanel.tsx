@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { clearPluginConversation, listPluginConversations } from '../api/admin';
+import { clearPluginConversation, listPluginConversations } from '../api/conversations';
 import { useUI } from '../i18n/UI';
 import { ActionDialog } from '../components/ActionDialog';
 import { Pagination } from '../components/Pagination';

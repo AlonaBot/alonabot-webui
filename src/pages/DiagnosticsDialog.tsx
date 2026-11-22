@@ -2,7 +2,7 @@ import { useState, useId, type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { AlertTriangle, X } from 'lucide-react';
 import { useUI } from '../i18n/UI';
-import { downloadDiagnostics, type DiagnosticsOptions } from '../api/admin';
+import { downloadDiagnostics, type DiagnosticsOptions } from '../api/logs';
 
 interface DiagnosticsDialogProps {
   open: boolean;

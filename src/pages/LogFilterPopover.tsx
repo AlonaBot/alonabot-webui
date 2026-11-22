@@ -7,7 +7,8 @@ import {
   type LogLevelKey,
   createDefaultFilterState,
 } from './logsFormat';
-import type { Package, AdapterInstance } from '../api/admin';
+import type { AdapterInstance } from '../api/instances';
+import type { Package } from '../api/packages';
 
 interface LogFilterPopoverProps {
   filter: LogFilterState;

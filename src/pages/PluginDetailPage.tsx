@@ -18,38 +18,12 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import {
-  AdminAPIError,
-  changePackage,
-  getLogLevels,
-  isConfirmationError,
-  listPackages,
-  listGenerations,
-  packageIconURL,
-  rollbackPackage,
-  setPackageLogLevel,
-  uninstallPackage,
-  getAllowedInstances,
-  setAllowedInstances,
-  listInstances,
-  getPluginConfig,
-  getPluginRuntime,
-  getPluginSleepPolicy,
-  setPluginSleepPolicy,
-  patchPluginConfig,
-  type Generation,
-  type LogLevels,
-  type Package,
-  type SourceLogLevel,
-  type AllowedInstances,
-  type AdapterInstance,
-  type ConfigSnapshot,
-  listCoreOptions,
-  resolveCoreOptions,
-  type ConfigOption,
-  type PluginRuntime,
-  type SleepPolicy,
-} from '../api/admin';
+import { AdminAPIError, isConfirmationError } from '../api/client';
+import { getPluginConfig, patchPluginConfig, type ConfigSnapshot, listCoreOptions, resolveCoreOptions, type ConfigOption } from '../api/config';
+import { listInstances, type AdapterInstance } from '../api/instances';
+import { getLogLevels, setPackageLogLevel, type LogLevels, type SourceLogLevel } from '../api/logs';
+import { changePackage, listPackages, listGenerations, packageIconURL, rollbackPackage, uninstallPackage, getPluginRuntime, getPluginSleepPolicy, setPluginSleepPolicy, type Generation, type Package, type PluginRuntime, type SleepPolicy } from '../api/packages';
+import { getAllowedInstances, setAllowedInstances, type AllowedInstances } from '../api/policies';
 import { ChangelogDialog } from '../components/ChangelogDialog';
 import { StoragePanel } from './StoragePanel';
 import { ConversationsPanel } from './ConversationsPanel';

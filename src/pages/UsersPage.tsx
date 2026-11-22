@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState, type JSX } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MoreHorizontal, Plus, RefreshCw, ShieldCheck } from 'lucide-react';
-import { changeCoreAdmin, getCoreDenies, setCoreDenies } from '../api/admin';
+import { changeCoreAdmin, getCoreDenies, setCoreDenies } from '../api/policies';
 import { useUI } from '../i18n/UI';
 import { SearchContext } from '../shell/search';
 import { loadUsers, mergeUsers } from './users';

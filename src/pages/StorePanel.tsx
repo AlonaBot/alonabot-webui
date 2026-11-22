@@ -1,7 +1,8 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ArrowUpCircle, BadgeCheck, Download, ExternalLink, Plus, RefreshCw, Star, Trash2, Upload, X } from 'lucide-react';
-import { AdminAPIError, installPackage, isConfirmationError, listPackages, updatePackage, type Package } from '../api/admin';
+import { AdminAPIError, isConfirmationError } from '../api/client';
+import { installPackage, listPackages, updatePackage, type Package } from '../api/packages';
 import { ChangelogDialog, ReleasePreview } from '../components/ChangelogDialog';
 import { checkStoreRepo, getStore, type StoreCheck, type StoreEntry, type StorePage, type StoreSort } from '../api/webui';
 import { useUI } from '../i18n/UI';

@@ -1,4 +1,5 @@
-import { AdminAPIError, type ConfigSnapshot } from '../api/admin';
+import { AdminAPIError } from '../api/client';
+import { type ConfigSnapshot } from '../api/config';
 import { fieldsFromSchema, type Template } from '../schema/model';
 import { buildPatch } from '../schema/patch';
 

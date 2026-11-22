@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef, type JSX, type ReactNode } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Sun, Moon, Laptop, X, KeyRound } from 'lucide-react';
-import { getDefaultLocale, setDefaultLocale, getLogLevels, setGlobalLogLevel, rotateAdminToken, getCoreDenies, setCoreDenies, getCoreConfigDiagnostics, pruneCoreConfig, getCoreSleep, setCoreSleep, type CoreSleep, type GlobalLogLevel } from '../api/admin';
+import { rotateAdminToken } from '../api/auth';
+import { getDefaultLocale, setDefaultLocale, getCoreConfigDiagnostics, pruneCoreConfig, getCoreSleep, setCoreSleep, type CoreSleep } from '../api/core';
+import { getLogLevels, setGlobalLogLevel, type GlobalLogLevel } from '../api/logs';
+import { getCoreDenies, setCoreDenies } from '../api/policies';
 import { useUI } from '../i18n/UI';
 import { useUISettings } from '../shell/settings';
 import { Link } from '../shell/router';

@@ -19,16 +19,8 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import {
-  changePackage,
-  installPackage,
-  isConfirmationError,
-  listPackages,
-  packageIconURL,
-  uninstallPackage,
-  updatePackage,
-  type Package,
-} from '../api/admin';
+import { isConfirmationError } from '../api/client';
+import { changePackage, installPackage, listPackages, packageIconURL, uninstallPackage, updatePackage, type Package } from '../api/packages';
 import { ChangelogDialog, ReleasePreview } from '../components/ChangelogDialog';
 import { getLatestRelease, type LatestRelease } from '../api/webui';
 import { repository, compareVersions } from './versions';

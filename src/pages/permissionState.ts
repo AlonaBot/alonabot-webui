@@ -1,4 +1,4 @@
-import type { CommandScope, CommandOverride, CommandPolicy } from '../api/admin';
+import type { CommandScope, CommandOverride, CommandPolicy } from '../api/policies';
 
 /** commandOverride 修改一项显式覆盖时保留同作用域的另一项。 */
 export function commandOverride(overrides: CommandOverride[], scope: CommandScope, change: Partial<Pick<CommandOverride, 'permissions' | 'enabled'>>): CommandOverride {

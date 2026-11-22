@@ -1,6 +1,6 @@
 import type { SeenUser } from '../api/webui';
 import { listSeenUsers } from '../api/webui';
-import { getCoreAdmins, getCoreDenies } from '../api/admin';
+import { getCoreAdmins, getCoreDenies } from '../api/policies';
 export async function loadUsers() {
   const [seen, admins, denies] = await Promise.all([listSeenUsers(), getCoreAdmins(), getCoreDenies()]);
   return mergeUsers(seen, admins, denies.users);

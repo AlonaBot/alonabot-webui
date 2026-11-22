@@ -1,4 +1,5 @@
-import type { ProfileToolPolicy, ToolPolicy } from '../api/admin';
+import type { ToolPolicy } from '../api/policies';
+import type { ProfileToolPolicy } from '../api/profiles';
 
 export function profileToolKey(item: ProfileToolPolicy): string {
   return item.operation ? `operation:${item.operation.plugin_id}/${item.operation.name}` : `tool:${item.tool}`;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, type JSX } from 'react';
 import { Check, Copy, Eye, EyeOff, KeyRound } from 'lucide-react';
 import markSvg from '../assets/mark.svg?no-inline';
-import { bootstrap, confirmBootstrap, login } from '../api/admin';
+import { bootstrap, confirmBootstrap, login } from '../api/auth';
 import { useUI } from '../i18n/UI';
 import { version } from '../../package.json';
 

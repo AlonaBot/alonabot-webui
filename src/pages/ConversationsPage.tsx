@@ -1,7 +1,9 @@
 import { useEffect, useState, type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { RefreshCw, Trash2 } from 'lucide-react';
-import { listPackages, listPluginConversations, clearPluginConversation, getProfileAssignments, listProfiles, type Package, type Profile, type ProfileAssignments } from '../api/admin';
+import { listPluginConversations, clearPluginConversation } from '../api/conversations';
+import { listPackages, type Package } from '../api/packages';
+import { getProfileAssignments, listProfiles, type Profile, type ProfileAssignments } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 import { conversationAssignment } from './conversationState';
 

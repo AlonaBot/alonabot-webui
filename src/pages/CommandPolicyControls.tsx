@@ -1,5 +1,5 @@
 import { Edit2, RotateCcw } from 'lucide-react';
-import type { CommandOverride, CommandScope } from '../api/admin';
+import type { CommandOverride, CommandScope } from '../api/policies';
 import { useUI } from '../i18n/UI';
 import { commandOverride, permissionParent, permissionPreset } from './permissionState';
 

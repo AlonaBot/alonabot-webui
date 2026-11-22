@@ -11,18 +11,9 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import {
-  createProfile,
-  deleteProfile,
-  getProfilePlugins,
-  listPackages,
-  listProfiles,
-  onPackagesChanged,
-  updateProfile,
-  type Package,
-  type Profile,
-  type ProfilePlugin,
-} from '../api/admin';
+import { onPackagesChanged } from '../api/client';
+import { listPackages, type Package } from '../api/packages';
+import { createProfile, deleteProfile, getProfilePlugins, listProfiles, updateProfile, type Profile, type ProfilePlugin } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 import { navigate } from '../shell/router';
 import { SearchContext } from '../shell/search';

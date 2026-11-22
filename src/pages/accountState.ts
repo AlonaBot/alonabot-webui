@@ -1,4 +1,5 @@
-import type { Chat, ProfileAssignments } from '../api/admin';
+import type { Chat } from '../api/conversations';
+import type { ProfileAssignments } from '../api/profiles';
 
 /** accountChats 只使用聊天目录实际记录的账号归属，保留最近活跃顺序。 */
 export function accountChats(chats: Chat[], instanceID: string): Chat[] {

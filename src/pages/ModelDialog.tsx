@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import type { ConfigSnapshot } from '../api/admin';
+import type { ConfigSnapshot } from '../api/config';
 import { useUI } from '../i18n/UI';
 import { buildUpdateModelPatch, editingConfig, MODEL_TYPES, parseModels, parseProviders, type ConfiguredModel, type ModelType } from './modelConfig';
 import { ModelSelect } from './ModelSelect';

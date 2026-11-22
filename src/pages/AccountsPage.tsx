@@ -1,11 +1,12 @@
 import { useContext, useEffect, useState, type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Bot, Check, Eye, Plus, RefreshCw, Send, Trash2, X } from 'lucide-react';
-import {
-  assignInstanceProfile, changeInstance, createInstance, getInstanceConfig, getInstanceSchema,
-  getProfileAssignments, isConfirmationError, listChats, listInstances, listPackages, listProfiles,
-  pruneInstanceConfig, type AdapterInstance, type Chat, type Correction, type Package, type Profile, type ProfileAssignments,
-} from '../api/admin';
+import { isConfirmationError } from '../api/client';
+import { type Correction } from '../api/config';
+import { listChats, type Chat } from '../api/conversations';
+import { changeInstance, createInstance, getInstanceConfig, getInstanceSchema, listInstances, pruneInstanceConfig, type AdapterInstance } from '../api/instances';
+import { listPackages, type Package } from '../api/packages';
+import { assignInstanceProfile, getProfileAssignments, listProfiles, type Profile, type ProfileAssignments } from '../api/profiles';
 import { ConfigForm } from '../components/ConfigForm';
 import { useUI } from '../i18n/UI';
 import { isSecretSet } from '../schema/patch';

@@ -1,6 +1,8 @@
 import { useEffect, useState, type JSX } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { getPluginConfig, patchProfilePlugin, pruneProfilePlugin, type ConfigSnapshot, type Package, type ProfilePlugin } from '../api/admin';
+import { getPluginConfig, type ConfigSnapshot } from '../api/config';
+import { type Package } from '../api/packages';
+import { patchProfilePlugin, pruneProfilePlugin, type ProfilePlugin } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 import { fieldText, pickLocale } from '../i18n/catalog';
 import { fieldsFromSchema, type Field } from '../schema/model';

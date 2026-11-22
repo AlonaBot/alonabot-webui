@@ -1,7 +1,9 @@
 import { useMemo, useState, type JSX } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, Plus, X } from 'lucide-react';
-import type { ConfigSnapshot, Package, ProfilePlugin } from '../api/admin';
+import type { ConfigSnapshot } from '../api/config';
+import type { Package } from '../api/packages';
+import type { ProfilePlugin } from '../api/profiles';
 import { OptionsFromControl, type ConfigFormProps } from '../components/ConfigForm';
 import { useUI } from '../i18n/UI';
 import { fieldsFromSchema } from '../schema/model';

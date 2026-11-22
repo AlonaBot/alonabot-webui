@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ExternalLink, X } from 'lucide-react';
-import { getCoreChangelog, getPackageChangelog, type Changelog } from '../api/admin';
+import { getCoreChangelog, type Changelog } from '../api/core';
+import { getPackageChangelog } from '../api/packages';
 import { getLatestRelease, getSeenVersion, setSeenVersion, type LatestRelease } from '../api/webui';
 import { useUI } from '../i18n/UI';
 import chinese from '../../i18n/zh-CN.json';

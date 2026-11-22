@@ -1,6 +1,7 @@
 import { useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { AlertTriangle, CheckCircle, ExternalLink, RefreshCw } from 'lucide-react';
-import { listPackages, type CoreInfo, type Package } from '../api/admin';
+import { type CoreInfo } from '../api/core';
+import { listPackages, type Package } from '../api/packages';
 import { getStatistics, type Statistics } from '../api/webui';
 import { StatisticsCharts } from '../components/StatisticsCharts';
 import { rangeLogs, type LogRecord } from './statistics';

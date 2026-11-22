@@ -2,7 +2,10 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ArrowRight, Bot, Check, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { changePackage, getAgentModelUsage, getPluginConfig, listPackages, onPackagesChanged, testAgentModel, type ConfigSnapshot, type Package } from '../api/admin';
+import { getAgentModelUsage, testAgentModel } from '../api/agent';
+import { onPackagesChanged } from '../api/client';
+import { getPluginConfig, type ConfigSnapshot } from '../api/config';
+import { changePackage, listPackages, type Package } from '../api/packages';
 import english from '../../i18n/en-US.json';
 import { ConfigForm } from '../components/ConfigForm';
 import { useUI } from '../i18n/UI';

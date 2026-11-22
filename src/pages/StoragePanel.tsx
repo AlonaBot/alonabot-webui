@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Download, Folder, FolderPlus, Pencil, Plus, Trash2, Upload } from 'lucide-react';
-import { AdminAPIError, clearPluginData, deletePluginFile, deletePluginKV, downloadPluginFile, exportPluginData, getPluginKV, listPluginFiles, listPluginKV, makePluginDirectory, renamePluginFile, setPluginKV, uploadPluginFile } from '../api/admin';
+import { AdminAPIError } from '../api/client';
+import { clearPluginData, deletePluginFile, deletePluginKV, downloadPluginFile, exportPluginData, getPluginKV, listPluginFiles, listPluginKV, makePluginDirectory, renamePluginFile, setPluginKV, uploadPluginFile } from '../api/data';
 import { useUI } from '../i18n/UI';
 import { Pagination } from '../components/Pagination';
 import { ActionDialog } from '../components/ActionDialog';

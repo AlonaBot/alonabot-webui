@@ -1,7 +1,10 @@
 import { useEffect, useState, type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Plus, Trash2, X } from 'lucide-react';
-import { getProfilePlugins, getProfileTools, getToolPolicies, listPackages, onPackagesChanged, putProfileTools, type Package, type ProfilePlugin, type ProfileToolPolicy, type ToolPolicy } from '../api/admin';
+import { onPackagesChanged } from '../api/client';
+import { listPackages, type Package } from '../api/packages';
+import { getToolPolicies, type ToolPolicy } from '../api/policies';
+import { getProfilePlugins, getProfileTools, putProfileTools, type ProfilePlugin, type ProfileToolPolicy } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 import { profileToolCandidates, profileToolIdentity, profileToolKey } from './profileTools';
 

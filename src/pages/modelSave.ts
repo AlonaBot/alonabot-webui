@@ -1,4 +1,5 @@
-import { changePackage, getPluginConfig, patchPluginConfig, type ConfigSnapshot, type PendingConfig } from '../api/admin';
+import { getPluginConfig, patchPluginConfig, type ConfigSnapshot, type PendingConfig } from '../api/config';
+import { changePackage } from '../api/packages';
 
 /** saveModelConfig 在 PATCH 成功后立即交还脱敏快照，开发来源保存已重启，安装来源继续激活 Pending。 */
 export async function saveModelConfig(

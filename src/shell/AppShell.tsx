@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { useUI } from '../i18n/UI';
 import { routes } from '../routes';
-import { listPackages, onPackagesChanged } from '../api/admin';
+import { onPackagesChanged } from '../api/client';
+import { listPackages } from '../api/packages';
 import { MobileTabBar } from './MobileTabBar';
 import { navigate, usePath } from './router';
 import { SearchContext, type SearchItem } from './search';

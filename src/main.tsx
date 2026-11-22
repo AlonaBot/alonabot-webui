@@ -10,15 +10,9 @@ import { routes, setCachedCore } from './routes';
 import { AppShell } from './shell/AppShell';
 import { navigate, usePath } from './shell/router';
 import { UISettingsContext, type UISettings } from './shell/settings';
-import {
-  AdminAPIError,
-  getCore,
-  logout,
-  onSessionExpired,
-  restoreSession,
-  setClientLocale,
-  type CoreInfo,
-} from './api/admin';
+import { logout, restoreSession } from './api/auth';
+import { AdminAPIError, onSessionExpired, setClientLocale } from './api/client';
+import { getCore, type CoreInfo } from './api/core';
 import { LoginPage } from './pages/LoginPage';
 import { PluginDetailPage } from './pages/PluginDetailPage';
 import { getLatestRelease, type LatestRelease } from './api/webui';

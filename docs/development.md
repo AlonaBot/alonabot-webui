@@ -44,7 +44,7 @@ alonabot enable alonabot-webui-admin --data-dir ./data
 
 父桥按 [ADMIN-API §7](https://github.com/AlonaBot/AlonaBot/blob/main/spec/ADMIN-API.md#7-插件页面-postmessage-桥) 在每次 `translate` 请求时用当前语言和请求参数返回 `text`；`hello` 交付语言、主题与令牌，`locale` 事件交付语言。浏览器验证用沙箱 iframe 验证 showcase 首次翻译、切换语言后重新取词、主题与快捷键转发。
 
-配置文件的工具覆盖候选按 [ADMIN-API §18](https://github.com/AlonaBot/AlonaBot/blob/main/spec/ADMIN-API.md#18-工具调用策略) 的 `identities` 展开为 §23 的独立工具与操作；同名两类分别编辑，仅有旧全局覆盖的空身份行没有新增候选。已保存的配置文件覆盖按原身份继续读写。配置与配置文件页面共用 `src/api/admin.ts` 的 `ToolPolicy.identities: ('tool' | 'operation')[]`。
+配置文件的工具覆盖候选按 [ADMIN-API §18](https://github.com/AlonaBot/AlonaBot/blob/main/spec/ADMIN-API.md#18-工具调用策略) 的 `identities` 展开为 §23 的独立工具与操作；同名两类分别编辑，仅有旧全局覆盖的空身份行没有新增候选。已保存的配置文件覆盖按原身份继续读写。配置与配置文件页面共用 `src/api/policies.ts` 的 `ToolPolicy.identities: ('tool' | 'operation')[]`。
 
 配置页面使用 `PluginConfigPanel({id})` 与共享 `ConfigForm`：编辑基线为 `pending.config ?? active`，保存使用 `active_generation`，409 保留草稿并允许显式采用最新配置；secret 再认证、动态选项、回复示例及双语字段沿用同一表单。插件详情标签单行横滚，Agent 页面入口为 `pages/memory`（记忆），Core 数据标签保留。父桥在 layout effect 提前绑定，保留首次 hello 的主题与语言订阅。
 

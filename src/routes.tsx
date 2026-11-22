@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { ShieldCheck, Bot, Box, LayoutDashboard, MessageSquare, Puzzle, ScrollText, Settings, Shield, SlidersHorizontal } from 'lucide-react';
 import { ConfigForm } from './components/ConfigForm';
 import { useUI } from './i18n/UI';
-import { type CoreInfo } from './api/admin';
+import { type CoreInfo } from './api/core';
 import { OverviewPage } from './pages/OverviewPage';
 import { PluginsPage } from './pages/PluginsPage';
 import { UsersPage } from './pages/UsersPage';

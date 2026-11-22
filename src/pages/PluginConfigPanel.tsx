@@ -1,6 +1,10 @@
 import { useEffect, useState, useMemo, useCallback, useRef, type JSX } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { AdminAPIError, changePackage, getPluginConfig, patchPluginConfig, discardPluginConfig, prunePluginConfig, revealPluginSecret, encodeSecretPath, listConfigOptions, resolveConfigOptions, pluginExampleURL, getDefaultPlatform, listPackages, type ConfigSnapshot, type Package, type Profile, type ProfilePlugin, listProfiles, getProfilePlugins, patchProfilePlugin, pruneProfilePlugin } from '../api/admin';
+import { AdminAPIError } from '../api/client';
+import { getPluginConfig, patchPluginConfig, discardPluginConfig, prunePluginConfig, revealPluginSecret, encodeSecretPath, listConfigOptions, resolveConfigOptions, type ConfigSnapshot } from '../api/config';
+import { getDefaultPlatform } from '../api/core';
+import { changePackage, pluginExampleURL, listPackages, type Package } from '../api/packages';
+import { type Profile, type ProfilePlugin, listProfiles, getProfilePlugins, patchProfilePlugin, pruneProfilePlugin } from '../api/profiles';
 import { ConfigForm, type ConfigFormProps } from '../components/ConfigForm';
 import { pickLocale } from '../i18n/catalog';
 import { useUI } from '../i18n/UI';

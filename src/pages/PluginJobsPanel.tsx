@@ -1,10 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, type JSX } from 'react';
 import { AlertCircle, Calendar, Pause, Play, RefreshCw, Search, X } from 'lucide-react';
-import {
-  listPluginJobs,
-  changePluginJob,
-  type PluginJob,
-} from '../api/admin';
+import { listPluginJobs, changePluginJob, type PluginJob } from '../api/packages';
 import { useUI } from '../i18n/UI';
 
 export function PluginJobsPanel(props: { id: string }): JSX.Element {

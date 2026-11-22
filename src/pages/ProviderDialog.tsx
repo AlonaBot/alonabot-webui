@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Eye, EyeOff, Plus, RefreshCw, X } from 'lucide-react';
-import { discoverAgentModels, type ConfigSnapshot, type ModelDiscoveryInput } from '../api/admin';
+import { discoverAgentModels, type ModelDiscoveryInput } from '../api/agent';
+import { type ConfigSnapshot } from '../api/config';
 import { templateText } from '../i18n/catalog';
 import { useUI } from '../i18n/UI';
 import { isSecretSet, MissingSecretsError } from '../schema/patch';

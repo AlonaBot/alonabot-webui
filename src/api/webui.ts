@@ -1,5 +1,5 @@
-import { adminRequest, AdminAPIError } from './admin';
-export { adminRequest } from './admin';
+import { adminRequest, AdminAPIError } from './client';
+export { adminRequest } from './client';
 
 export type StatisticsRange = '24h' | '7d' | '30d';
 export type HourBucket = { hour: string; incoming: number; outgoing: number; send_errors: number; accounts: { instance_id: string; incoming: number; outgoing: number }[]; commands: { plugin_id: string; route_id: string; command_name: string; result: 'ok' | 'error' | 'denied'; count: number; duration_ms: number }[] };

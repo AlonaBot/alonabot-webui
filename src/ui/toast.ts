@@ -1,4 +1,4 @@
-import { AdminAPIError } from '../api/admin';
+import { AdminAPIError } from '../api/client';
 
 export type ToastKind = 'success' | 'error' | 'info';
 
