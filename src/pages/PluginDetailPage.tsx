@@ -29,7 +29,7 @@ import { StoragePanel } from './StoragePanel';
 import { ConversationsPanel } from './ConversationsPanel';
 import { DatabasePanel } from './DatabasePanel';
 import { useUI } from '../i18n/UI';
-import { Link, navigate } from '../shell/router';
+import { Link, navigate, useQueryParam } from '../shell/router';
 import { SearchContext } from '../shell/search';
 import { PluginConfigPanel } from './PluginConfigPanel';
 import { PluginJobsPanel } from './PluginJobsPanel';
@@ -62,11 +62,12 @@ export function PluginDetailPage(props: {
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'config' | `page:${string}` | 'jobs' | 'data' | 'versions' | 'advanced'>('config');
 
+  // 地址里的 ?tab= 决定当前标签，侧栏的插件页面入口与刷新后都能回到同一标签。
+  const tabParam = useQueryParam('tab');
   useEffect(() => {
-    const sync = () => { if (new URLSearchParams(window.location.search).get('tab') === 'config') setActiveTab('config'); };
-    sync(); window.addEventListener('popstate', sync);
-    return () => window.removeEventListener('popstate', sync);
-  }, []);
+    if (tabParam === 'config' || tabParam === 'jobs' || tabParam === 'data' || tabParam === 'versions' || tabParam === 'advanced') setActiveTab(tabParam);
+    else if (tabParam?.startsWith('page:')) setActiveTab(tabParam as `page:${string}`);
+  }, [tabParam]);
 
   // 发信许可与实例
   const [allowedInstances, setAllowedInstancesState] = useState<AllowedInstances | null>(null);

@@ -791,6 +791,8 @@
     "tokenSavedConfirm": "我已把令牌保存在安全的地方",
     "enterConsole": "进入管理后台",
     "rotatedTokenNotice": "新令牌只显示这一次，请立即保存。所有已登录的浏览器都已退出，需要用新令牌重新登录。",
-    "signInAgain": "用新令牌登录"
+    "signInAgain": "用新令牌登录",
+    "pluginPageDisabled": "插件已停用，启用后才能打开这个页面",
+    "modelsNeedAgent": "先在插件里安装并启用 Agent"
   }
 }

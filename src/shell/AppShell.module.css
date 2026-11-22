@@ -1,0 +1,36 @@
+.shell {
+  display: flex;
+  align-items: flex-start;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--color-ink) 7%, transparent) 1px, transparent 0) 0 0 / 22px 22px fixed,
+    var(--color-bg);
+  color: var(--color-ink);
+}
+
+/* 原型顶部的点阵只铺在页面上缘，往下渐隐到纯底色。 */
+.main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  background: linear-gradient(to bottom, transparent 0, var(--color-bg) 160px);
+}
+
+.content {
+  padding: 0 var(--space-10) var(--space-10);
+  font-size: var(--text-sm);
+  animation: page-in var(--dur-slow) var(--ease-out);
+}
+
+@media (max-width: 1100px) {
+  .content { padding-inline: var(--space-6); }
+}
+
+@media (max-width: 767px) {
+  .shell { background: var(--color-bg); }
+  .main { background: none; }
+  .content { padding: 0 var(--space-4) calc(72px + var(--space-6)); }
+}
+
+@keyframes page-in { from { opacity: 0; transform: translateY(4px); } }

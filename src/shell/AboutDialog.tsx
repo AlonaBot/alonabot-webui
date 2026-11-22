@@ -1,78 +1,29 @@
-import { useUI } from '../i18n/UI';
 import { useState, type JSX } from 'react';
-import { ChangelogDialog } from '../components/ChangelogDialog';
-import * as Dialog from '@radix-ui/react-dialog';
-import { ExternalLink, X } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import oflTxtUrl from '../assets/fonts/OFL.txt?no-inline';
 import markSvg from '../assets/mark.svg?no-inline';
+import { ChangelogDialog } from '../components/ChangelogDialog';
+import { useUI } from '../i18n/UI';
+import { Button } from '../ui/Button';
+import { Dialog } from '../ui/Dialog';
+import styles from './AboutDialog.module.css';
 
-interface AboutDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  version: string;
-}
-
-/**
- * 「关于」对话框组件。
- * 展示 AlonaBot 版本号、项目主页链接与开源许可说明。
- */
-export function AboutDialog(props: AboutDialogProps): JSX.Element {
-  const { open, onOpenChange, version } = props;
+/** 「关于」：版本、项目主页、字体与许可证，可打开 Core 的更新说明。 */
+export function AboutDialog({ open, onOpenChange, version }: { open: boolean; onOpenChange: (open: boolean) => void; version: string }): JSX.Element {
   const ui = useUI();
-  const [showChangelog, setShowChangelog] = useState(false);
-
-  return (
-    <><ChangelogDialog component="core" version={version} open={showChangelog} onClose={() => setShowChangelog(false)} /><Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="dialog-content about-dialog-content">
-          <div className="about-dialog-header">
-            <div className="about-brand-row">
-              <img src={markSvg} alt="AlonaBot" width={40} height={40} className="about-brand-logo" />
-              <div>
-                <Dialog.Title className="about-app-title">AlonaBot</Dialog.Title>
-                <Dialog.Description className="about-app-desc">
-                  {ui.aboutDesc}
-                </Dialog.Description>
-              </div>
-            </div>
-            <Dialog.Close asChild>
-              <button type="button" className="dialog-close-button" aria-label={ui.close}>
-                <X size={16} />
-              </button>
-            </Dialog.Close>
-          </div>
-
-          <button onClick={() => setShowChangelog(true)}>{ui.viewChangelog}</button>
-          <div className="about-info-grid">
-            <div className="about-info-row">
-              <span className="about-info-label">{ui.version}</span>
-              <span className="about-info-value font-mono">{version}</span>
-            </div>
-            <div className="about-info-row">
-              <span className="about-info-label">{ui.projectHome}</span>
-              <a
-                href="https://github.com/AlonaBot/AlonaBot"
-                target="_blank"
-                rel="noreferrer"
-                className="about-info-link"
-              >
-                GitHub <ExternalLink size={12} />
-              </a>
-            </div>
-            <div className="about-info-row">
-              <span className="about-info-label">{ui.font}</span>
-              <a href={oflTxtUrl} target="_blank" rel="noreferrer" className="about-info-link">
-                JetBrains Mono (SIL OFL 1.1) <ExternalLink size={12} />
-              </a>
-            </div>
-            <div className="about-info-row">
-              <span className="about-info-label">{ui.license}</span>
-              <span className="about-info-value">MIT License</span>
-            </div>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root></>
-  );
+  const [changelog, setChangelog] = useState(false);
+  return <>
+    <Dialog open={open} onOpenChange={onOpenChange} size="sm"
+      title={<span className={styles.brand}><img src={markSvg} alt="" width={32} height={34} />AlonaBot</span>}
+      description={ui.aboutDesc}
+      footer={<Button onClick={() => setChangelog(true)}>{ui.viewChangelog}</Button>}>
+      <dl className={styles.facts}>
+        <dt>{ui.version}</dt><dd className={styles.mono}>{version}</dd>
+        <dt>{ui.projectHome}</dt><dd><a href="https://github.com/AlonaBot/AlonaBot" target="_blank" rel="noreferrer">GitHub <ExternalLink size={12} /></a></dd>
+        <dt>{ui.font}</dt><dd><a href={oflTxtUrl} target="_blank" rel="noreferrer">JetBrains Mono (SIL OFL 1.1) <ExternalLink size={12} /></a></dd>
+        <dt>{ui.license}</dt><dd>MIT License</dd>
+      </dl>
+    </Dialog>
+    <ChangelogDialog component="core" version={version} open={changelog} onClose={() => setChangelog(false)} />
+  </>;
 }

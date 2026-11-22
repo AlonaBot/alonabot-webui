@@ -1,3 +1,7 @@
+// 全局样式最先引入，组件的 CSS Modules 在层叠顺序上排在其后。
+import './styles/tokens.css';
+import './styles/base.css';
+import './style.css';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LanguageSwitch } from './components/LanguageSwitch';
@@ -24,9 +28,6 @@ import { queryClient } from './queries/client';
 import { Toaster } from './ui/Toaster';
 import { TooltipProvider } from './ui/Tooltip';
 import { ErrorBoundary } from './ui/ErrorBoundary';
-import './styles/tokens.css';
-import './styles/base.css';
-import './style.css';
 
 const languageStorageKey = 'alonabot.webui.locale';
 const catalogs = { 'en-US': english, 'zh-CN': chinese };

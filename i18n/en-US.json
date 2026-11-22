@@ -791,6 +791,8 @@
     "tokenSavedConfirm": "I have saved the token somewhere safe",
     "enterConsole": "Open the console",
     "rotatedTokenNotice": "The new token is shown only once, so save it now. Every signed-in browser has been signed out and needs the new token.",
-    "signInAgain": "Sign in with the new token"
+    "signInAgain": "Sign in with the new token",
+    "pluginPageDisabled": "This plugin is disabled. Enable it to open the page.",
+    "modelsNeedAgent": "Install and enable the Agent under Plugins first"
   }
 }

@@ -1,0 +1,8 @@
+.brand { display: inline-flex; align-items: center; gap: var(--space-3); }
+
+.facts { display: grid; grid-template-columns: auto 1fr; gap: var(--space-3) var(--space-6); margin: 0; padding: var(--space-4); border-radius: 12px; background: var(--color-surface-2); font-size: var(--text-sm); }
+.facts dt { color: var(--color-ink-muted); }
+.facts dd { margin: 0; text-align: right; }
+.facts a { display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); text-decoration: none; }
+.facts a:hover { text-decoration: underline; }
+.mono { font-family: var(--font-mono); }
