@@ -858,6 +858,7 @@
     "noAccountChatsHint": "No conversations yet. Send the bot a message to try it.",
     "pruneDone": "Removed unrecognized settings",
     "statusOnline": "Online",
-    "statusUnavailable": "Unavailable"
+    "statusUnavailable": "Unavailable",
+    "advancedSettings": "Advanced settings"
   }
 }

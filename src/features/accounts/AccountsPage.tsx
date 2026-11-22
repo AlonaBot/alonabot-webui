@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Download, Eye, MoreHorizontal, Plus, Power, Trash2 } from 'lucide-react';
 import { listChats, type Chat } from '../../api/conversations';
 import { changeInstance, getInstanceConfig, pruneInstanceConfig, type AdapterInstance } from '../../api/instances';
+import { changePackage } from '../../api/packages';
 import { getProfileAssignments, listProfiles } from '../../api/profiles';
 import { useUI } from '../../i18n/UI';
 import { accountChats, chatProfile } from '../../pages/accountState';
@@ -63,6 +64,17 @@ export function AccountsPage(): JSX.Element {
     }
   };
 
+  /** 从账号卡片重新安装适配器：装好后一并启用，账号随即恢复运行。 */
+  const reinstall = async (repo: string, packageID: string) => {
+    if (!await actions.install({ Source: repo })) return;
+    try { await changePackage('enable', packageID); }
+    catch (error) { toast.error(error); }
+    finally {
+      void client.invalidateQueries({ queryKey: ['packages'] });
+      void client.invalidateQueries({ queryKey: ['instances'] });
+    }
+  };
+
   /** 适配器组件停用或未安装时的提示与一键处理。 */
   const adapterIssue = (instance: AdapterInstance) => {
     const label = instance.adapter_id === 'telegram' ? ui.adapterTelegram : instance.adapter_id === 'onebot11' ? ui.adapterOneBot : instance.adapter_id;
@@ -72,7 +84,7 @@ export function AccountsPage(): JSX.Element {
     }
     if (instance.package_state === 'not_installed') {
       const repo = officialAdapters.find(item => item.adapterID === instance.adapter_id)?.repo;
-      return { text: ui.adapterMissingNotice.replace('{name}', label), action: repo && <Button size="sm" variant="soft" icon={<Download size={14} />} loading={actions.busy.has(repo)} onClick={() => void actions.install({ Source: repo })}>{ui.actionInstall}</Button> };
+      return { text: ui.adapterMissingNotice.replace('{name}', label), action: repo && <Button size="sm" variant="soft" icon={<Download size={14} />} loading={actions.busy.has(repo)} onClick={() => void reinstall(repo, instance.package_id)}>{ui.actionInstall}</Button> };
     }
     return null;
   };

@@ -50,14 +50,14 @@
   padding: var(--space-6);
   border: 1.5px dashed var(--color-accent);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--color-accent-soft) 70%, transparent);
+  background: var(--color-accent-soft);
   color: var(--color-accent-strong);
   font-size: var(--text-md);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background-color var(--dur-fast), transform var(--dur-fast);
 }
-.add:hover { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.add:hover { border-color: var(--color-accent-strong); background: color-mix(in srgb, var(--color-accent-soft) 80%, var(--color-accent)); }
 .add:active { transform: scale(0.99); }
 .add small { max-width: 32ch; font-size: var(--text-xs); font-weight: 400; color: var(--color-ink-muted); text-align: center; }
 
@@ -65,6 +65,7 @@
 .choices { margin-bottom: var(--space-5); }
 .installPrompt { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); border-radius: 12px; background: var(--color-surface-2); font-size: var(--text-sm); }
 .installPrompt p { margin: 0; color: var(--color-ink-muted); }
+.tip { margin: 0; padding: var(--space-2) var(--space-3); border-radius: 8px; background: var(--color-accent-soft); color: var(--color-accent-strong); font-size: 13px; }
 .formSkeleton { display: flex; flex-direction: column; gap: var(--space-3); }
 .form { display: flex; flex-direction: column; gap: var(--space-4); }
 .schema { min-width: 0; margin: 0; padding: 0; border: 0; }

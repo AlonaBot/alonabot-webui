@@ -858,6 +858,7 @@
     "noAccountChatsHint": "还没有会话。给机器人发一条消息试试。",
     "pruneDone": "已清理未识别的设置项",
     "statusOnline": "在线",
-    "statusUnavailable": "不可用"
+    "statusUnavailable": "不可用",
+    "advancedSettings": "高级设置"
   }
 }

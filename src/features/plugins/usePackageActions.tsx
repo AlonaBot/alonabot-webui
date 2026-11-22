@@ -66,7 +66,9 @@ export function usePackageActions(): {
       return false;
     } finally {
       mark(id, false);
+      // 账号列表带有所属适配器的状态，组件变化后一起刷新。
       void client.invalidateQueries({ queryKey: packagesKey });
+      void client.invalidateQueries({ queryKey: ['instances'] });
     }
   }
 

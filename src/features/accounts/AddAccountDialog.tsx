@@ -53,7 +53,7 @@ export function AddAccountDialog({ packages, onClose }: { packages: readonly Pac
   const label = (id: string) => id === 'telegram' ? ui.adapterTelegram : id === 'onebot11' ? ui.adapterOneBot : id;
   const instanceID = name.trim();
   const messages = { config: adapterID === 'telegram'
-    ? { token: { description: ui.botTokenHint }, api_base_url: { description: ui.apiBaseURL }, proxy_mode: { description: ui.proxyMode }, proxy: { description: ui.proxyURL } }
+    ? { token: { description: ui.botToken }, api_base_url: { description: ui.apiBaseURL }, proxy_mode: { description: ui.proxyMode }, proxy: { description: ui.proxyURL } }
     : adapterID === 'onebot11' ? { ws_url: { description: ui.webSocketURL }, access_token: { description: ui.accessToken }, mode: { description: ui.connectionMode } } : {} };
 
   const create = async (patch: Record<string, unknown>, confirmed = false) => {
@@ -101,9 +101,10 @@ export function AddAccountDialog({ packages, onClose }: { packages: readonly Pac
           <input className={styles.input} value={name} placeholder={ui.instanceNamePlaceholder} disabled={pending} onChange={event => setName(event.target.value)} autoFocus />
           <small>{ui.instanceNameHint}</small>
         </label>
+        {adapterID === 'telegram' && <p className={styles.tip}>{ui.botTokenHint}</p>}
         <fieldset disabled={pending} className={styles.schema}>
           {/* 实例选项端点要求实例已存在，创建前沿用表单的普通文本输入。 */}
-          <ConfigForm schema={schema.data} value={{}} messages={messages} onSubmit={patch => void create(patch)}
+          <ConfigForm schema={schema.data} value={{}} messages={messages} collapseOptional onSubmit={patch => void create(patch)}
             footer={<>
               <label className={styles.field}>
                 <span>{ui.configProfile}</span>

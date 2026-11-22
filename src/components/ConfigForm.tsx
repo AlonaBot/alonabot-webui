@@ -6,6 +6,7 @@ import type { Field, Template } from '../schema/model';
 import { buildPatch, isSecretSet, MissingSecretsError } from '../schema/patch';
 import { fieldExamples, fieldText, templateText } from '../i18n/catalog';
 import { useUI } from '../i18n/UI';
+import { Disclosure } from '../ui/Disclosure';
 import { AdminAPIError } from '../api/client';
 import { type ConfigOption, type OptionsPage } from '../api/config';
 
@@ -24,6 +25,8 @@ export type ConfigFormProps = {
   onReveal?: (path: string[]) => Promise<string>;
   footer?: ReactNode;
   editablePaths?: readonly string[];
+  /** 为真时只直接显示必填项，其余顶层字段收进「高级设置」。用于新建账号这类首次填写的表单。 */
+  collapseOptional?: boolean;
 };
 
 interface FormContextValue {
@@ -557,8 +560,15 @@ function FormEditor(props: ConfigFormProps) {
           details = details.parentElement?.closest('details') ?? null;
         }
       }}>
-        <Fields key={resetVersion} fields={fields} value={edited} original={props.value as Record<string, unknown>}
-          path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
+        {props.collapseOptional ? <>
+          <Fields key={resetVersion} fields={fields.filter(field => field.required)} value={edited} original={props.value as Record<string, unknown>}
+            path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
+          {fields.some(field => !field.required && !field.invisible) && <Disclosure summary={ui.advancedSettings}>
+            <Fields key={resetVersion} fields={fields.filter(field => !field.required)} value={edited} original={props.value as Record<string, unknown>}
+              path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
+          </Disclosure>}
+        </> : <Fields key={resetVersion} fields={fields} value={edited} original={props.value as Record<string, unknown>}
+          path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />}
         {error && <div role="alert" className="form-error">
           <p>{error instanceof MissingSecretsError ? ui.missingSecrets : ui.patchError}</p>
           <pre>{error.message}</pre>
