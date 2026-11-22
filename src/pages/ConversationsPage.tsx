@@ -1,4 +1,5 @@
 import { useEffect, useState, type JSX } from 'react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import { toast } from '../ui/toast';
 import { Skeleton } from '../ui/EmptyState';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -55,8 +56,8 @@ export function ConversationsPage(): JSX.Element {
   const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return <div className="conversations-page">
     <div className="conversations-toolbar">
-      <select aria-label={ui.filterPlugin} value={plugin} disabled={busy} onChange={event => { setPlugin(event.target.value); setPage(1); }}>{packages.map(value => <option key={value.ID} value={value.ID}>{value.ID}</option>)}</select>
-      <select aria-label={ui.profileTitle} value={profile} onChange={event => { setProfile(event.target.value); setPage(1); }}><option value="">{ui.allProfiles}</option>{profiles.map(value => <option key={value.id} value={value.id}>{value.id === 'default' ? ui.defaultProfile : value.name}</option>)}</select>
+      <OptionSelect aria-label={ui.filterPlugin} value={plugin} disabled={busy} onChange={event => { setPlugin(event.target.value); setPage(1); }}>{packages.map(value => <option key={value.ID} value={value.ID}>{value.ID}</option>)}</OptionSelect>
+      <OptionSelect aria-label={ui.profileTitle} value={profile} onChange={event => { setProfile(event.target.value); setPage(1); }}><option value="">{ui.allProfiles}</option>{profiles.map(value => <option key={value.id} value={value.id}>{value.id === 'default' ? ui.defaultProfile : value.name}</option>)}</OptionSelect>
       <input type="search" aria-label={ui.searchConversations} placeholder={ui.searchConversations} value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} />
       <button type="button" className="detail-icon-button" aria-label={ui.refresh} disabled={busy || loading} onClick={() => { setRevision(value => value + 1); }}><RefreshCw size={16} /></button>
     </div>

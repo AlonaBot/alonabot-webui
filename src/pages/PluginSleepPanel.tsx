@@ -1,4 +1,5 @@
 import { useId, useState, type JSX } from 'react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import { Skeleton } from '../ui/EmptyState';
 import { LockKeyhole } from 'lucide-react';
 import type { PluginRuntime, SleepPolicy } from '../api/packages';
@@ -75,12 +76,12 @@ export function PluginSleepPanel({ policy, runtime, policyError, runtimeError, w
             {policy.reason === 'always_on' && <Link to="/settings">{ui.sleepSettings}</Link>}
           </div>
           <div className="sleep-policy-controls">
-            <div className="sleep-policy-select">{locked && <LockKeyhole size={14} aria-hidden="true" />}<select id={fieldID} aria-describedby={fieldID + '-reason'} value={mode} onChange={event => {
+            <div className="sleep-policy-select">{locked && <LockKeyhole size={14} aria-hidden="true" />}<OptionSelect id={fieldID} aria-describedby={fieldID + '-reason'} value={mode} onChange={event => {
               setSaved(false);
               setDraft(event.target.value === 'auto' ? null : event.target.value === 'never' ? 'never' : policy.policy !== null && policy.policy !== 'never' ? policy.policy : policy.effective_policy !== 'never' ? policy.effective_policy : '');
             }}>
               <option value="auto">{ui.sleepFollowGlobal}</option><option value="never">{ui.sleepNever}</option><option value="duration" disabled={locked}>{ui.sleepDuration}</option>
-            </select></div>
+            </OptionSelect></div>
             {mode === 'duration' && <label className="sleep-duration-field">{ui.sleepDuration}<input required aria-describedby={fieldID + '-duration-hint'} disabled={locked} value={value ?? ''} onChange={event => { setDraft(event.target.value); setSaved(false); }} /><span id={fieldID + '-duration-hint'}>{ui.sleepDurationHint}</span></label>}
           </div>
         </div>

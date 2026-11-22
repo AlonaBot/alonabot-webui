@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState, type JSX } from 'react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import { Skeleton } from '../ui/EmptyState';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MoreHorizontal, Plus, RefreshCw, ShieldCheck } from 'lucide-react';
@@ -49,7 +50,7 @@ export function UsersPage(): JSX.Element {
     <PermissionsTabs active="users" userCount={loading || error ? null : users.length} />
     <div className="data-toolbar">
       <div className="time-range-pills">{(['all', 'admin', 'denied'] as const).map(value => <button key={value} className={`time-range-pill ${filter === value ? 'is-active' : ''}`} onClick={() => { setFilter(value); setPage(1); }}>{({ all: ui.filterRoleAll, admin: ui.administrator, denied: ui.denied })[value]} <small>{users.filter(user => value === 'all' || (value === 'admin' ? user.admin : user.denied)).length}</small></button>)}</div>
-      <select aria-label={ui.platform} value={adapter} onChange={e => { setAdapter(e.target.value); setPage(1); }}><option value="">{ui.allPlatforms}</option>{[...new Set(users.map(user => user.adapter))].map(value => <option key={value}>{value}</option>)}</select>
+      <OptionSelect aria-label={ui.platform} value={adapter} onChange={e => { setAdapter(e.target.value); setPage(1); }}><option value="">{ui.allPlatforms}</option>{[...new Set(users.map(user => user.adapter))].map(value => <option key={value}>{value}</option>)}</OptionSelect>
       <input aria-label={ui.searchUsers} placeholder={ui.searchUsers} value={query} onChange={e => { setQuery(e.target.value); setPage(1); }} />
       <button aria-label={ui.refresh} onClick={() => { setError(''); void load(); }}><RefreshCw size={16} /></button>
       <button className="dialog-button is-primary" disabled={busy} onClick={() => { setNewUser(''); setAdding(true); }}><Plus size={16} />{ui.addUser}</button>
@@ -61,7 +62,7 @@ export function UsersPage(): JSX.Element {
     <Pagination page={currentPage} total={filtered.length} size={20} onChange={setPage} />
     {adding && <ActionDialog title={ui.addUser} onClose={() => setAdding(false)} onConfirm={async () => { await change(newUser, newAction === 'admin' ? 'admin' : 'deny', true); }}>
       <label className="dialog-field-label">{ui.userID}<input value={newUser} placeholder="telegram:123" onChange={e => setNewUser(e.target.value)} /></label>
-      <label className="dialog-field-label">{ui.identity}<select value={newAction} onChange={e => setNewAction(e.target.value)}><option value="admin">{ui.administrator}</option><option value="deny">{ui.denied}</option></select></label>
+      <label className="dialog-field-label">{ui.identity}<OptionSelect value={newAction} onChange={e => setNewAction(e.target.value)}><option value="admin">{ui.administrator}</option><option value="deny">{ui.denied}</option></OptionSelect></label>
     </ActionDialog>}
   </div>;
 }

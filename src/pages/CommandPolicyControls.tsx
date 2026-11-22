@@ -1,4 +1,5 @@
 import { Edit2, RotateCcw } from 'lucide-react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import { Switch } from '../ui/Switch';
 import type { CommandOverride, CommandScope } from '../api/policies';
 import { useUI } from '../i18n/UI';
@@ -19,7 +20,7 @@ export function CommandPolicyControls({ overrides, scope, enabled, permissions, 
   const labels: Record<string, string> = { inherit: ui.commandInherit, everyone: ui.permEveryone, chat_admin: ui.permGroupAdmin, admin: ui.permAdminOnly, custom: `${ui.customPermissions}: ${effective?.join(', ')}` };
   const inheritTitle = parent?.scope.kind === 'group' ? ui.inheritGroup : parent?.scope.kind === 'plugin' ? ui.inheritPlugin : ui.inheritDeclaration;
   return <div className="command-policy-controls">
-    {!enabledOnly && <><select className={preset === 'inherit' ? 'is-inherited' : undefined} title={preset === 'inherit' ? inheritTitle : undefined} aria-label={`${ui.permissions} ${label}`} disabled={busy} value={preset} onChange={event => {
+    {!enabledOnly && <><OptionSelect className={preset === 'inherit' ? 'is-inherited' : undefined} title={preset === 'inherit' ? inheritTitle : undefined} aria-label={`${ui.permissions} ${label}`} disabled={busy} value={preset} onChange={event => {
       const value = event.target.value;
       if (value === 'custom') onCustom(effective);
       else onChange({ permissions: value === 'inherit' ? null : value === 'everyone' ? [] : [value] });
@@ -27,7 +28,7 @@ export function CommandPolicyControls({ overrides, scope, enabled, permissions, 
       <option value="inherit">{preset === 'inherit' ? labels[permissionPreset(effective)] : ui.commandInherit}</option>
       <option value="everyone">{ui.permEveryone}</option><option value="chat_admin">{ui.permGroupAdmin}</option><option value="admin">{ui.permAdminOnly}</option>
       <option value="custom">{preset === 'custom' ? `${ui.customPermissions}: ${override.permissions?.join(', ')}` : ui.customPermissions}</option>
-    </select>
+    </OptionSelect>
     {preset === 'custom' && <button type="button" className="detail-icon-button" aria-label={`${ui.customPermissions} ${label}`} disabled={busy} onClick={() => onCustom(override.permissions)}><Edit2 size={14} /></button>}</>}
     <div className="command-enabled-control">
       {!enabledOnly && override.enabled !== null && <button type="button" className="command-inherit-button" disabled={busy} title={ui.resetEnabled} aria-label={`${ui.resetEnabled} ${label}`} onClick={() => onChange({ enabled: null })}><RotateCcw size={12} /></button>}

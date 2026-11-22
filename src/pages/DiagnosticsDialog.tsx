@@ -1,4 +1,5 @@
 import { useState, useId, type JSX } from 'react';
+import { OptionSelect, CheckboxInput } from '../ui/NativeAdapters';
 import * as Dialog from '@radix-ui/react-dialog';
 import { AlertTriangle, X } from 'lucide-react';
 import { useUI } from '../i18n/UI';
@@ -82,7 +83,7 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
               <label htmlFor={timeRangeSelectId} className="diagnostics-field-label">
                 {ui.diagnosticsTimeRange}
               </label>
-              <select
+              <OptionSelect
                 id={timeRangeSelectId}
                 className="diagnostics-select"
                 value={options.since}
@@ -92,13 +93,13 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
                 <option value="24h">{ui.diagnosticsRange24h}</option>
                 <option value="72h">{ui.diagnosticsRange72h}</option>
                 <option value="168h">{ui.diagnosticsRange168h}</option>
-              </select>
+              </OptionSelect>
             </div>
 
             {/* 内容多选 */}
             <div className="diagnostics-checkboxes">
               <label className="logs-checkbox-row diagnostics-check-row">
-                <input
+                <CheckboxInput
                   type="checkbox"
                   checked={options.logs}
                   onChange={e => setOptions({ ...options, logs: e.target.checked })}
@@ -108,7 +109,7 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
               </label>
 
               <label className="logs-checkbox-row diagnostics-check-row">
-                <input
+                <CheckboxInput
                   type="checkbox"
                   checked={options.settings}
                   onChange={e => setOptions({ ...options, settings: e.target.checked })}
@@ -118,7 +119,7 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
               </label>
 
               <label className="logs-checkbox-row diagnostics-check-row">
-                <input
+                <CheckboxInput
                   type="checkbox"
                   checked={options.components}
                   onChange={e => setOptions({ ...options, components: e.target.checked })}
@@ -128,7 +129,7 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
               </label>
 
               <label className="logs-checkbox-row diagnostics-check-row">
-                <input
+                <CheckboxInput
                   type="checkbox"
                   checked={options.redact}
                   onChange={e => setOptions({ ...options, redact: e.target.checked })}

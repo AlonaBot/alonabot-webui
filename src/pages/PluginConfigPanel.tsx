@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, useRef, type JSX } from 'react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import * as Dialog from '@radix-ui/react-dialog';
 import { AdminAPIError } from '../api/client';
 import { getPluginConfig, patchPluginConfig, discardPluginConfig, prunePluginConfig, revealPluginSecret, encodeSecretPath, listConfigOptions, resolveConfigOptions, type ConfigSnapshot } from '../api/config';
@@ -25,9 +26,9 @@ export function PluginConfigPanel({ id }: { id: string }): JSX.Element {
   }, []);
   return <>
     {error && <p role="alert">{error}</p>}
-    <label className="plugin-profile-selector">{ui.profile}<select aria-label={ui.profile} value={profileID} onChange={event => {
+    <label className="plugin-profile-selector">{ui.profile}<OptionSelect aria-label={ui.profile} value={profileID} onChange={event => {
       const url = new URL(window.location.href); url.searchParams.set('profile', event.target.value); url.searchParams.set('tab', 'config'); navigate(url.pathname + url.search);
-    }}>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
+    }}>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</OptionSelect></label>
     <ProfileConfigEditor key={id + ':' + profileID} id={id} profileID={profileID} />
   </>;
 }

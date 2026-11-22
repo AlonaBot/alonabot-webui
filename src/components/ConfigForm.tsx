@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import type { ChangeEvent, FormEvent, JSX, ReactNode } from 'react';
 import { Eye, EyeOff, Search, X } from 'lucide-react';
 import { fieldsFromSchema } from '../schema/model';
@@ -404,11 +405,11 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
               onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.currentTarget.value)} />
           </div>;
         } else if (field.options) {
-          control = <select {...attributes} required={field.required} value={typeof value === 'string' ? value : ''}
+          control = <OptionSelect {...attributes} required={field.required} value={typeof value === 'string' ? value : ''}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.currentTarget.value)}>
             {!field.options.includes(value as string) && <option value="" />}
             {field.options.map((option, index) => <option key={option} value={option}>{text.labels?.[index] ?? option}</option>)}
-          </select>;
+          </OptionSelect>;
         } else {
           control = <input {...attributes} type="text" required={field.required} value={typeof value === 'string' ? value : ''}
             onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.value)} />;
@@ -689,14 +690,14 @@ function DictControl({ value = {}, onChange, id, required }: { value: Record<str
             onChange={(event: ChangeEvent<HTMLInputElement>) => change({ stored: event.currentTarget.value, text: event.currentTarget.value })} />
             : <button type="button" onClick={() => change({ editingSecret: true })}>{ui.modify}</button>}
         </div> : <>
-          <label>{ui.valueType}<select value={row.kind} onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+          <label>{ui.valueType}<OptionSelect value={row.kind} onChange={(event: ChangeEvent<HTMLSelectElement>) => {
             const kind = event.currentTarget.value as DictRow['kind'];
             change({ kind, text: kind === 'string' ? '' : kind === 'number' ? '0' : kind === 'boolean' ? 'false' : '{}' });
           }}><option value="string">{ui.stringValue}</option><option value="number">{ui.numberValue}</option>
-            <option value="boolean">{ui.booleanValue}</option><option value="json">{ui.jsonValue}</option></select></label>
-          <label>{ui.value}{row.kind === 'boolean' ? <select value={row.text}
+            <option value="boolean">{ui.booleanValue}</option><option value="json">{ui.jsonValue}</option></OptionSelect></label>
+          <label>{ui.value}{row.kind === 'boolean' ? <OptionSelect value={row.text}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => change({ text: event.currentTarget.value })}>
-            <option value="true">{ui.trueValue}</option><option value="false">{ui.falseValue}</option></select>
+            <option value="true">{ui.trueValue}</option><option value="false">{ui.falseValue}</option></OptionSelect>
             : <textarea value={row.text} className={row.kind === 'json' ? 'code-editor' : undefined} aria-invalid={!!parseError || undefined}
               ref={(input: HTMLTextAreaElement | null) => { input?.setCustomValidity(parseError ? row.kind === 'number' ? ui.invalidNumber : ui.invalidJSON : ''); }}
               onChange={(event: ChangeEvent<HTMLTextAreaElement>) => change({ text: event.currentTarget.value })} />}</label>
@@ -755,7 +756,7 @@ function TemplateControl(props: FieldProps & { id: string }) {
     const text = template && templateText(props.messages, template);
     const rowPath = many ? [...props.path, String(index)] : props.path;
     return <>
-      <select id={many ? undefined : props.id} aria-label={fieldText(props.messages, props.field).description}
+      <OptionSelect id={many ? undefined : props.id} aria-label={fieldText(props.messages, props.field).description}
         required={many || props.field.required} value={template?.key ?? ''}
         onChange={(event: ChangeEvent<HTMLSelectElement>) => {
           const chosen = props.field.templates!.find(candidate => candidate.key === event.currentTarget.value);
@@ -763,7 +764,7 @@ function TemplateControl(props: FieldProps & { id: string }) {
         }}>
         <option value="">{ui.chooseTemplate}</option>
         {props.field.templates!.map(candidate => <option key={candidate.key} value={candidate.key}>{templateText(props.messages, candidate).name}</option>)}
-      </select>
+      </OptionSelect>
       {text?.hint && <p className="field-hint">{text.hint}</p>}
       {template && <Fields key={template.key} fields={template.children} value={value![template.key] as Record<string, unknown>}
         original={(original && Object.hasOwn(original, template.key) ? original[template.key] : undefined) as Record<string, unknown>}

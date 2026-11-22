@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import { ArrowUp, Download, Folder, FolderPlus, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { AdminAPIError } from '../api/client';
 import { clearPluginData, deletePluginFile, deletePluginKV, downloadPluginFile, exportPluginData, getPluginKV, listPluginFiles, listPluginKV, makePluginDirectory, renamePluginFile, setPluginKV, uploadPluginFile } from '../api/data';
@@ -79,13 +80,13 @@ export function StoragePanel({ id }: { id: string }) {
     </div>}
     {editing && <ActionDialog title={ui.editValue} onClose={() => setEditing(null)} onConfirm={async () => { let value; try { value = kvInput(editing.value, editing.encoding); } catch { throw new Error(ui.invalidBase64); } await setPluginKV(id, editing.key, value); await loadKV(); }}>
       <label className="dialog-field-label">{ui.key}<input value={editing.key} disabled={!editing.new} onChange={e => setEditing({ ...editing, key: e.target.value })} /></label>
-      <label className="dialog-field-label">{ui.encoding}<select value={editing.encoding} onChange={e => {
+      <label className="dialog-field-label">{ui.encoding}<OptionSelect value={editing.encoding} onChange={e => {
         const encoding = e.target.value;
         try {
           const value = encoding === 'base64' ? btoa(Array.from(new TextEncoder().encode(editing.value), byte => String.fromCharCode(byte)).join('')) : new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(atob(editing.value), c => c.charCodeAt(0)));
           setEditing({ ...editing, encoding, value });
         } catch (err) { setError(String(err)); }
-      }}><option value="text">{ui.textValue}</option><option value="base64">{ui.base64Value}</option></select></label>
+      }}><option value="text">{ui.textValue}</option><option value="base64">{ui.base64Value}</option></OptionSelect></label>
       <label className="dialog-field-label">{ui.value}<textarea className="font-mono" value={editing.value} onChange={e => setEditing({ ...editing, value: e.target.value })} /></label>
     </ActionDialog>}
     {directory !== null && <ActionDialog title={ui.newDirectory} onClose={() => setDirectory(null)} onConfirm={async () => { await makePluginDirectory(id, childPath(directory)); await loadFiles(); }}><label>{ui.name}<input value={directory} onChange={e => setDirectory(e.target.value)} /></label></ActionDialog>}

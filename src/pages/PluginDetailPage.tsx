@@ -1,4 +1,5 @@
 import { useContext, useEffect, useRef, useState, type JSX } from 'react';
+import { OptionSelect, CheckboxInput } from '../ui/NativeAdapters';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
@@ -695,7 +696,7 @@ export function PluginDetailPage(props: {
               <div className="advanced-card-body">
                 <div className={hasSleep ? 'settings-row' : 'log-level-selector-row'}>
                   {hasSleep && <div className="settings-label-col"><label htmlFor="plugin-log-level">{ui.logLevel}</label><p>{ui.pluginLogLevelDesc}</p></div>}
-                  <select
+                  <OptionSelect
                     id="plugin-log-level"
                     aria-label={ui.logLevel}
                     className="log-level-select font-mono"
@@ -712,7 +713,7 @@ export function PluginDetailPage(props: {
                     <option value="error">{ui.logError}</option>
                     <option value="critical">{ui.logCritical}</option>
                     <option value="off">{ui.logOff}</option>
-                  </select>
+                  </OptionSelect>
                 </div>
                 {hasSleep && <PluginSleepPanel policy={sleepPolicy} runtime={runtime} policyError={sleepPolicyError} runtimeError={runtimeError} writeError={sleepWriteError} loading={sleepLoading} busy={savingSleep} onSubmit={saveSleep} />}
               </div>
@@ -771,7 +772,7 @@ export function PluginDetailPage(props: {
                           const checked = allowedInstances.instances.includes(instanceID);
                           return (
                             <label key={instanceID} >
-                              <input
+                              <CheckboxInput
                                 type="checkbox"
                                 checked={checked}
                                 disabled={savingAllowed}

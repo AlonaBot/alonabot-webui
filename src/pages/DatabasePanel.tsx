@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import { Skeleton } from '../ui/EmptyState';
 import { ArrowDown, ArrowUp, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { deletePluginRow, insertPluginRow, listPluginRows, listPluginTables, updatePluginRow, type DataColumn, type DataRow, type DataTable, type SQLiteValue } from '../api/data';
@@ -75,14 +76,14 @@ export function DatabasePanel({ id, generations }: { id: string; generations: re
   const editable = table && editing;
   return <section className="database-panel">
     <div className="data-toolbar">
-      <select aria-label={ui.databaseTable} value={tableName} onChange={event => { setTableName(event.target.value); resetQuery(); }}>
+      <OptionSelect aria-label={ui.databaseTable} value={tableName} onChange={event => { setTableName(event.target.value); resetQuery(); }}>
         {!tables?.length && <option value="">{ui.databaseTable}</option>}
         {tables?.map(item => <option key={item.name} value={item.name}>{item.name} · {item.rows} {ui.databaseRows}</option>)}
-      </select>
-      <select aria-label={ui.version} value={generation} onChange={event => { setGeneration(event.target.value); resetQuery(); }}>
+      </OptionSelect>
+      <OptionSelect aria-label={ui.version} value={generation} onChange={event => { setGeneration(event.target.value); resetQuery(); }}>
         <option value="">{ui.currentVersion}</option>
         {generations.filter(item => !item.active).map(item => <option key={item.id} value={item.id}>{item.version} · {item.created_at}</option>)}
-      </select>
+      </OptionSelect>
       <button aria-label={ui.refresh} onClick={reload}><RefreshCw size={16} /></button>
       <button className="dialog-button is-primary" disabled={!writable || !table} onClick={() => table && setEditing({ fields: rowFields(table.columns) })}><Plus size={15} />{ui.insertRow}</button>
     </div>
@@ -90,7 +91,7 @@ export function DatabasePanel({ id, generations }: { id: string; generations: re
     {tables === null ? <Skeleton height={120} /> : !tables.length ? <p className="data-empty">{ui.noTables}</p> : table && <>
       {!writable && <p className="muted">{ui.databaseReadOnly}</p>}
       <form className="data-toolbar database-filters" onSubmit={event => { event.preventDefault(); if (filterColumn) { setWhere(current => ({ ...current, [filterColumn]: filterValue })); setPage(1); } }}>
-        <select aria-label={ui.databaseColumn} value={filterColumn} onChange={event => setFilterColumn(event.target.value)}><option value="">{ui.databaseColumn}</option>{table.columns.map(column => <option key={column.name}>{column.name}</option>)}</select>
+        <OptionSelect aria-label={ui.databaseColumn} value={filterColumn} onChange={event => setFilterColumn(event.target.value)}><option value="">{ui.databaseColumn}</option>{table.columns.map(column => <option key={column.name}>{column.name}</option>)}</OptionSelect>
         <input aria-label={ui.filterValue} value={filterValue} onChange={event => setFilterValue(event.target.value)} placeholder={ui.filterValue} />
         <button type="submit" disabled={!filterColumn}>{ui.addFilter}</button>
         {Object.entries(where).map(([column, value]) => <button type="button" className="database-filter" key={column} onClick={() => { setWhere(current => Object.fromEntries(Object.entries(current).filter(([name]) => name !== column))); setPage(1); }}>{column} = {value}<X size={12} aria-label={ui.removeFilter} /></button>)}
@@ -113,10 +114,10 @@ export function DatabasePanel({ id, generations }: { id: string; generations: re
       const field = editing.fields[column.name];
       const setField = (next: Field) => setEditing({ ...editing, fields: { ...editing.fields, [column.name]: next } });
       return <div className="database-field" key={column.name}><label>{column.name} <small className="muted">{column.type}{column.pk ? ' · PK' : ''}{column.notnull ? ' · NOT NULL' : ''}</small>
-        <select aria-label={`${column.name}: ${ui.databaseValueType}`} value={field.mode} onChange={event => setField({ ...field, mode: event.target.value as Field['mode'] })}>
+        <OptionSelect aria-label={`${column.name}: ${ui.databaseValueType}`} value={field.mode} onChange={event => setField({ ...field, mode: event.target.value as Field['mode'] })}>
           <option value="default">{ui.databaseDefault}</option><option value="null">NULL</option><option value="text">{ui.textValue}</option><option value="number">{ui.databaseNumber}</option><option value="boolean">{ui.databaseBoolean}</option><option value="blob">BLOB (base64)</option>
-        </select></label>
-        {field.mode === 'boolean' ? <select aria-label={column.name} value={field.value} onChange={event => setField({ ...field, value: event.target.value })}><option value="">—</option><option>true</option><option>false</option></select> : <textarea aria-label={column.name} className="font-mono" disabled={field.mode === 'default' || field.mode === 'null'} value={field.value} onChange={event => setField({ ...field, value: event.target.value })} />}
+        </OptionSelect></label>
+        {field.mode === 'boolean' ? <OptionSelect aria-label={column.name} value={field.value} onChange={event => setField({ ...field, value: event.target.value })}><option value="">—</option><option>true</option><option>false</option></OptionSelect> : <textarea aria-label={column.name} className="font-mono" disabled={field.mode === 'default' || field.mode === 'null'} value={field.value} onChange={event => setField({ ...field, value: event.target.value })} />}
       </div>;
     })}</div></ActionDialog>}
     {deleting && table && <ActionDialog title={ui.actionDelete} onClose={() => setDeleting(null)} onConfirm={async () => { await deletePluginRow(id, table.name, deleting.rowid!); reload(); }}><p>{ui.deleteConfirm}</p><p className="font-mono">{table.name} · rowid {deleting.rowid}</p></ActionDialog>}
