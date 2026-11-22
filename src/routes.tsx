@@ -11,7 +11,7 @@ import { AccountsPage } from './features/accounts/AccountsPage';
 import { PermissionsPage } from './pages/PermissionsPage';
 import { ConversationsPage } from './pages/ConversationsPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { ModelsPage } from './pages/ModelsPage';
+import { ModelsPage } from './features/models/ModelsPage';
 import { ProfilesPage } from './pages/ProfilesPage';
 import { LogsPage } from './pages/LogsPage';
 import chinese from '../i18n/zh-CN.json';

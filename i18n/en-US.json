@@ -859,6 +859,17 @@
     "pruneDone": "Removed unrecognized settings",
     "statusOnline": "Online",
     "statusUnavailable": "Unavailable",
-    "advancedSettings": "Advanced settings"
+    "advancedSettings": "Advanced settings",
+    "installAgent": "Install the Agent",
+    "agentDisabledTitle": "The Agent is not enabled",
+    "agentDisabledDesc": "Enable it to add model providers and let the bot start chatting.",
+    "enableAgent": "Enable the Agent",
+    "modelsLoadFailed": "Could not load model settings",
+    "applyChanges": "Apply",
+    "noModelsHint": "Add a provider (such as DeepSeek, OpenAI or a local Ollama), then choose the models to use.",
+    "pendingBadge": "Pending",
+    "justTested": "just now",
+    "testConnection": "Test",
+    "manualModelHint": "If the list cannot be fetched, enter a model ID manually"
   }
 }

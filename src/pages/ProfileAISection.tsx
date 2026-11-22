@@ -7,7 +7,7 @@ import type { ProfilePlugin } from '../api/profiles';
 import { OptionsFromControl, type ConfigFormProps } from '../components/ConfigForm';
 import { useUI } from '../i18n/UI';
 import { fieldsFromSchema } from '../schema/model';
-import { ModelSelect } from './ModelSelect';
+import { Select } from '../ui/Select';
 import { parseModels } from './modelConfig';
 import { ProfileConfigEditor } from './PluginConfigPanel';
 import { ProfileToolsPanel } from './ProfileToolsPanel';
@@ -51,7 +51,7 @@ function AIForm({ form, snapshot, profileID, plugin }: { form: ConfigFormProps; 
           {field.key === 'member_sessions' && <span className="profile-row-desc">{ui.memberSessionsDesc}</span>}
           {profileID !== 'default' && (inherited(field.key) ? <span className="profile-inherit-badge">{ui.followDefault}</span> : <button type="button" className="profile-inherit-btn" onClick={() => change(field.key, null)}>{ui.followDefault}</button>)}
         </div>
-        {field.key === 'chat_model' || field.key === 'image_caption_model' ? <ModelSelect value={value(field.key) as string} label={field.key === 'chat_model' ? ui.chatModel : ui.imageCaptionModel} options={modelOptions(field.key)} onChange={next => change(field.key, next)} />
+        {field.key === 'chat_model' || field.key === 'image_caption_model' ? <Select variant="filled" value={value(field.key) as string} aria-label={field.key === 'chat_model' ? ui.chatModel : ui.imageCaptionModel} options={modelOptions(field.key)} onValueChange={next => change(field.key, next)} />
           : field.key === 'default_persona' ? <Popover.Root open={personaOpen} onOpenChange={setPersonaOpen}>
             <Popover.Trigger asChild><button type="button" className="model-select profile-persona-control" aria-label={ui.persona}><span>{value(field.key) as string || ui.none}</span><ChevronDown size={14} /></button></Popover.Trigger>
             <Popover.Portal><Popover.Content className="profile-persona-popover" align="end" sideOffset={6} collisionPadding={16}>

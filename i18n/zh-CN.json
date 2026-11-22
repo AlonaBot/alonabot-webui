@@ -859,6 +859,17 @@
     "pruneDone": "已清理未识别的设置项",
     "statusOnline": "在线",
     "statusUnavailable": "不可用",
-    "advancedSettings": "高级设置"
+    "advancedSettings": "高级设置",
+    "installAgent": "安装 Agent",
+    "agentDisabledTitle": "Agent 还没有启用",
+    "agentDisabledDesc": "启用后就能添加大模型提供商，让机器人开始对话。",
+    "enableAgent": "启用 Agent",
+    "modelsLoadFailed": "读取模型配置失败",
+    "applyChanges": "应用",
+    "noModelsHint": "添加一个提供商（例如 DeepSeek、OpenAI 或本地 Ollama），再选择要用的模型。",
+    "pendingBadge": "待生效",
+    "justTested": "刚刚测试",
+    "testConnection": "测试",
+    "manualModelHint": "拉不到列表时可以手动输入模型 ID"
   }
 }
