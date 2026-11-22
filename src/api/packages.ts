@@ -1,6 +1,7 @@
 // 组件安装、更新、卸载、版本、运行与休眠。
 import { currentCSRFToken, getClientLocale, jsonBody, notifyPackagesChanged, notifySessionExpired, pluginPath, request } from './client';
 import type { Changelog } from './core';
+import { waitTask, type Task } from './tasks';
 
 export type Package = {
   ID: string;
@@ -18,6 +19,9 @@ export type Package = {
   RuntimeState?: RuntimeState;
   Warnings?: string[];
   pages?: { path: string; title: string }[];
+  Name?: string;
+  Description?: string;
+  Author?: string;
 };
 
 export type Generation = {
@@ -51,10 +55,19 @@ export function packageIconURL(id: string): string {
 
 /** 安装组件（远程 Source: "owner/repo" 或浏览器本地上传 FormData）。 */
 export async function installPackage(
-  input: { Source: string; Replace?: boolean; Confirm?: boolean } | FormData,
+  input: { Source: string; Replace?: boolean; Confirm?: boolean; Build?: boolean; Ref?: string } | FormData,
+  onLog?: (log: string) => void,
 ): Promise<Package> {
   let pkg: Package;
-  if (input instanceof FormData) {
+  if (!(input instanceof FormData) && input.Build) {
+    // 源码构建在 Core 里作为后台任务运行，返回任务 ID，这里等它结束。
+    const task = await request<Task>('/api/v1/packages/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    pkg = await waitTask<Package>(task.id, onLog);
+  } else if (input instanceof FormData) {
     pkg = await request<Package>('/api/v1/packages/install', {
       method: 'POST',
       body: input,

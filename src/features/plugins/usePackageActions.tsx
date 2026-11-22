@@ -15,7 +15,7 @@ export type InstallInput = { Source: string; Replace?: boolean; Build?: boolean;
 type Confirmation = { title: string; affected: string[]; run: () => Promise<unknown> };
 
 /** 组件显示名：Core 提供 Name 时用 Name，否则用 ID。 */
-export function packageName(pkg: Pick<Package, 'ID'> & { Name?: string }): string {
+export function packageName(pkg: Pick<Package, 'ID' | 'Name'>): string {
   return pkg.Name || pkg.ID;
 }
 
@@ -28,7 +28,7 @@ export function usePackageActions(): {
   toggle: (pkg: Package) => Promise<void>;
   restart: (pkg: Package) => Promise<void>;
   reload: (pkg: Package) => Promise<void>;
-  install: (input: InstallInput) => Promise<boolean>;
+  install: (input: InstallInput, onLog?: (log: string) => void) => Promise<boolean>;
   update: (pkg: Package, archive?: File) => Promise<boolean>;
   uninstall: (pkg: Package, purge: 0 | 1 | 2) => Promise<boolean>;
   busy: ReadonlySet<string>;
@@ -95,7 +95,7 @@ export function usePackageActions(): {
     });
   }
 
-  function install(input: InstallInput, replace = 'archive' in input ? input.replace === true : input.Replace === true): Promise<boolean> {
+  function install(input: InstallInput, onLog?: (log: string) => void, replace = 'archive' in input ? input.replace === true : input.Replace === true): Promise<boolean> {
     const key = 'archive' in input ? input.archive.name : input.Source;
     return withConfirm(key, async confirm => {
       let result: Package;
@@ -106,14 +106,14 @@ export function usePackageActions(): {
         form.append('replace', String(replace));
         result = await installPackage(form);
       } else {
-        result = await installPackage({ ...input, Replace: replace, Confirm: confirm });
+        result = await installPackage({ ...input, Replace: replace, Confirm: confirm }, onLog);
       }
       toast.success(ui.packageInstalled.replace('{name}', packageName(result)).replace('{version}', result.Version));
       if (result.Warnings?.length) setWarnings(result.Warnings);
     }, {
       // 同类组件已存在时 Core 返回不带 affected 的 ALREADY_EXISTS；询问后带 Replace 重发。
       onError: error => !replace && error instanceof AdminAPIError && error.status === 409 && error.code === 'ALREADY_EXISTS'
-        ? { title: ui.replaceComponent, affected: [error.message], run: () => install(input, true) }
+        ? { title: ui.replaceComponent, affected: [error.message], run: () => install(input, onLog, true) }
         : null,
     });
   }
@@ -156,5 +156,5 @@ export function usePackageActions(): {
     {changelog && <ChangelogDialog component={changelog.id} version={changelog.version} open automatic onClose={() => setChangelog(null)} />}
   </>;
 
-  return { toggle, restart, reload, install: input => install(input), update, uninstall, busy, dialogs };
+  return { toggle, restart, reload, install: (input, onLog) => install(input, onLog), update, uninstall, busy, dialogs };
 }

@@ -24,10 +24,11 @@ export type InstallMode = 'repo' | 'build' | 'upload';
 export function InstallDialog({ initialMode, onClose, onInstall }: {
   initialMode: InstallMode;
   onClose: () => void;
-  onInstall: (input: InstallInput) => Promise<boolean>;
+  onInstall: (input: InstallInput, onLog?: (log: string) => void) => Promise<boolean>;
 }): JSX.Element {
   const ui = useUI();
   const [mode, setMode] = useState<InstallMode>(initialMode);
+  const [log, setLog] = useState('');
   const [source, setSource] = useState('');
   const [ref, setRef] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -41,12 +42,13 @@ export function InstallDialog({ initialMode, onClose, onInstall }: {
     const input: InstallInput = mode === 'upload'
       ? { archive: file!, replace }
       : { Source: repo!, Replace: replace, ...(mode === 'build' ? { Build: true, ...(ref.trim() ? { Ref: ref.trim() } : {}) } : {}) };
-    const done = await onInstall(input);
+    setLog('');
+    const done = await onInstall(input, setLog);
     setPending(false);
     if (done) onClose();
   };
 
-  return <Dialog open onOpenChange={open => { if (!open && !pending) onClose(); }} title={ui.manualInstall} dismissible={!pending}
+  return <Dialog open onOpenChange={open => { if (!open && !pending) onClose(); }} title={ui.manualInstall} dismissible={!pending} size={mode === 'build' && log ? 'lg' : 'md'}
     footer={<>
       <Button onClick={onClose} disabled={pending}>{ui.cancel}</Button>
       <Button variant="primary" loading={pending} disabled={!ready} onClick={() => void submit()}>{mode === 'build' ? ui.buildAndInstall : ui.actionInstall}</Button>
@@ -75,8 +77,14 @@ export function InstallDialog({ initialMode, onClose, onInstall }: {
         </>}
       <Checkbox checked={replace} onCheckedChange={setReplace} label={ui.replaceConflict} description={ui.replaceConflictHint} disabled={pending} />
       {pending && mode === 'build' && <p className={styles.hint} role="status">{ui.buildInProgress}</p>}
+      {mode === 'build' && log && <BuildLog text={log} />}
     </div>
   </Dialog>;
+}
+
+/** 构建日志：等宽、自动滚到最新一行。 */
+function BuildLog({ text }: { text: string }): JSX.Element {
+  return <pre className={styles.buildLog} ref={node => { if (node) node.scrollTop = node.scrollHeight; }} aria-live="polite">{text}</pre>;
 }
 
 /** 更新：沿用原来源时先显示新版本说明，读完才允许更新；也可上传新版本包。 */

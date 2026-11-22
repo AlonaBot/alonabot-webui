@@ -29,7 +29,7 @@ function status(pkg: Package, ui: ReturnType<typeof useUI>): { tone: Tone; text:
 
 /** 已安装组件卡片。WebUI 自己不能在这里停用或卸载，显示锁。 */
 export function PluginCard({ pkg, latest, updateFailed, activity, busy, onToggle, onRestart, onReload, onUpdate, onUninstall, onReason }: {
-  pkg: Package & { Name?: string; Description?: string };
+  pkg: Package;
   latest?: string;
   updateFailed: boolean;
   activity: readonly number[];
