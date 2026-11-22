@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Skeleton } from '../ui/EmptyState';
 import { ArrowDown, ArrowUp, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { deletePluginRow, insertPluginRow, listPluginRows, listPluginTables, updatePluginRow, type DataColumn, type DataRow, type DataTable, type SQLiteValue } from '../api/data';
 import { type Generation } from '../api/packages';
@@ -86,7 +87,7 @@ export function DatabasePanel({ id, generations }: { id: string; generations: re
       <button className="dialog-button is-primary" disabled={!writable || !table} onClick={() => table && setEditing({ fields: rowFields(table.columns) })}><Plus size={15} />{ui.insertRow}</button>
     </div>
     {error && <pre role="alert" className="form-error">{error}</pre>}
-    {tables === null ? !error && <p role="status">{ui.loading}</p> : !tables.length ? <p className="data-empty">{ui.noTables}</p> : table && <>
+    {tables === null ? <Skeleton height={120} /> : !tables.length ? <p className="data-empty">{ui.noTables}</p> : table && <>
       {!writable && <p className="muted">{ui.databaseReadOnly}</p>}
       <form className="data-toolbar database-filters" onSubmit={event => { event.preventDefault(); if (filterColumn) { setWhere(current => ({ ...current, [filterColumn]: filterValue })); setPage(1); } }}>
         <select aria-label={ui.databaseColumn} value={filterColumn} onChange={event => setFilterColumn(event.target.value)}><option value="">{ui.databaseColumn}</option>{table.columns.map(column => <option key={column.name}>{column.name}</option>)}</select>
@@ -99,7 +100,7 @@ export function DatabasePanel({ id, generations }: { id: string; generations: re
           {data.rows.map((row, index) => <tr key={row.rowid ?? index}><td className="font-mono">{row.rowid ?? '—'}</td>{table.columns.map(column => <td key={column.name} className="database-cell"><span>{row.values[column.name] === null ? <i className="muted">NULL</i> : typeof row.values[column.name] === 'object' ? `BLOB · ${JSON.stringify(row.values[column.name])}` : String(row.values[column.name])}</span></td>)}<td><button disabled={!writable || row.rowid === null} aria-label={`${ui.modify}: ${row.rowid}`} onClick={() => setEditing({ row, fields: rowFields(table.columns, row) })}><Pencil size={14} /></button><button disabled={!writable || row.rowid === null} aria-label={`${ui.actionDelete}: ${row.rowid}`} onClick={() => setDeleting(row)}><Trash2 size={14} /></button></td></tr>)}
         </tbody></table>{!data.rows.length && <p className="data-empty">{ui.noEntries}</p>}</div>
         <div className="database-footer"><span className="muted">{data.total} {ui.databaseRows}</span><Pagination page={page} total={data.total} size={50} onChange={setPage} /></div>
-      </> : !error && <p role="status">{ui.loading}</p>}
+      </> : <Skeleton height={120} />}
     </>}
     {editable && <ActionDialog title={editing.row ? ui.modify : ui.insertRow} onClose={() => setEditing(null)} onConfirm={async () => {
       let values: Record<string, SQLiteValue>;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Skeleton } from '../ui/EmptyState';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ExternalLink, X } from 'lucide-react';
 import { getCoreChangelog, type Changelog } from '../api/core';
@@ -39,7 +40,7 @@ export function ChangelogDialog({ component, version, open, automatic = false, o
     setSaving(true);
     try { if (entries.length) await setSeenVersion(component, entries[0].version); onClose(); } catch (err) { setError(String(err)); } finally { setSaving(false); }
   }
-  return <Dialog.Root open={visible} onOpenChange={value => { if (!value) void close(); }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content plugins-dialog-content" aria-describedby={undefined}><div className="dialog-header"><Dialog.Title className="dialog-title">{ui.changelog} · {component}</Dialog.Title><button className="dialog-close-button" disabled={saving} aria-label={ui.close} onClick={() => void close()}><X size={16} /></button></div>{error && <pre role="alert" className="form-error">{error}</pre>}{loading && <p role="status">{ui.loading}</p>}<div className="data-dialog-body" lang={actualLocale}>{entries.map(entry => <article className="changelog-entry" key={entry.version}><h3 className="font-mono">{entry.version} <small className="muted">{entry.date}</small></h3><Markdown text={entry.markdown} /></article>)}{!loading && !entries.length && !error && <p>{ui.noChangelog}</p>}</div></Dialog.Content></Dialog.Portal></Dialog.Root>;
+  return <Dialog.Root open={visible} onOpenChange={value => { if (!value) void close(); }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content plugins-dialog-content" aria-describedby={undefined}><div className="dialog-header"><Dialog.Title className="dialog-title">{ui.changelog} · {component}</Dialog.Title><button className="dialog-close-button" disabled={saving} aria-label={ui.close} onClick={() => void close()}><X size={16} /></button></div>{error && <pre role="alert" className="form-error">{error}</pre>}{loading && <Skeleton height={120} />}<div className="data-dialog-body" lang={actualLocale}>{entries.map(entry => <article className="changelog-entry" key={entry.version}><h3 className="font-mono">{entry.version} <small className="muted">{entry.date}</small></h3><Markdown text={entry.markdown} /></article>)}{!loading && !entries.length && !error && <p>{ui.noChangelog}</p>}</div></Dialog.Content></Dialog.Portal></Dialog.Root>;
 }
 
 export function ReleasePreview({ repo, onLoaded }: { repo: string; onLoaded?: (release: LatestRelease) => void }) {

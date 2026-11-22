@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState, type JSX } from 'react';
+import { Skeleton } from '../ui/EmptyState';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MoreHorizontal, Plus, RefreshCw, ShieldCheck } from 'lucide-react';
 import { changeCoreAdmin, getCoreDenies, setCoreDenies } from '../api/policies';
@@ -54,7 +55,7 @@ export function UsersPage(): JSX.Element {
       <button className="dialog-button is-primary" disabled={busy} onClick={() => { setNewUser(''); setAdding(true); }}><Plus size={16} />{ui.addUser}</button>
     </div>
     {error && <pre role="alert" className="form-error">{error}</pre>}
-    {loading ? <p role="status">{ui.loading}</p> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>{ui.users}</th><th>{ui.platform}</th><th>{ui.identity}</th><th>{ui.status}</th><th>{ui.actions}</th></tr></thead><tbody>
+    {loading ? <Skeleton height={120} /> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>{ui.users}</th><th>{ui.platform}</th><th>{ui.identity}</th><th>{ui.status}</th><th>{ui.actions}</th></tr></thead><tbody>
       {filtered.slice((currentPage - 1) * 20, currentPage * 20).map(user => <tr key={user.user}><td><strong>{user.display_name || user.user}</strong><small className="muted block">{user.user}</small></td><td>{user.adapter}</td><td>{user.admin ? <span className="status-tag"><ShieldCheck size={13} />{ui.administrator}</span> : '—'}</td><td><span className={user.denied ? 'is-danger' : 'muted'}>{user.denied ? ui.denied : ui.normal}</span></td><td><DropdownMenu.Root><DropdownMenu.Trigger asChild><button aria-label={`${ui.actions}: ${user.user}`}><MoreHorizontal size={16} /></button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="dropdown-menu-content" align="end">{(['admin', 'deny'] as const).map(action => <DropdownMenu.Item disabled={busy} className="dropdown-menu-item" key={action} onSelect={() => { setError(''); void change(user.user, action, !(action === 'admin' ? user.admin : user.denied)).catch(err => setError(String(err))); }}>{action === 'admin' ? (user.admin ? ui.removeAdmin : ui.grantAdmin) : (user.denied ? ui.allowUser : ui.denyUser)}</DropdownMenu.Item>)}</DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root></td></tr>)}
     </tbody></table>{filtered.length === 0 && <p className="data-empty">{ui.noUsers}</p>}</div>}
     <Pagination page={currentPage} total={filtered.length} size={20} onChange={setPage} />

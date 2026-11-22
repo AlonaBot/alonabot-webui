@@ -1,4 +1,5 @@
 import { useId, useState, type JSX } from 'react';
+import { Skeleton } from '../ui/EmptyState';
 import { LockKeyhole } from 'lucide-react';
 import type { PluginRuntime, SleepPolicy } from '../api/packages';
 import { useUI } from '../i18n/UI';
@@ -63,7 +64,7 @@ export function PluginSleepPanel({ policy, runtime, policyError, runtimeError, w
   return <div className="plugin-sleep-panel">
     {writeError && <pre className="sleep-error plugins-error-banner" role="alert">{writeError}</pre>}
     {policyError && <div className="sleep-error plugins-error-banner" role="alert"><strong>{ui.sleepPolicy}</strong><pre>{policyError}</pre></div>}
-    {loading && <p role="status">{ui.loading}</p>}
+    {loading && <Skeleton height={120} />}
     {policy && <form onSubmit={async event => {
       event.preventDefault(); setSaved(false);
       if (await onSubmit(value!)) { setDraft(undefined); setSaved(true); }
