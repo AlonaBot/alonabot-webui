@@ -10,6 +10,7 @@
 .label span { font-size: var(--text-xs); color: var(--color-ink-muted); }
 .control { display: flex; flex: none; justify-content: flex-end; width: min(240px, 45%); }
 .control > * { width: 100%; }
+.control > button, .control > a { width: auto; }
 .theme { width: auto; }
 .control:has(.theme) { width: auto; }
 
