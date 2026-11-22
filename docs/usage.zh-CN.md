@@ -1,0 +1,13 @@
+# 使用 WebUI
+
+[English](usage.md)
+
+在 Core v0.2.0 或更高版本安装官方 WebUI，打开 Core 地址（默认 `http://127.0.0.1:7650`），使用管理 token 登录。认证、监听地址、代理与部署设置见 [Core 部署指南](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.zh-CN.md)。
+
+侧栏提供总览、插件、账号、模型、配置文件、会话、日志、权限和系统设置。插件商店用于安装组件；账号页配置适配器实例；模型页维护 Provider 与模型；配置文件控制会话使用的配置及工具策略。
+
+插件详情页提供配置、任务、插件页面、数据库表格、KV/文件存储、导出与清空。Agent 提供会话摘要与清除入口，其页面提供会话正文与记忆。清空操作前先确认目标并保留所需备份。
+
+配置表单以 `pending.config ?? active` 为编辑基线，使用 `active_generation` 保存；遇到 409 时保留草稿，并允许显式采用最新配置。Secret 修改需要再次认证。界面支持中英切换、主题选择、侧栏顺序与隐藏设置、全局搜索及手机导航。
+
+浏览器经同源 Cookie/CSRF 调用 Admin API；WebUI 后台经 SDK 与 Core 通信，受管 SQLite 保存统计、用户目录、商店缓存与已读版本。完整后台验证需要同时安装静态资源和 Go 进程，见[源码开发](development.zh-CN.md)。

@@ -1,0 +1,16 @@
+# 按仓库真实路径分配区域标签；标签由维护者统一建立。
+"area: docs":
+  - changed-files:
+      - any-glob-to-any-file: ["*.md", "docs/**", "changelog/**"]
+"area: tests":
+  - changed-files:
+      - any-glob-to-any-file: ["**/*_test.go", "fixtures/**"]
+"area: github-actions":
+  - changed-files:
+      - any-glob-to-any-file: [".github/**"]
+"area: frontend":
+  - changed-files:
+      - any-glob-to-any-file: ["src/**", "fixtures/**", "package.json", "package-lock.json", "index.html", "vite.config.ts", "tsconfig.json", "i18n/**"]
+"area: webui":
+  - changed-files:
+      - any-glob-to-any-file: ["admin.go", "internal/admin/**", "plugin.yaml", "go.mod", "go.sum"]

@@ -39,13 +39,14 @@ jobs:
         run: |
           set -euo pipefail
           test "$(sed -n 's/^version: //p' plugin.yaml)" = "${TAG#v}"
-          go build -mod=mod -o "$RUNNER_TEMP/alonabot" github.com/AlonaBot/AlonaBot/cmd/alonabot
-          "$RUNNER_TEMP/alonabot" check .
+          go mod download github.com/AlonaBot/AlonaBot
+          env GOTOOLCHAIN="$(go env GOVERSION)" go -C "$(go list -m -f '{{.Dir}}' github.com/AlonaBot/AlonaBot)" install ./cmd/alonabot
+          alonabot check .
       - name: 构建五平台包
         shell: bash
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/alonabot" pack . --out release-assets \
+          alonabot pack . --out release-assets \
             --target linux/amd64 --target linux/arm64 --target windows/amd64 \
             --target darwin/amd64 --target darwin/arm64
       - name: 核对许可证
@@ -58,6 +59,21 @@ jobs:
         run: |
           set -euo pipefail
           notes="$RUNNER_TEMP/release-notes.md"
-          { cat "changelog/${TAG#v}/en-US.md"; printf '\n\n---\n\n'; cat "changelog/${TAG#v}/zh-CN.md"; } > "$notes"
+          {
+            for locale in en-US zh-CN; do
+              if [ "$locale" = en-US ]; then printf '## English\n\n'; else printf '\n## 简体中文\n\n'; fi
+              awk '
+                /^ {0,3}(`{3,}|~{3,})/ {
+                  marker = $0; sub(/^ */, "", marker); sub(/[^`~].*$/, "", marker)
+                  if (!fence) { fence = substr(marker, 1, 1); width = length(marker) }
+                  else if (substr(marker, 1, 1) == fence && length(marker) >= width && $0 ~ /^ *[`~]+[[:space:]]*$/) { fence = "" }
+                  print; next
+                }
+                !fence && !version && /^#{1,2} / { version = 1; next }
+                !fence && /^#{1,6} / { sub(/^#+ /, "### ") }
+                { print }
+              ' "changelog/${TAG#v}/$locale.md"
+            done
+          } > "$notes"
           gh release create "$TAG" --verify-tag --draft --title "$TAG" --notes-file "$notes" release-assets/*.tar.gz
           gh release edit "$TAG" --draft=false --latest
