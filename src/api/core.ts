@@ -69,3 +69,26 @@ export function getCoreSleep(): Promise<CoreSleep> {
 export async function setCoreSleep(value: Pick<CoreSleep, 'mode' | 'idle_timeout'>): Promise<void> {
   await request('/api/v1/core/sleep', jsonBody({ mode: value.mode, idle_timeout: value.idle_timeout }, 'PUT'));
 }
+
+/** 网络代理、GitHub 下载镜像与源码构建的下载来源；proxy 修改后重启 Core 生效。 */
+export type DownloadSettings = { proxy: string; github_mirror: string; go_download_base: string; goproxy: string };
+
+export function getDownloadSettings(): Promise<DownloadSettings> {
+  return request<DownloadSettings>('/api/v1/core/downloads');
+}
+
+/** 只更新给出的字段。 */
+export async function setDownloadSettings(value: Partial<DownloadSettings>): Promise<void> {
+  await request<void>('/api/v1/core/downloads', jsonBody(value, 'PUT'));
+}
+
+/** 源码构建按需下载的 Go 工具链与构建缓存占用。 */
+export type BuildEnvironment = { go_version: string; toolchain_bytes: number; cache_bytes: number };
+
+export function getBuildEnvironment(): Promise<BuildEnvironment> {
+  return request<BuildEnvironment>('/api/v1/core/build-environment');
+}
+
+export async function clearBuildEnvironment(): Promise<void> {
+  await request<void>('/api/v1/core/build-environment', { method: 'DELETE' });
+}

@@ -10,7 +10,7 @@ import { UsersPage } from './pages/UsersPage';
 import { AccountsPage } from './features/accounts/AccountsPage';
 import { PermissionsPage } from './pages/PermissionsPage';
 import { ConversationsPage } from './pages/ConversationsPage';
-import { SettingsPage } from './pages/SettingsPage';
+import { SettingsPage } from './features/settings/SettingsPage';
 import { ModelsPage } from './features/models/ModelsPage';
 import { ProfilesPage } from './pages/ProfilesPage';
 import { LogsPage } from './pages/LogsPage';
