@@ -1024,7 +1024,6 @@ details[open] .summary-hint { display: none; }
 .model-select { min-height: 34px; padding: 6px 12px; border: 1px solid transparent; border-radius: var(--radius); background: var(--color-surface-2); color: var(--color-ink); font-size: var(--text-sm); }
 .model-select { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; }
 
-:is(.provider-dialog-content, .model-edit-dialog, .model-delete-dialog) .dialog-actions { gap: 10px; margin-top: 16px; }
 
 /* 日志页、筛选弹层与诊断包对话框。 */
 .logs-page { display: flex; flex-direction: column; gap: 16px; min-width: 0; font-family: var(--font-sans); container-type: inline-size; }
