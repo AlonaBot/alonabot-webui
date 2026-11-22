@@ -1,7 +1,7 @@
 // 组件安装、更新、卸载、版本、运行与休眠。
 import { currentCSRFToken, getClientLocale, jsonBody, notifyPackagesChanged, notifySessionExpired, pluginPath, request } from './client';
 import type { Changelog } from './core';
-import { waitTask, type Task } from './tasks';
+import { waitTask } from './tasks';
 
 export type Package = {
   ID: string;
@@ -61,12 +61,12 @@ export async function installPackage(
   let pkg: Package;
   if (!(input instanceof FormData) && input.Build) {
     // 源码构建在 Core 里作为后台任务运行，返回任务 ID，这里等它结束。
-    const task = await request<Task>('/api/v1/packages/install', {
+    const accepted = await request<{ task_id: string }>('/api/v1/packages/install', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
     });
-    pkg = await waitTask<Package>(task.id, onLog);
+    pkg = await waitTask<Package>(accepted.task_id, onLog);
   } else if (input instanceof FormData) {
     pkg = await request<Package>('/api/v1/packages/install', {
       method: 'POST',

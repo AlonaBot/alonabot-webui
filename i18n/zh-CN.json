@@ -833,7 +833,7 @@
     "repositoryInvalid": "请填写 owner/repo 或 GitHub 仓库地址。",
     "sortBy": "排序",
     "sourceRef": "分支、标签或提交（可选）",
-    "sourceRefPlaceholder": "默认用最新 Release 的标签",
+    "sourceRefPlaceholder": "默认使用仓库的默认分支",
     "stateProblem": "运行出错",
     "storeFetchHint": "可以在插件源菜单里换一条读取线路，或在系统设置里配置网络代理。",
     "storeRoute": "读取线路",

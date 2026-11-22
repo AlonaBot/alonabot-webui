@@ -24,6 +24,11 @@ export function ChangelogDialog({ component, version, open, automatic = false, o
     Promise.all([component === 'core' ? getCoreChangelog(locale) : getPackageChangelog(component, locale), automatic ? getSeenVersion(component) : Promise.resolve({ version: null })]).then(([value, seen]) => {
       if (!active) return;
       const installed = value.entries.filter(entry => { const compared = compareVersions(entry.version, version); return compared === 0 || compared === -1; });
+      // 全新安装还没有已读记录：直接记为已读当前版本，不在第一次登录时弹出整段更新说明。
+      if (automatic && component === 'core' && seen.version === null) {
+        void setSeenVersion(component, version).catch(err => { if (active) setError(String(err)); });
+        return;
+      }
       setEntries(unreadEntries(installed, seen.version)); setActualLocale(value.locale);
     }).catch(err => { if (active) setError(String(err)); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };

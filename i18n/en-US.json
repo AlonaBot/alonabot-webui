@@ -833,7 +833,7 @@
     "repositoryInvalid": "Enter owner/repo or a GitHub repository URL.",
     "sortBy": "Sort",
     "sourceRef": "Branch, tag or commit (optional)",
-    "sourceRefPlaceholder": "Defaults to the latest release tag",
+    "sourceRefPlaceholder": "Defaults to the repository's default branch",
     "stateProblem": "Failed",
     "storeFetchHint": "Try another route in the plugin source menu, or set a network proxy in System settings.",
     "storeRoute": "Route",
