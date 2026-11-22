@@ -198,7 +198,7 @@
     "showSecret": "Show secret",
     "hideSecret": "Hide secret",
     "bootstrapTitle": "Save your admin token",
-    "bootstrapHelp": "Keep this token to sign in from another browser or machine.",
+    "bootstrapHelp": "This is the only credential for the console and it is shown only here. You need it to sign in from another browser or device; if you lose it, run alonabot admin-token show on the machine running AlonaBot.",
     "copyToken": "Copy token",
     "tokenSaved": "I have saved it",
     "tokenHelp": "Can’t find your token? Run this on the machine hosting AlonaBot:",
@@ -785,6 +785,12 @@
     "pageCrashed": "This page ran into an error",
     "retry": "Retry",
     "removeFile": "Remove file",
-    "dropFile": "Drop a file here, or click to choose"
+    "dropFile": "Drop a file here, or click to choose",
+    "tokenInvalid": "That token is not correct. Check it and try again.",
+    "keepSignedIn": "Keep me signed in on this device",
+    "tokenSavedConfirm": "I have saved the token somewhere safe",
+    "enterConsole": "Open the console",
+    "rotatedTokenNotice": "The new token is shown only once, so save it now. Every signed-in browser has been signed out and needs the new token.",
+    "signInAgain": "Sign in with the new token"
   }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import * as Dialog from '@radix-ui/react-dialog';
 import { LanguageSwitch } from './components/LanguageSwitch';
+import { TokenRevealDialog } from './features/auth/TokenRevealDialog';
 import { UIContext } from './i18n/UI';
 import { pickLocale } from './i18n/catalog';
 import english from '../i18n/en-US.json';
@@ -13,7 +13,7 @@ import { UISettingsContext, type UISettings } from './shell/settings';
 import { logout, restoreSession } from './api/auth';
 import { AdminAPIError, onSessionExpired, setClientLocale } from './api/client';
 import { getCore, type CoreInfo } from './api/core';
-import { LoginPage } from './pages/LoginPage';
+import { LoginPage } from './features/auth/LoginPage';
 import { PluginDetailPage } from './pages/PluginDetailPage';
 import { getLatestRelease, type LatestRelease } from './api/webui';
 import { compareVersions } from './pages/versions';
@@ -52,8 +52,6 @@ function AdminApp() {
 
   // 令牌轮换后持有结果对话框，独立于已认证页面展示
   const [rotatedToken, setRotatedToken] = useState<string | null>(null);
-  const [tokenCopied, setTokenCopied] = useState(false);
-  const [tokenCopyError, setTokenCopyError] = useState<string | null>(null);
 
   const restore = async () => {
     setSessionState('checking');
@@ -156,7 +154,6 @@ function AdminApp() {
   }, []);
 
   const handleTokenRotated = useCallback((token: string) => {
-    setTokenCopied(false); setTokenCopyError(null);
     setRotatedToken(token);
     setCachedCore(null);
     setCoreInfo(null);
@@ -196,17 +193,7 @@ function AdminApp() {
 
     // 未登录时显示登录页（开发环境下允许直接查看 /dev/forms）
     if (sessionState === 'unauthenticated' && !(import.meta.env.DEV && currentPath === '/dev/forms')) {
-      return (
-        <div className="login-wrapper">
-          <div className="login-locale-bar">
-            <LanguageSwitch
-              value={locale}
-              onChange={handleSetLocale}
-            />
-          </div>
-          <LoginPage onAuthenticated={handleAuthenticated} />
-        </div>
-      );
+      return <LoginPage onAuthenticated={handleAuthenticated} locale={locale} onLocaleChange={handleSetLocale} />;
     }
 
     const matchedRoute = routes.find(r => r.path === currentPath);
@@ -259,66 +246,8 @@ function AdminApp() {
       {renderContent()}
       <Toaster />
 
-      {rotatedToken ? (
-        <Dialog.Root
-          open={true}
-          onOpenChange={open => {
-            if (!open) {
-              setRotatedToken(null);
-              navigate('/login', { replace: true });
-            }
-          }}
-        >
-          <Dialog.Portal>
-            <Dialog.Overlay className="dialog-overlay" />
-            <Dialog.Content className="dialog-content">
-              <Dialog.Title className="dialog-title">{ui.rotateTokenModalTitle}</Dialog.Title>
-              <Dialog.Description className="dialog-description">
-                {ui.rotateTokenModalWarning}
-              </Dialog.Description>
-              <div className="rotated-token-result">
-                <p>{ui.newTokenNotice}</p>
-                <div className="settings-input-row">
-                  <input
-                    type="text"
-                    readOnly
-                    value={rotatedToken}
-                    className="font-mono"
-                    onClick={e => (e.target as HTMLInputElement).select()}
-                  />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(rotatedToken);
-                        setTokenCopied(true);
-                        setTokenCopyError(null);
-                      } catch (error) {
-                        setTokenCopyError(error instanceof Error ? error.message : String(error));
-                      }
-                    }}
-                  >
-                    {tokenCopied ? ui.copied : ui.copyCommand}
-                  </button>
-                </div>
-              </div>
-              {tokenCopyError && <p role="alert">{tokenCopyError}</p>}
-              <div className="dialog-actions">
-                <button
-                  type="button"
-                  className="save-button"
-                  onClick={() => {
-                    setRotatedToken(null);
-                    navigate('/login', { replace: true });
-                  }}
-                >
-                  {ui.done}
-                </button>
-              </div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
-      ) : null}
+      {rotatedToken && <TokenRevealDialog token={rotatedToken} title={ui.rotateTokenModalTitle} description={ui.rotatedTokenNotice} confirmLabel={ui.signInAgain}
+        onConfirm={() => { setRotatedToken(null); navigate('/login', { replace: true }); }} />}
     </UIContext>
   );
 }

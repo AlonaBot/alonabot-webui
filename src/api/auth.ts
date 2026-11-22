@@ -5,12 +5,12 @@ import { AdminAPIError, request, setCSRFToken } from './client';
 // 认证与会话 API
 // ----------------------------------------------------------------------------
 
-/** 提交管理 token 登录，200 时取 csrf_token 存入内存。 */
-export async function login(token: string): Promise<void> {
+/** 提交管理 token 登录，200 时取 csrf_token 存入内存；remember 为真时 Core 签发长期 Cookie。 */
+export async function login(token: string, remember: boolean): Promise<void> {
   const result = await request<{ csrf_token: string }>('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ token, remember }),
   });
   setCSRFToken(result.csrf_token);
 }

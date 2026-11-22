@@ -1,14 +1,13 @@
 /* 配置预览的层级、表单控件与窄屏布局。 */
-button, select { cursor: pointer; }
-button { border: 1px solid var(--color-line); border-radius: 7px; padding: .4rem .7rem; background: var(--color-surface); color: inherit; }
-button:hover { border-color: var(--color-accent); background: var(--color-surface-2); }
+:where(button, select) { cursor: pointer; }
+:where(button) { border: 1px solid var(--color-line); border-radius: 7px; padding: .4rem .7rem; background: var(--color-surface); color: inherit; }
+:where(button):hover { border-color: var(--color-accent); background: var(--color-surface-2); }
 .page-shell { max-width: 1180px; margin: auto; padding: 0 32px 64px; }
-header { display: flex; align-items: center; justify-content: space-between; min-height: 90px; border-bottom: 1px solid var(--color-line); gap: 24px; }
+.page-shell > header { display: flex; align-items: center; justify-content: space-between; min-height: 90px; border-bottom: 1px solid var(--color-line); gap: 24px; }
 .brand { font-weight: 750; font-size: 22px; color: inherit; text-decoration: none; letter-spacing: -.7px; }
 .brand span { font-size: 11px; letter-spacing: 1.5px; margin-left: 8px; color: var(--color-ink-muted); }
-.language-switch { display: flex; gap: 12px; align-items: center; font-size: 14px; color: var(--color-ink-muted); }
-.language-switch select { width: auto; background: transparent; }
-h1 { font-size: clamp(28px, 4vw, 40px); letter-spacing: -1.3px; line-height: 1.2; margin: 40px 0 12px; }
+
+.page-shell h1 { font-size: clamp(28px, 4vw, 40px); letter-spacing: -1.3px; line-height: 1.2; margin: 40px 0 12px; }
 .page-heading p { color: var(--color-ink-muted); margin: 0 0 26px; }
 .fixture-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
 .fixture-tabs button { background: transparent; border-color: transparent; }
@@ -22,30 +21,30 @@ h1 { font-size: clamp(28px, 4vw, 40px); letter-spacing: -1.3px; line-height: 1.2
 .required-mark { color: var(--color-warning-ink); font-size: 12px; font-weight: 500; }
 .field-hint, .editor-language { color: var(--color-ink-muted); font-size: 14px; margin: 0 0 10px; }
 .obvious-hint { color: var(--color-warning-ink); background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface)); border-left: 3px solid var(--color-warning); padding: 12px; }
-input:not([type=checkbox]):not([type=range]):not([type=radio]), textarea, select { width: 100%; min-width: 0; border: 1px solid var(--color-line); border-radius: 6px; padding: 9px 11px; background: var(--color-surface); color: inherit; }
-textarea { min-height: 96px; resize: vertical; }
-input[type=range] { width: 100%; accent-color: var(--color-accent); }
-input[type=checkbox] { width: 34px; height: 20px; accent-color: var(--color-accent); cursor: pointer; }
+:where(input:not([type=checkbox]):not([type=range]):not([type=radio]), textarea, select) { width: 100%; min-width: 0; border: 1px solid var(--color-line); border-radius: 6px; padding: 9px 11px; background: var(--color-surface); color: inherit; }
+:where(textarea) { min-height: 96px; resize: vertical; }
+:where(input[type=range]) { width: 100%; accent-color: var(--color-accent); }
+:where(input[type=checkbox]) { width: 34px; height: 20px; accent-color: var(--color-accent); cursor: pointer; }
 .config-group { border: 1px solid var(--color-line); padding: 18px; border-radius: 8px; }
 .config-group .config-field:last-child { margin-bottom: 0; }
 .secret-control, .number-control { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .secret-control > span { color: var(--color-ink-muted); font-size: 14px; }
 .secret-control input { flex: 1; flex-basis: 160px; }
 .number-control input { flex: 1; }
-output { font-variant-numeric: tabular-nums; color: var(--color-accent); }
+:where(output) { font-variant-numeric: tabular-nums; color: var(--color-accent); }
 .default-pending { background: var(--color-surface-2); padding: 12px; border-radius: 6px; font-size: 14px; }
 .default-pending p { margin: 0 0 8px; }
 .collection-row { border: 1px solid var(--color-line); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
 .collection-row > button { margin-top: 10px; color: var(--color-danger); font-size: 13px; }
 .dict-row label { display: block; font-size: 13px; color: var(--color-ink-muted); margin-bottom: 8px; }
 .dict-row input, .dict-row textarea, .dict-row select { display: block; margin-top: 4px; }
-summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+:where(summary) { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
 .summary-hint { display: block; margin-left: 18px; color: var(--color-ink-muted); font-size: 13px; font-weight: 400; }
-details[open] summary { margin-bottom: 14px; }
+:where(details[open] summary) { margin-bottom: 14px; }
 details[open] .summary-hint { display: none; }
 .form-error, [aria-invalid=true] { color: var(--color-danger); border-color: var(--color-danger); }
 .form-error { background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface)); padding: 12px; margin-bottom: 16px; border-radius: 6px; }
-pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+:where(pre) { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .code-editor { font-family: ui-monospace, SFMono-Regular, monospace; }
 .save-button { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-surface); font-weight: 600; padding: 10px 18px; }
 .save-button:hover { background: var(--color-accent-strong); color: var(--color-surface); }
@@ -54,7 +53,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .file-label { font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-ink-muted); margin: 0 0 22px; }
 .empty-patch { color: var(--color-ink-muted); font-size: 14px; }
 .patch-panel pre { background: var(--color-surface-2); padding: 18px; border-radius: 8px; }
-@media (max-width: 800px) { .workspace { grid-template-columns: 1fr; } .patch-panel { position: static; } .page-shell { padding: 0 18px 36px; } .form-panel { padding: 20px; } header { min-height: 76px; } .language-switch { gap: 6px; } }
+@media (max-width: 800px) { .workspace { grid-template-columns: 1fr; } .patch-panel { position: static; } .page-shell { padding: 0 18px 36px; } .form-panel { padding: 20px; } .page-shell > header { min-height: 76px; }  }
 
 /* 外壳及其 Portal 使用独立排版，表单保留原有规则。 */
 :where(.shell-sidebar, .shell-topbar, .mobile-tabbar, .dialog-content, .dropdown-menu-content, .sidebar-tooltip-content, .shell-empty-view) {
@@ -966,121 +965,9 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   }
 }
 
-
 /* 登录、总览、组件与账号页面。 */
 
 /* 登录页 */
-.login-wrapper {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--color-bg);
-  position: relative;
-}
-
-.login-locale-bar {
-  display: flex;
-  justify-content: flex-end;
-  padding: 16px 24px;
-}
-
-.login-page-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-.login-card {
-  width: 100%;
-  max-width: 380px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  padding: 32px 28px;
-}
-
-.login-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.login-brand-mark {
-  display: block;
-  margin: 0 auto 12px;
-}
-
-.login-title {
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--color-ink);
-  margin-bottom: 6px;
-}
-
-.login-desc {
-  font-size: var(--text-sm);
-  color: var(--color-ink-muted);
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.login-label {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-ink);
-}
-
-.login-input {
-  height: 40px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-surface);
-  color: var(--color-ink);
-  font-size: var(--text-sm);
-}
-
-.login-submit-button {
-  height: 40px;
-  background-color: var(--color-accent);
-  color: var(--color-bg);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.login-submit-button:hover:not(:disabled) {
-  background-color: var(--color-accent-strong);
-}
-
-.login-submit-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.login-error-banner {
-  background-color: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface));
-  border: 1px solid var(--color-danger);
-  border-radius: var(--radius-sm);
-  color: var(--color-danger);
-  padding: 10px 12px;
-  font-size: var(--text-xs);
-  word-break: break-word;
-}
 
 /* 侧栏版本号与新版本提示 */
 .sidebar-version-container {
@@ -1122,7 +1009,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   padding: 0;
   cursor: pointer;
 }
-
 
 /* 总览页面 */
 .overview-page {
@@ -1374,13 +1260,11 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   color: var(--color-ink);
 }
 
-
 @media (max-width: 900px) {
   .overview-charts-grid {
     grid-template-columns: 1fr;
   }
 }
-
 
 /* 插件页面样式 */
 .plugins-page {
@@ -1672,7 +1556,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .plugin-switch-box {
   flex-shrink: 0;
 }
-
 
 .plugin-switch-label {
   position: relative;
@@ -2089,7 +1972,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   opacity: 0.6;
 }
 
-
 /* 插件详情页面样式 */
 .plugin-detail-page {
   display: flex;
@@ -2377,7 +2259,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   text-align: center;
 }
 
-
 .advanced-card-header {
   display: flex;
   align-items: center;
@@ -2430,7 +2311,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   margin-bottom: 16px;
 }
 
-
 /* 机器人账号页面样式 */
 .accounts-page {
   display: flex;
@@ -2446,7 +2326,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   flex-wrap: wrap;
 }
 
-
 .accounts-notice-card {
   display: flex;
   align-items: flex-start;
@@ -2456,9 +2335,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   border-radius: var(--radius);
   padding: 14px 18px;
 }
-
-
-
 
 .accounts-empty-view {
   background-color: var(--color-surface);
@@ -2473,7 +2349,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   color: var(--color-ink-muted);
   font-size: var(--text-sm);
 }
-
 
 .accounts-grid {
   display: grid;
@@ -2547,16 +2422,12 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   color: var(--color-ink-muted);
 }
 
-
-
 .account-stat-item {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: var(--text-xs);
 }
-
-
 
 .account-card-actions {
   display: flex;
@@ -2588,7 +2459,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   border-color: var(--color-accent);
 }
 
-
 .account-action-button.is-danger-text {
   color: var(--color-danger);
 }
@@ -2612,7 +2482,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   margin-top: 8px;
 }
 
-
 .inspect-config-pre {
   background-color: var(--color-surface-2);
   border: 1px solid var(--color-line);
@@ -2625,17 +2494,12 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
   margin: 12px 0 20px 0;
 }
 
-
-
 /* 页面规则只作用于本切片，避免改变外壳与原表单的排版。 */
-:is(.login-wrapper, .overview-page, .plugins-page, .plugin-detail-page, .accounts-page) {
+:is(.overview-page, .plugins-page, .plugin-detail-page, .accounts-page) {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   min-width: 0;
 }
-
-.login-title { margin: 0 0 6px; }
-.login-desc { margin: 0; }
 
 :is(.plugins-page, .plugin-detail-page, .accounts-page) .plugins-error-banner {
   white-space: pre-wrap;
@@ -3032,31 +2896,6 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 }
 
 /* 登录页：网络节点围绕中央卡片，颜色跟随现有主题令牌。 */
-.login-wrapper { isolation: isolate; }
-.login-locale-bar { position: absolute; top: 32px; right: 36px; padding: 0; z-index: 1; }
-.login-locale-bar .language-switch { font-size: 0; gap: 0; }
-.login-locale-bar select { font-size: var(--text-sm); background: var(--color-surface); border: 0; border-radius: var(--radius); padding: 8px 12px; }
-.login-page-container { min-height: 100svh; position: relative; padding: 90px 24px; }
-.login-network { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; color: var(--color-accent); opacity: .65; }
-.login-center { width: min(100%, 400px); }
-.login-card { max-width: none; padding: 30px 32px 28px; }
-.login-header { display: flex; align-items: center; gap: 10px; text-align: left; margin-bottom: 16px; }
-.login-brand-mark { margin: 0; }
-.login-title { font-size: var(--text-xl); font-weight: 700; letter-spacing: 0; margin: 0; }
-.login-label { font-size: var(--text-xs); font-weight: 400; color: var(--color-ink-muted); }
-.login-token-control { display: flex; align-items: center; border: 1px solid var(--color-line); border-radius: var(--radius); padding: 0 12px; gap: 8px; color: var(--color-ink-muted); }
-.login-token-control:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 18%, transparent); }
-.login-token-control .login-input { border: 0; outline: 0; box-shadow: none; padding: 8px 0; background: transparent; color: var(--color-ink); }
-.login-token-control > svg { flex-shrink: 0; }
-.login-token-control button, .login-command button { display: inline-flex; padding: 2px; border: 0; background: transparent; color: var(--color-ink-muted); flex-shrink: 0; }
-.login-submit-button { height: 42px; background: var(--color-bubble); color: var(--color-on-bubble); border-radius: var(--radius); font-weight: 500; }
-.login-submit-button:hover:not(:disabled) { background: color-mix(in srgb, var(--color-bubble) 88%, var(--color-accent)); }
-.login-token-help { margin-top: 18px; background: var(--color-surface-2); border-radius: var(--radius); padding: 12px 14px; font-size: var(--text-xs); line-height: 1.35; color: var(--color-ink-muted); }
-.login-token-help p { margin: 0; }
-.login-command { display: flex; align-items: center; gap: 8px; background: var(--color-surface); border-radius: var(--radius-sm); padding: 7px 8px 7px 10px; margin: 6px 0 8px; color: var(--color-ink); }
-.login-command code { flex: 1; min-width: 0; font-family: var(--font-mono); overflow-wrap: anywhere; }
-.login-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.login-version { margin: 14px 0 0; text-align: center; color: var(--color-ink-muted); font-size: var(--text-xs); }
 
 /* 机器人账号页与对话框：只覆盖本页的卡片、表单和分页。 */
 .accounts-page { max-width: 864px; margin: 0 auto; gap: 16px; }
@@ -3116,8 +2955,8 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .accounts-chats-dialog .account-chat-list { margin: 12px 0; }
 .accounts-chats-dialog .account-chat-row { border-bottom: 1px solid var(--color-line); }
 @media (max-width: 767px) {
-  .login-locale-bar { top: 20px; right: 20px; }
-  .login-card { padding: 28px 24px; }
+  
+  
   .accounts-grid { grid-template-columns: minmax(0, 1fr); }
   .accounts-topbar > input { flex-basis: auto; }
   .accounts-add-dialog { padding: 24px 20px; }
@@ -3296,7 +3135,6 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
   .plugin-page-frame { min-height: 420px; }
 }
 
-
 /* 配置文件页（ProfilesPage 与各个分区）样式 */
 .profiles-page { max-width: 864px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 .profiles-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; }
@@ -3470,5 +3308,3 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
   .settings-sleep-timeout { width: 100%; }
 }
 
-.login-bootstrap h2, .login-bootstrap p { margin: 0; }
-.login-bootstrap textarea { resize: none; }

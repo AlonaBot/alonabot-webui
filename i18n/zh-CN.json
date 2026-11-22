@@ -198,7 +198,7 @@
     "showSecret": "显示密钥",
     "hideSecret": "隐藏密钥",
     "bootstrapTitle": "保存管理令牌",
-    "bootstrapHelp": "请保存此令牌，供其他浏览器或机器登录时使用。",
+    "bootstrapHelp": "这是登录管理后台的唯一凭据，只在这里显示一次。在其他浏览器或设备登录时需要它；忘记了可以在运行 AlonaBot 的机器上执行 alonabot admin-token show 找回。",
     "copyToken": "复制令牌",
     "tokenSaved": "我已保存",
     "tokenHelp": "找不到令牌？在运行 AlonaBot 的机器上执行：",
@@ -785,6 +785,12 @@
     "pageCrashed": "这个页面出错了",
     "retry": "重试",
     "removeFile": "移除文件",
-    "dropFile": "拖入文件，或点击选择"
+    "dropFile": "拖入文件，或点击选择",
+    "tokenInvalid": "令牌不正确，请检查后重试。",
+    "keepSignedIn": "在这台设备上保持登录",
+    "tokenSavedConfirm": "我已把令牌保存在安全的地方",
+    "enterConsole": "进入管理后台",
+    "rotatedTokenNotice": "新令牌只显示这一次，请立即保存。所有已登录的浏览器都已退出，需要用新令牌重新登录。",
+    "signInAgain": "用新令牌登录"
   }
 }
