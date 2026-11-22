@@ -12,6 +12,7 @@ import { ActionDialog } from '../components/ActionDialog';
 import { storeCardState } from './storeCards';
 
 const sourceKey = 'alonabot.webui.sources';
+const mirrorKey = 'alonabot.webui.storeMirror';
 const defaultSource = 'AlonaBot/plugin-store';
 const pageSize = 9;
 const repositoryPattern = /^[\w.-]+\/[\w.-]+$/;
@@ -103,7 +104,7 @@ export function StorePanel({ packages, onInstalled, onManage }: { packages: Pack
     pendingRefresh.current = false;
     if (refresh) setSyncing(true);
     setLoading(true);
-    getStore({ source, role, q: query, sort, offset: (page - 1) * pageSize, limit: pageSize, refresh })
+    getStore({ source, mirror: localStorage.getItem(mirrorKey) ?? 'auto', role, q: query, sort, offset: (page - 1) * pageSize, limit: pageSize, refresh })
       .then(value => { if (active) setData(value); })
       .catch(err => { if (active) { setData(null); setSourceError(err); } })
       .finally(() => { if (active) { setLoading(false); setSyncing(false); } });

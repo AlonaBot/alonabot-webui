@@ -460,7 +460,7 @@
     "invalidDatabaseValue": "Invalid column value",
     "updateCheckFailed": "Update check unavailable",
     "noPublishedRelease": "No release has been published yet.",
-    "sourceIndexMissing": "This plugin source does not have an index.json yet.",
+    "sourceIndexMissing": "This plugin source has not published a store snapshot (store.json on the index branch) yet.",
     "storeFetchFailed": "This plugin source is temporarily unavailable.",
     "revealSecret": "Reveal",
     "discard": "Discard",

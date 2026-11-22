@@ -460,7 +460,7 @@
     "invalidDatabaseValue": "列值格式错误",
     "updateCheckFailed": "暂时无法检查更新",
     "noPublishedRelease": "尚未发布版本。",
-    "sourceIndexMissing": "该插件源还没有 index.json。",
+    "sourceIndexMissing": "该插件源还没有发布商店快照（index 分支的 store.json）。",
     "storeFetchFailed": "暂时无法读取该插件源。",
     "revealSecret": "查看",
     "discard": "放弃",
