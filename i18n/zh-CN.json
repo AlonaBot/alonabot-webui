@@ -839,6 +839,25 @@
     "storeRoute": "读取线路",
     "storeStale": "暂时无法更新，显示的是 {time} 的结果",
     "webuiSelfDescription": "你正在使用的官方管理界面",
-    "webuiSelfLocked": "正在使用的管理界面不能在这里停用或卸载"
+    "webuiSelfLocked": "正在使用的管理界面不能在这里停用或卸载",
+    "accountAdded": "已添加账号 {name}",
+    "accountDeleted": "已删除账号 {name}",
+    "accountsLoadFailed": "读取账号失败",
+    "accountStoppedNote": "停用期间不接收消息",
+    "adapterDisabledNotice": "{name} 适配器已停用，这个账号暂时不会收发消息。",
+    "adapterInstallPrompt": "还没有安装 {name} 适配器。安装后就能填写账号信息。",
+    "adapterMissingNotice": "{name} 适配器未安装，账号设置仍保留。",
+    "adapterNotInstalled": "未安装，选中后可一键安装",
+    "addAccountHint": "接入 Telegram 机器人或 QQ（OneBot），机器人就能开始收发消息。",
+    "botTokenHint": "在 Telegram 里向 @BotFather 发送 /newbot 获取",
+    "defaultAccount": "默认账号",
+    "deleteAccountDesc": "账号的连接设置会被删除，聊天记录和配置文件不受影响。",
+    "deleteAccountTitle": "删除账号 {name}？",
+    "installAdapter": "安装 {name} 适配器",
+    "instanceNameHint": "只在管理界面里用来区分账号，例如 main 或 qq-test。",
+    "noAccountChatsHint": "还没有会话。给机器人发一条消息试试。",
+    "pruneDone": "已清理未识别的设置项",
+    "statusOnline": "在线",
+    "statusUnavailable": "不可用"
   }
 }

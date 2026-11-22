@@ -55,6 +55,8 @@ export type AdapterInstance = {
   instance_id: string;
   adapter_id: string;
   package_id: string;
+  /** 所属适配器组件的状态；被停用或卸载时账号保留但不会运行。 */
+  package_state?: 'enabled' | 'disabled' | 'not_installed';
   state: 'running' | 'stopped' | 'failed';
   safe_error: string;
   default: boolean;

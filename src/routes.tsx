@@ -7,7 +7,7 @@ import { type CoreInfo } from './api/core';
 import { OverviewPage } from './pages/OverviewPage';
 import { PluginsPage } from './features/plugins/PluginsPage';
 import { UsersPage } from './pages/UsersPage';
-import { AccountsPage } from './pages/AccountsPage';
+import { AccountsPage } from './features/accounts/AccountsPage';
 import { PermissionsPage } from './pages/PermissionsPage';
 import { ConversationsPage } from './pages/ConversationsPage';
 import { SettingsPage } from './pages/SettingsPage';

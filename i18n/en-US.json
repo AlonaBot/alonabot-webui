@@ -839,6 +839,25 @@
     "storeRoute": "Route",
     "storeStale": "Could not refresh; showing results from {time}",
     "webuiSelfDescription": "The official console you are using now",
-    "webuiSelfLocked": "The console you are using cannot be disabled or uninstalled here"
+    "webuiSelfLocked": "The console you are using cannot be disabled or uninstalled here",
+    "accountAdded": "Added account {name}",
+    "accountDeleted": "Deleted account {name}",
+    "accountsLoadFailed": "Could not load accounts",
+    "accountStoppedNote": "Messages are not received while stopped",
+    "adapterDisabledNotice": "The {name} adapter is disabled, so this account cannot send or receive messages.",
+    "adapterInstallPrompt": "The {name} adapter is not installed yet. Install it to fill in the account details.",
+    "adapterMissingNotice": "The {name} adapter is not installed; the account settings are kept.",
+    "adapterNotInstalled": "Not installed; select to install",
+    "addAccountHint": "Connect a Telegram bot or QQ (OneBot) so the bot can start chatting.",
+    "botTokenHint": "Send /newbot to @BotFather in Telegram to get one",
+    "defaultAccount": "Default account",
+    "deleteAccountDesc": "The connection settings are deleted. Chat history and profiles are not affected.",
+    "deleteAccountTitle": "Delete account {name}?",
+    "installAdapter": "Install the {name} adapter",
+    "instanceNameHint": "Only used in the console to tell accounts apart, such as main or qq-test.",
+    "noAccountChatsHint": "No conversations yet. Send the bot a message to try it.",
+    "pruneDone": "Removed unrecognized settings",
+    "statusOnline": "Online",
+    "statusUnavailable": "Unavailable"
   }
 }
