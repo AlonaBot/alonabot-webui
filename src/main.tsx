@@ -10,7 +10,7 @@ import { UIContext } from './i18n/UI';
 import { pickLocale } from './i18n/catalog';
 import english from '../i18n/en-US.json';
 import chinese from '../i18n/zh-CN.json';
-import { routes, setCachedCore } from './routes';
+import { routes } from './routes';
 import { AppShell } from './shell/AppShell';
 import { navigate, usePath } from './shell/router';
 import { UISettingsContext, type UISettings } from './shell/settings';
@@ -74,7 +74,6 @@ function AdminApp() {
     setAppError(null);
     try {
       const core = await getCore();
-      setCachedCore(core);
       setCoreInfo(core);
     } catch (error) {
       setAppError(error instanceof Error ? error.message : String(error));
@@ -83,7 +82,6 @@ function AdminApp() {
 
   useEffect(() => {
     const unsubscribe = onSessionExpired(() => {
-      setCachedCore(null);
       setCoreInfo(null);
       setSessionState('unauthenticated');
       navigate('/login', { replace: true });
@@ -145,7 +143,6 @@ function AdminApp() {
   const handleLogout = useCallback(async () => {
     try {
       await logout();
-      setCachedCore(null);
       setCoreInfo(null);
       setSessionState('unauthenticated');
       navigate('/login', { replace: true });
@@ -156,7 +153,6 @@ function AdminApp() {
 
   const handleTokenRotated = useCallback((token: string) => {
     setRotatedToken(token);
-    setCachedCore(null);
     setCoreInfo(null);
     setSessionState('unauthenticated');
   }, []);

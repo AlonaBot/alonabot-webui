@@ -3,8 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { ShieldCheck, Bot, Box, LayoutDashboard, MessageSquare, Puzzle, ScrollText, Settings, Shield, SlidersHorizontal } from 'lucide-react';
 import { ConfigForm } from './components/ConfigForm';
 import { useUI } from './i18n/UI';
-import { type CoreInfo } from './api/core';
-import { OverviewPage } from './pages/OverviewPage';
+import { OverviewPage } from './features/overview/OverviewPage';
 import { PluginsPage } from './features/plugins/PluginsPage';
 import { UsersPage } from './pages/UsersPage';
 import { AccountsPage } from './features/accounts/AccountsPage';
@@ -31,17 +30,6 @@ export type RouteEntry = {
   navigation?: boolean;
   render: () => JSX.Element;
 };
-
-let cachedCore: CoreInfo | null = null;
-
-export function setCachedCore(core: CoreInfo | null) {
-  cachedCore = core;
-}
-
-function OverviewRouteWrapper(): JSX.Element {
-  const ui = useUI();
-  return cachedCore ? <OverviewPage core={cachedCore} /> : <p role="status">{ui.coreUnavailable}</p>;
-}
 
 const secretSet = { $secret_set: true };
 const formExamples = [
@@ -136,7 +124,7 @@ export const routes: RouteEntry[] = [
     label: 'overview',
     icon: LayoutDashboard,
     group: 'main',
-    render: () => <OverviewRouteWrapper />,
+    render: () => <OverviewPage />,
   },
   {
     id: 'plugins',

@@ -258,77 +258,6 @@ details[open] .summary-hint { display: none; }
 }
 
 /* 总览页面 */
-.overview-page {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.overview-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.overview-status-container {
-  display: flex;
-  align-items: center;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.overview-alert-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background-color: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
-  border: 1px solid var(--color-danger);
-  border-radius: var(--radius-lg);
-  color: var(--color-ink);
-  font-size: var(--text-sm);
-}
-
-.overview-alert-icon {
-  color: var(--color-danger);
-  flex-shrink: 0;
-}
-
-.overview-alert-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--color-accent);
-  font-weight: 600;
-  margin-left: 6px;
-  cursor: pointer;
-}
-
-.overview-normal-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background-color: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  font-size: var(--text-sm);
-  color: var(--color-ink);
-  white-space: nowrap;
-}
-
-.overview-normal-icon {
-  color: var(--color-success);
-  flex-shrink: 0;
-}
-
-.overview-actions-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
 .time-range-pills {
   display: flex;
@@ -355,25 +284,6 @@ details[open] .summary-hint { display: none; }
   font-weight: 600;
 }
 
-.overview-refresh-button {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-surface);
-  color: var(--color-ink-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.overview-refresh-button:hover {
-  color: var(--color-ink);
-  border-color: var(--color-accent);
-}
-
 .is-spinning {
   animation: spin 1s linear infinite;
 }
@@ -381,72 +291,6 @@ details[open] .summary-hint { display: none; }
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-.overview-core-banner {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius);
-  padding: 14px 20px;
-  flex-wrap: wrap;
-}
-
-.core-info-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.core-info-label {
-  font-size: var(--text-xs);
-  color: var(--color-ink-muted);
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.core-info-value {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-ink);
-}
-
-.core-info-divider {
-  width: 1px;
-  height: 18px;
-  background-color: var(--color-line);
-}
-
-.overview-charts-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 18px;
-}
-
-.overview-chart-card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  min-height: 260px;
-}
-
-.chart-card-title {
-  font-size: var(--text-md);
-  font-weight: 600;
-  color: var(--color-ink);
-  margin: 0;
-  white-space: nowrap;
-}
-
-@media (max-width: 900px) {
-  .overview-charts-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* 全局 input 重置的选择器比单个类更强，这里按同等强度覆盖，避免框内再画一道边框。 */
@@ -923,7 +767,7 @@ details[open] .summary-hint { display: none; }
   margin-top: 12px;
 }
 
-:is(.overview-page, .plugin-detail-page) {
+:is(.plugin-detail-page) {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   min-width: 0;
@@ -935,12 +779,12 @@ details[open] .summary-hint { display: none; }
 }
 
 @media (max-width: 767px) {
-  .overview-charts-grid { grid-template-columns: minmax(0, 1fr); }
+  
 
-  .detail-title-row, .overview-core-banner { gap: 12px; }
-  .core-info-divider { display: none; }
-  .overview-status-container { flex-basis: 100%; }
-  .overview-actions-row { flex-wrap: wrap; }
+  .detail-title-row { gap: 12px; }
+  
+  
+  
 
   .plugins-dialog-content { padding: 20px; }
 }
@@ -964,30 +808,6 @@ details[open] .summary-hint { display: none; }
 
 .verified { color: var(--color-accent); margin-left: 4px; vertical-align: middle; }
 
-.statistics-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
-.stats-messages { grid-column: span 2; }
-.stats-errors { grid-column: span 2; }
-.statistics-grid .overview-chart-card { padding: 22px; min-height: 260px; }
-.chart-series svg { display: block; width: 100%; overflow: visible; }
-.chart-series svg text { fill: var(--color-ink-muted); font-family: var(--font-sans); font-size: 11px; }
-.chart-grid { stroke: var(--color-line); }
-.chart-legend { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; font-size: var(--text-xs); color: var(--color-ink-muted); margin: 12px 0; }
-.chart-legend > span { display: inline-flex; gap: 6px; align-items: center; }
-.chart-legend i, .account-legend i { width: 8px; height: 8px; display: inline-block; border-radius: 50%; flex-shrink: 0; }
-.chart-legend strong { color: var(--color-ink); }
-.chart-values { color: var(--color-ink-muted); font-size: var(--text-xs); }
-.chart-values .data-table-wrap { max-height: 260px; overflow: auto; }
-.account-chart { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding-top: 20px; }
-.account-chart svg { width: 160px; flex-shrink: 0; }
-.chart-total { font-size: var(--text-lg); font-weight: 600; fill: var(--color-ink); }
-.account-legend { display: grid; gap: 10px; flex: 1; max-height: 210px; overflow: auto; }
-.account-legend > div { display: flex; align-items: center; gap: 6px; font-size: var(--text-xs); }
-.account-legend span { flex: 1; overflow-wrap: anywhere; }
-.command-bars { margin-top: 24px; max-height: 240px; overflow: auto; }
-.command-bars > div { display: grid; grid-template-columns: minmax(80px,1fr) 1fr 40px; align-items: center; gap: 10px; margin: 16px 0; font-size: var(--text-xs); }
-.command-bars span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.command-bars meter { width: 100%; accent-color: var(--color-accent); }
-.stats-since { font-size: var(--text-xs); }
 .storage-section { margin: 24px 0; }
 .storage-section h3 { font-size: var(--text-sm); font-weight: 500; }
 .storage-row { background: var(--color-surface); border-radius: var(--radius-lg); padding: 20px; display: flex; gap: 20px; align-items: center; justify-content: space-between; }
@@ -1014,8 +834,8 @@ details[open] .summary-hint { display: none; }
 .database-field > label { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
 .database-field > label > select { margin-left: auto; }
 .database-field textarea { width: 100%; min-height: 60px; }
-@media (max-width: 1100px) {  .statistics-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .stats-messages { grid-column: span 2; } .stats-errors { grid-column: auto; } }
-@media (max-width: 767px) { .statistics-grid { grid-template-columns: 1fr; } .stats-messages, .stats-errors { grid-column: auto; } .data-toolbar input { max-width: none; }     .data-table-wrap { padding: 8px; } .statistics-grid .overview-chart-card { padding: 16px; } .storage-row { padding: 16px; } }
+
+@media (max-width: 767px) {   .data-toolbar input { max-width: none; }     .data-table-wrap { padding: 8px; }  .storage-row { padding: 16px; } }
 
 /* 模型页：复用外壳间距、主题令牌与管理对话框。 */
 

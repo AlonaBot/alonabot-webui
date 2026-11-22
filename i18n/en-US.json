@@ -895,6 +895,11 @@
     "sleepModeDesc": "Idle plugins can sleep and wake up when a message arrives",
     "sourceBuildSettings": "Build from source",
     "sourceBuildSettingsHint": "Only used when installing plugins from source",
-    "storeRouteDesc": "Route used to read the plugin store list"
+    "storeRouteDesc": "Route used to read the plugin store list",
+    "overviewProblems": "{names} need attention ({count} in total)",
+    "messagesUnit": "messages",
+    "commandTriggers": "Command triggers",
+    "chartAgentUsage": "Agent usage",
+    "noUsageToday": "No model calls today"
   }
 }

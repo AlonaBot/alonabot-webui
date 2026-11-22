@@ -895,6 +895,11 @@
     "sleepModeDesc": "空闲的插件可以自动休眠，有消息时再唤醒",
     "sourceBuildSettings": "从源码构建",
     "sourceBuildSettingsHint": "只在从源码安装插件时使用",
-    "storeRouteDesc": "读取插件商店列表的线路；国内建议「自动选择」或 jsDelivr"
+    "storeRouteDesc": "读取插件商店列表的线路；国内建议「自动选择」或 jsDelivr",
+    "overviewProblems": "{names} 出了问题（共 {count} 个）",
+    "messagesUnit": "条消息",
+    "commandTriggers": "命令触发次数",
+    "chartAgentUsage": "Agent 用量",
+    "noUsageToday": "今天还没有调用模型"
   }
 }
