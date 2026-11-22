@@ -25,6 +25,13 @@ import { getLatestRelease, type LatestRelease } from './api/webui';
 import { compareVersions } from './pages/versions';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { useTheme } from './theme/theme';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './queries/client';
+import { Toaster } from './ui/Toaster';
+import { TooltipProvider } from './ui/Tooltip';
+import { ErrorBoundary } from './ui/ErrorBoundary';
+import './styles/tokens.css';
+import './styles/base.css';
 import './style.css';
 
 const languageStorageKey = 'alonabot.webui.locale';
@@ -236,16 +243,18 @@ function AdminApp() {
             </div>
           ) : null}
 
-          {isComponentDetail && componentId ? (
-            <PluginDetailPage key={componentId} id={componentId} />
-          ) : matchedRoute ? (
-            matchedRoute.render()
-          ) : (
-            <div className="shell-empty-view">
-              <h2>AlonaBot WebUI</h2>
-              <p>{ui.pageUnavailable}</p>
-            </div>
-          )}
+          <ErrorBoundary key={currentPath}>
+            {isComponentDetail && componentId ? (
+              <PluginDetailPage key={componentId} id={componentId} />
+            ) : matchedRoute ? (
+              matchedRoute.render()
+            ) : (
+              <div className="shell-empty-view">
+                <h2>AlonaBot WebUI</h2>
+                <p>{ui.pageUnavailable}</p>
+              </div>
+            )}
+          </ErrorBoundary>
         </AppShell>
       </UISettingsContext.Provider>
     );
@@ -254,6 +263,7 @@ function AdminApp() {
   return (
     <UIContext value={ui}>
       {renderContent()}
+      <Toaster />
 
       {rotatedToken ? (
         <Dialog.Root
@@ -321,5 +331,11 @@ function AdminApp() {
 
 const container = document.getElementById('root');
 if (container) {
-  createRoot(container).render(<AdminApp />);
+  createRoot(container).render(
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider delayDuration={300}>
+        <AdminApp />
+      </TooltipProvider>
+    </QueryClientProvider>,
+  );
 }

@@ -25,6 +25,32 @@
   --text-xl: 28px;
   --font-sans: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* 间距按 4px 栅格；页面内边距、卡片内边距与控件间距只用这些值。 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --control-h-sm: 30px;
+  --control-h: 36px;
+  --control-h-lg: 44px;
+
+  /* 动效：进出场用 ease-out，展开收起用 ease-in-out；减少动效时由 base.css 统一缩短。 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
+
+  --z-sticky: 10;
+  --z-popover: 50;
+  --z-dialog: 60;
+  --z-toast: 70;
 }
 
 :root[data-theme="light"] {

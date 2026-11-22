@@ -40,7 +40,8 @@ function AIForm({ form, snapshot, profileID, plugin }: { form: ConfigFormProps; 
     if (stored && !candidates.some(option => option.value === stored)) candidates.unshift({ value: stored, label: `${stored} · ${ui.optionNotFound}` });
     return [{ value: '', label: ui.none }, ...candidates];
   };
-  const triggerValues = value('triggers') as string[];
+  // 新装的 Agent 尚未写入 triggers，按空列表处理。
+  const triggerValues = (value('triggers') as string[] | undefined) ?? [];
   return <form onSubmit={event => { event.preventDefault(); form.onSubmit(patch); }}>
     {[['chat_model', 'image_caption_model'], ['default_persona', 'triggers', 'wake_words', 'member_sessions']].map((group, index) => <section className="profile-section-group" key={index}><h3 className="profile-section-title">{index === 0 ? ui.sectionModel : ui.sectionChat}</h3><div className="profile-card">
       {fields.filter(field => group.includes(field.key)).filter(field => field.key !== 'wake_words' || triggerValues.includes('wake_word')).map(field => <div className="profile-card-row" key={field.key}>

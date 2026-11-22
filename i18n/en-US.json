@@ -779,6 +779,12 @@
     "runtimeReasonCoreShutdown": "Core shutdown",
     "sleepSavedPolicy": "Saved sleep policy",
     "pluginLogLevelDesc": "Changes which logs this plugin emits, immediately.",
-    "sleepSavedSettings": "Saved run settings"
+    "sleepSavedSettings": "Saved run settings",
+    "notifications": "Notifications",
+    "actionFailed": "Action failed",
+    "pageCrashed": "This page ran into an error",
+    "retry": "Retry",
+    "removeFile": "Remove file",
+    "dropFile": "Drop a file here, or click to choose"
   }
 }

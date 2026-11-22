@@ -7,7 +7,7 @@ npm ci
 npm run dev
 ```
 
-打开 Vite 输出的地址。`/dev/forms` 可以用本地 fixture 预览配置表单与 JSON Merge Patch。当前 Vite 配置没有 API 代理；真实管理页面从 Core 的同源入口打开并登录。路由登记在 `src/routes.tsx`，界面文案通过 `i18n/` 提供，主题与外壳复用 `src/theme/` 和 `src/shell/`。
+打开 Vite 输出的地址。`/dev/forms` 可以用本地 fixture 预览配置表单与 JSON Merge Patch。开发服务器把 `/api` 与 `/plugins` 转发到 `http://127.0.0.1:7650` 的 Core，并把 Host 与 Origin 改写为 Core 的来源：先启动 Core，在开发页登录（或先在 7650 登录，Cookie 不区分端口），改动前端后页面直接热更新并使用真实数据。WebUI 自己的 Go 后台仍是 Core 里已安装的版本，改后台要重新打包安装。路由登记在 `src/routes.tsx`，界面文案通过 `i18n/` 提供，主题与外壳复用 `src/theme/` 和 `src/shell/`。
 
 ```fish
 npm run typecheck

@@ -779,6 +779,12 @@
     "runtimeReasonCoreShutdown": "Core 关闭",
     "sleepSavedPolicy": "已保存休眠策略",
     "pluginLogLevelDesc": "只改变这个插件输出哪些日志，立即生效",
-    "sleepSavedSettings": "已保存运行设置"
+    "sleepSavedSettings": "已保存运行设置",
+    "notifications": "通知",
+    "actionFailed": "操作失败",
+    "pageCrashed": "这个页面出错了",
+    "retry": "重试",
+    "removeFile": "移除文件",
+    "dropFile": "拖入文件，或点击选择"
   }
 }
