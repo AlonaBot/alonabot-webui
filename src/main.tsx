@@ -100,7 +100,7 @@ function AdminApp() {
     if (sessionState !== 'authenticated') return;
     let active = true;
     setCoreUpdateFailed(false); setLatestCore(null);
-    getLatestRelease('AlonaBot/AlonaBot').then(value => { if (active) { setLatestCore(value); setCoreUpdateFailed(!!value?.error); } }).catch(() => { if (active) setCoreUpdateFailed(true); });
+    getLatestRelease('AlonaBot/AlonaBot').then(value => { if (active) setLatestCore(value); }).catch(() => { if (active) setCoreUpdateFailed(true); });
     return () => { active = false; };
   }, [sessionState]);
 

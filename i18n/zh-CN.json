@@ -779,6 +779,12 @@
     "runtimeReasonCoreShutdown": "Core 关闭",
     "sleepSavedPolicy": "已保存休眠策略",
     "pluginLogLevelDesc": "只改变这个插件输出哪些日志，立即生效",
-    "sleepSavedSettings": "已保存运行设置"
+    "sleepSavedSettings": "已保存运行设置",
+    "githubDownloads": "组件下载",
+    "githubAPIBase": "GitHub API 基址",
+    "githubAPIBaseHint": "用于读取 Release 元数据，留空使用官方 GitHub API。",
+    "githubDownloadPrefix": "归档下载前缀",
+    "githubDownloadPrefixHint": "原样拼接在原始资产 URL 前，留空直连下载。",
+    "githubDownloadExample": "拼接示例：https://proxy.example/ + https://github.com/owner/repo/releases/download/v1.0.0/package.tar.gz"
   }
 }

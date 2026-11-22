@@ -779,6 +779,12 @@
     "runtimeReasonCoreShutdown": "Core shutdown",
     "sleepSavedPolicy": "Saved sleep policy",
     "pluginLogLevelDesc": "Changes which logs this plugin emits, immediately.",
-    "sleepSavedSettings": "Saved run settings"
+    "sleepSavedSettings": "Saved run settings",
+    "githubDownloads": "Component downloads",
+    "githubAPIBase": "GitHub API base",
+    "githubAPIBaseHint": "Release metadata endpoint. Leave empty to use the official GitHub API.",
+    "githubDownloadPrefix": "Archive download prefix",
+    "githubDownloadPrefixHint": "Prepended verbatim to the original asset URL. Leave empty to download directly.",
+    "githubDownloadExample": "Example: https://proxy.example/ + https://github.com/owner/repo/releases/download/v1.0.0/package.tar.gz"
   }
 }

@@ -1362,3 +1362,17 @@ export async function bootstrap(): Promise<string | null> {
 export async function confirmBootstrap(): Promise<void> {
   await request<void>('/api/auth/bootstrap/confirm', { method: 'POST' });
 }
+
+/** GitHubSettings 保存 Core 在线组件安装所用的元数据基址与下载前缀。 */
+export interface GitHubSettings {
+  github_api_base: string;
+  github_download_prefix: string;
+}
+
+export function getGitHubSettings(): Promise<GitHubSettings> {
+  return request<GitHubSettings>('/api/v1/core/github');
+}
+
+export function setGitHubSettings(value: GitHubSettings): Promise<void> {
+  return request<void>('/api/v1/core/github', jsonBody(value, 'PUT'));
+}

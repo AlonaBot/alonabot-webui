@@ -52,7 +52,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for package in release-assets/*.tar.gz; do tar -tzf "$package" | grep -x LICENSE; done
+          for package in release-assets/*.tar.gz; do
+            tar -tzf "$package" | grep -x LICENSE
+            if tar -tzf "$package" | grep -x config_schema.json; then
+              echo "legacy config_schema.json: rename to plugin_config_schema.json and rebuild with the new SDK" >&2
+              exit 1
+            fi
+          done
       - name: 生成正文并发布资产
         shell: bash
         run: |
