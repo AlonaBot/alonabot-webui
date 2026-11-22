@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-r
 import { deletePluginRow, insertPluginRow, listPluginRows, listPluginTables, updatePluginRow, type DataColumn, type DataRow, type DataTable, type SQLiteValue } from '../api/data';
 import { type Generation } from '../api/packages';
 import { ActionDialog } from '../components/ActionDialog';
-import { Pagination } from '../components/Pagination';
+import { Pagination } from '../ui/Pagination';
 import { useUI } from '../i18n/UI';
 
 type Field = { mode: 'default' | 'null' | 'text' | 'number' | 'boolean' | 'blob'; value: string };

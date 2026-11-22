@@ -5,7 +5,7 @@ import { ConfigForm } from './components/ConfigForm';
 import { useUI } from './i18n/UI';
 import { type CoreInfo } from './api/core';
 import { OverviewPage } from './pages/OverviewPage';
-import { PluginsPage } from './pages/PluginsPage';
+import { PluginsPage } from './features/plugins/PluginsPage';
 import { UsersPage } from './pages/UsersPage';
 import { AccountsPage } from './pages/AccountsPage';
 import { PermissionsPage } from './pages/PermissionsPage';

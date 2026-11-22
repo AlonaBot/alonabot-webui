@@ -6,7 +6,7 @@ import { useUI } from '../i18n/UI';
 import { SearchContext } from '../shell/search';
 import { loadUsers, mergeUsers } from './users';
 import { PermissionsTabs } from './PermissionsTabs';
-import { Pagination } from '../components/Pagination';
+import { Pagination } from '../ui/Pagination';
 import { ActionDialog } from '../components/ActionDialog';
 
 export function UsersPage(): JSX.Element {

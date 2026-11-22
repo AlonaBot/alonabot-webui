@@ -1,18 +1,28 @@
-import { useState, type ReactNode } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
+import { useState, type JSX, type ReactNode } from 'react';
 import { useUI } from '../i18n/UI';
+import { Button } from '../ui/Button';
+import { Dialog } from '../ui/Dialog';
+import { toast } from '../ui/toast';
 
-export function ActionDialog({ title, children, onClose, onConfirm, confirmLabel }: { title: string; children: ReactNode; onClose: () => void; onConfirm: () => Promise<void | boolean>; confirmLabel?: string }) {
+/**
+ * 带一个确认操作的对话框。onConfirm 返回 false 表示已转入其他确认流程、保持打开；
+ * 抛错时以 toast 提示并保持打开，便于修改后重试。
+ */
+export function ActionDialog({ title, children, onClose, onConfirm, confirmLabel }: { title: string; children: ReactNode; onClose: () => void; onConfirm: () => Promise<void | boolean>; confirmLabel?: string }): JSX.Element {
   const ui = useUI();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  return <Dialog.Root open onOpenChange={open => { if (!open && !busy) onClose(); }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" />
-    <Dialog.Content className="dialog-content plugins-dialog-content" aria-describedby={undefined}>
-      <div className="dialog-header"><Dialog.Title className="dialog-title">{title}</Dialog.Title><button className="dialog-close-button" aria-label={ui.close} disabled={busy} onClick={onClose}><X size={16} /></button></div>
-      {children}
-      {error && <pre role="alert" className="form-error">{error}</pre>}
-      <div className="dialog-actions"><button disabled={busy} onClick={onClose}>{ui.cancel}</button><button className="dialog-button is-primary" disabled={busy} onClick={async () => { setBusy(true); setError(''); try { const completed = await onConfirm(); if (completed !== false) onClose(); } catch (err) { setError(err instanceof Error ? err.message : String(err)); } finally { setBusy(false); } }}>{busy ? ui.loading : confirmLabel ?? ui.confirm}</button></div>
-    </Dialog.Content>
-  </Dialog.Portal></Dialog.Root>;
+  const confirm = async () => {
+    setBusy(true);
+    try {
+      if (await onConfirm() !== false) onClose();
+    } catch (error) {
+      toast.error(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }} title={title} size="sm" dismissible={!busy}
+    footer={<><Button onClick={onClose} disabled={busy}>{ui.cancel}</Button><Button variant="primary" loading={busy} onClick={() => void confirm()}>{confirmLabel ?? ui.confirm}</Button></>}>
+    {children}
+  </Dialog>;
 }

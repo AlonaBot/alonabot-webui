@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { clearPluginConversation, listPluginConversations } from '../api/conversations';
 import { useUI } from '../i18n/UI';
 import { ActionDialog } from '../components/ActionDialog';
-import { Pagination } from '../components/Pagination';
+import { Pagination } from '../ui/Pagination';
 export function ConversationsPanel({ id }: { id: string }) {
   const ui = useUI();
   const [rows, setRows] = useState<Awaited<ReturnType<typeof listPluginConversations>>>([]);
