@@ -8,6 +8,8 @@ import { buildPatch, isSecretSet, MissingSecretsError } from '../schema/patch';
 import { fieldExamples, fieldText, templateText } from '../i18n/catalog';
 import { useUI } from '../i18n/UI';
 import { Disclosure } from '../ui/Disclosure';
+import { Checkbox } from '../ui/Checkbox';
+import { Switch } from '../ui/Switch';
 import { AdminAPIError } from '../api/client';
 import { type ConfigOption, type OptionsPage } from '../api/config';
 import { Spinner } from '../ui/EmptyState';
@@ -376,8 +378,7 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
           original={original as Record<string, unknown>} path={path} messages={messages} missing={missing} onChange={onChange} />;
         break;
       case 'bool':
-        control = <input {...attributes} type="checkbox" role="switch" checked={value === true}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.checked)} />;
+        control = <Switch id={id} aria-describedby={attributes['aria-describedby']} checked={value === true} onCheckedChange={onChange} />;
         break;
       case 'int':
       case 'float':
@@ -622,10 +623,15 @@ function StaticListControl(props: FieldProps & { id: string }) {
   const serial = useRef(0);
   const rows = useRef(values.map(() => ({ id: serial.current++ })));
   const text = fieldText(props.messages, props.field);
-  if (props.field.options) return <select id={props.id} multiple required={props.field.required} value={values as string[]}
-    onChange={(event: ChangeEvent<HTMLSelectElement>) => props.onChange(Array.from<HTMLOptionElement, string>(event.currentTarget.selectedOptions, option => option.value))}>
-    {props.field.options.map((option, index) => <option key={option} value={option}>{text.labels?.[index] ?? option}</option>)}
-  </select>;
+  if (props.field.options) {
+    const options = props.field.options;
+    return <div id={props.id} className="option-checks" role="group" aria-label={text.description}>
+      {options.map((option, index) => <Checkbox key={option} label={text.labels?.[index] ?? option} checked={values.includes(option)}
+        // 按选项顺序写回，结果与原多选框一致。
+        onCheckedChange={on => props.onChange(options.filter(entry => entry === option ? on : values.includes(entry)))} />)}
+      {props.field.required && values.length === 0 && <input required value="" aria-label={ui.emptyCollection} onChange={() => {}} className="visually-hidden" />}
+    </div>;
+  }
   return <div id={props.id} className="list-control">
     {values.map((value, index) => <div key={rows.current[index].id} className="collection-row">
       {props.field.children ? <Fields fields={props.field.children} value={value as Record<string, unknown>}
@@ -774,17 +780,18 @@ function TemplateControl(props: FieldProps & { id: string }) {
     </>;
   }
   if (!many) return editor(values[0], 0);
+  const missingIn = (index: number) => props.missing.some(path => path.startsWith(valuePath([...props.path, String(index)]) + '/'));
   return <div id={props.id} className="template-list">
     {values.map((value, index) => {
       const template = selection(value);
       const text = template && templateText(props.messages, template);
       return <div key={rows.current[index].id} className="collection-row">
-        <details open={props.missing.some(path => path.startsWith(valuePath([...props.path, String(index)]) + '/')) || undefined}>
-          <summary>{template ? label(template, value!) : ui.chooseTemplate}
-            {text?.hint && !template!.hideHintInList && <span className="summary-hint">{text.hint}</span>}
-          </summary>
+        {/* 有缺失字段时换 key 重新挂载，使该行自动展开。 */}
+        <Disclosure key={missingIn(index) ? 'missing' : 'ok'} defaultOpen={missingIn(index) || !template}
+          summary={template ? label(template, value!) : ui.chooseTemplate}
+          hint={text?.hint && !template!.hideHintInList ? text.hint : undefined}>
           {editor(value, index)}
-        </details>
+        </Disclosure>
         <button type="button" onClick={() => { rows.current.splice(index, 1); props.onChange(values.filter((_, at) => at !== index)); }}>{ui.removeRow}</button>
       </div>;
     })}

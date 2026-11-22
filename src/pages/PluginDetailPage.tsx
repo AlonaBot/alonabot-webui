@@ -39,6 +39,9 @@ import { rawConfigPatch } from './rawConfig';
 import { PluginPageFrame } from '../components/PluginPageFrame';
 import { PluginSleepPanel } from './PluginSleepPanel';
 import { LoadingRows, Skeleton, Spinner } from '../ui/EmptyState';
+import { RadioGroup } from '../ui/RadioGroup';
+import { UninstallDialog } from '../features/plugins/PluginDialogs';
+import { usePackageActions } from '../features/plugins/usePackageActions';
 
 /** PluginDetailPage 展示保留代次、回退确认及组件高级设置。 */
 export function PluginDetailPage(props: {
@@ -47,6 +50,7 @@ export function PluginDetailPage(props: {
 }): JSX.Element {
   const { id, generations } = props;
   const ui = useUI();
+  const actions = usePackageActions();
   const { locale } = useUISettings();
   const { register } = useContext(SearchContext);
 
@@ -111,7 +115,6 @@ export function PluginDetailPage(props: {
 
   // 卸载对话框
   const [uninstallModalOpen, setUninstallModalOpen] = useState(false);
-  const [purgeLevel, setPurgeLevel] = useState<0 | 1 | 2>(0);
 
   // 409 确认对话框
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -308,25 +311,7 @@ export function PluginDetailPage(props: {
     }
   };
 
-  const executeUninstall = async (confirm = false) => {
-    if (!pkg) return;
-    try {
-      await uninstallPackage(pkg.ID, purgeLevel, confirm);
-      setUninstallModalOpen(false);
-      navigate('/components', { replace: true });
-    } catch (err: unknown) {
-      if (isConfirmationError(err)) {
-        setConfirmAffected(err.affected);
-        setPendingConfirmAction(() => async () => {
-          await executeUninstall(true);
-        });
-        setConfirmModalOpen(true);
-      } else {
-        setErrorBanner(err instanceof Error ? err.message : String(err));
-        await loadData();
-      }
-    }
-  };
+
 
   const handleRollbackClick = (gen: Generation) => {
     setTargetGeneration(gen);
@@ -438,12 +423,11 @@ export function PluginDetailPage(props: {
 
           <div className="detail-title-info">
             <div className="detail-name-row">
-              <h1 className="detail-title font-mono">{id}</h1>
+              <h1 className="detail-title">{pkg?.Name || id}</h1>
               {renderStatus()}
             </div>
-            {pkg?.Source ? (
-              <span className="detail-source-badge font-mono">{pkg.Source}</span>
-            ) : null}
+            <span className="detail-source-badge font-mono">{pkg?.Source ?? id}</span>
+            {pkg?.Description && <p className="detail-description">{pkg.Description}</p>}
           </div>
 
           <div className="detail-actions-right">
@@ -500,7 +484,6 @@ export function PluginDetailPage(props: {
                   <DropdownMenu.Item
                     className="dropdown-menu-item is-danger"
                     onSelect={() => {
-                      setPurgeLevel(0);
                       setUninstallModalOpen(true);
                     }}
                   >
@@ -729,36 +712,13 @@ export function PluginDetailPage(props: {
                 </div>
                 <div className="advanced-card-body">
                   <p className="field-hint">{ui.allowedInstancesDesc}</p>
-                  <div className="allowed-mode-controls">
-                    <label >
-                      <input
-                        type="radio"
-                        name="allowedMode"
-                        disabled={savingAllowed}
-                        checked={allowedInstances?.all ?? true}
-                        onChange={() => {
-                          const updated: AllowedInstances = { all: true, instances: [] };
-                          setAllowedInstancesState(updated);
-                          void handleSaveAllowedInstances(updated);
-                        }}
-                      />
-                      <span>{ui.allInstancesAllowed}</span>
-                    </label>
-                    <label >
-                      <input
-                        type="radio"
-                        name="allowedMode"
-                        disabled={savingAllowed}
-                        checked={!(allowedInstances?.all ?? true)}
-                        onChange={() => {
-                          const updated: AllowedInstances = { all: false, instances: allowedInstances?.instances ?? [] };
-                          setAllowedInstancesState(updated);
-                          void handleSaveAllowedInstances(updated);
-                        }}
-                      />
-                      <span>{ui.selectAllowedInstances}</span>
-                    </label>
-                  </div>
+                  <RadioGroup aria-label={ui.allowedInstances} disabled={savingAllowed} value={(allowedInstances?.all ?? true) ? 'all' : 'some'}
+                    options={[{ value: 'all', label: ui.allInstancesAllowed }, { value: 'some', label: ui.selectAllowedInstances }]}
+                    onValueChange={mode => {
+                      const updated: AllowedInstances = mode === 'all' ? { all: true, instances: [] } : { all: false, instances: allowedInstances?.instances ?? [] };
+                      setAllowedInstancesState(updated);
+                      void handleSaveAllowedInstances(updated);
+                    }} />
 
                   {allowedInstances && !allowedInstances.all && (
                     <div><input aria-label={ui.searchInstances} placeholder={ui.searchInstances} value={allowedQuery} onChange={event => setAllowedQuery(event.target.value)} />
@@ -848,7 +808,6 @@ export function PluginDetailPage(props: {
                   type="button"
                   className="dialog-button is-danger"
                   onClick={() => {
-                    setPurgeLevel(0);
                     setUninstallModalOpen(true);
                   }}
                 >
@@ -906,74 +865,12 @@ export function PluginDetailPage(props: {
         </Dialog.Portal>
       </Dialog.Root>
 
-      {/* 卸载对话框 */}
-      <Dialog.Root open={uninstallModalOpen} onOpenChange={setUninstallModalOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content plugins-dialog-content" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.uninstallTitle}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close-button" aria-label={ui.close}>
-                  <X size={16} />
-                </button>
-              </Dialog.Close>
-            </div>
-
-            {errorBanner && <p className="plugins-error-banner" role="alert">{errorBanner}</p>}
-            <p className="dialog-subtitle">
-              {ui.uninstallDesc.replace('{id}', id)}
-            </p>
-
-            <div className="dialog-radio-group">
-              <label className="dialog-radio-item">
-                <input
-                  type="radio"
-                  name="detail-purge-level"
-                  checked={purgeLevel === 0}
-                  onChange={() => setPurgeLevel(0)}
-                />
-                <span className="radio-text">{ui.purge0}</span>
-              </label>
-              <label className="dialog-radio-item">
-                <input
-                  type="radio"
-                  name="detail-purge-level"
-                  checked={purgeLevel === 1}
-                  onChange={() => setPurgeLevel(1)}
-                />
-                <span className="radio-text">{ui.purge1}</span>
-              </label>
-              <label className="dialog-radio-item">
-                <input
-                  type="radio"
-                  name="detail-purge-level"
-                  checked={purgeLevel === 2}
-                  onChange={() => setPurgeLevel(2)}
-                />
-                <span className="radio-text">{ui.purge2}</span>
-              </label>
-            </div>
-
-            <div className="dialog-actions">
-              <button
-                type="button"
-                className="dialog-button"
-                onClick={() => setUninstallModalOpen(false)}
-              >
-                {ui.cancel}
-              </button>
-              <button
-                type="button"
-                className="dialog-button is-danger"
-                onClick={() => executeUninstall(false)}
-              >
-                {ui.actionUninstall}
-              </button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      {uninstallModalOpen && pkg && <UninstallDialog pkg={pkg} onClose={() => setUninstallModalOpen(false)} onUninstall={async purge => {
+        const done = await actions.uninstall(pkg, purge);
+        if (done) navigate('/components', { replace: true });
+        return done;
+      }} />}
+      {actions.dialogs}
 
       {/* 409 确认对话框 */}
       <Dialog.Root open={confirmModalOpen} onOpenChange={open => { if (!confirming) { setConfirmModalOpen(open); if (!open) setPendingConfirmAction(null); } }}>
