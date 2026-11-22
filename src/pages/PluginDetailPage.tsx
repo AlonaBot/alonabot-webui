@@ -38,6 +38,7 @@ import { useUISettings } from '../shell/settings';
 import { rawConfigPatch } from './rawConfig';
 import { PluginPageFrame } from '../components/PluginPageFrame';
 import { PluginSleepPanel } from './PluginSleepPanel';
+import { LoadingRows, Skeleton, Spinner } from '../ui/EmptyState';
 
 /** PluginDetailPage 展示保留代次、回退确认及组件高级设置。 */
 export function PluginDetailPage(props: {
@@ -613,7 +614,7 @@ export function PluginDetailPage(props: {
               <div className="version-info-row">
                 <div className="version-meta-item">
                   <span className="version-meta-label">{ui.currentVersion}</span>
-                  <span className="version-meta-val font-mono">{pkg?.Version ?? ui.loading}</span>
+                  <span className="version-meta-val font-mono">{pkg?.Version ?? <Skeleton width={60} height={14} />}</span>
                 </div>
                 <div className="version-meta-item">
                   <span className="version-meta-label">{ui.activeGeneration}</span>
@@ -623,7 +624,7 @@ export function PluginDetailPage(props: {
             </div>
 
             <input aria-label={ui.filterGenerations} placeholder={ui.filterGenerations} value={generationQuery} onChange={event => setGenerationQuery(event.target.value)} />
-            {generationError ? <p role="alert">{generationError}</p> : loading ? <p role="status">{ui.loading}</p> : generationList.length > 0 ? (
+            {generationError ? <p role="alert">{generationError}</p> : loading ? <LoadingRows rows={2} /> : generationList.length > 0 ? (
               <div className="generations-list-container">
                 <table className="generations-table font-mono">
                   <thead>
@@ -705,7 +706,7 @@ export function PluginDetailPage(props: {
                     onChange={e => handleLogLevelChange(e.target.value as SourceLogLevel)}
                   >
                     <option value="inherit">
-                      {ui.logLevelInherit.replace('{level}', logLevels?.global ?? ui.loading)}
+                      {ui.logLevelInherit.replace('{level}', logLevels?.global ?? '…')}
                     </option>
                     <option value="debug">{ui.logDebug}</option>
                     <option value="info">{ui.logInfo}</option>
@@ -827,7 +828,7 @@ export function PluginDetailPage(props: {
                       disabled={savingRawJson || !rawSnapshot || rawConflict !== null}
                       onClick={handleSaveRawJson}
                     >
-                      {savingRawJson ? ui.loading : ui.save}
+                      {savingRawJson ? <Spinner size={14} /> : ui.save}
                     </button>
                   </div>
                 </div>

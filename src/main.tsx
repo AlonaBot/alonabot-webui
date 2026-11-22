@@ -28,6 +28,7 @@ import { queryClient } from './queries/client';
 import { Toaster } from './ui/Toaster';
 import { TooltipProvider } from './ui/Tooltip';
 import { ErrorBoundary } from './ui/ErrorBoundary';
+import { Spinner } from './ui/EmptyState';
 
 const languageStorageKey = 'alonabot.webui.locale';
 const catalogs = { 'en-US': english, 'zh-CN': chinese };
@@ -182,7 +183,7 @@ function AdminApp() {
               <button type="button" onClick={() => void restore()}>{ui.refresh}</button>
             </>
           ) : (
-            <p role="status">{ui.loading}</p>
+            <Spinner size={28} />
           )}
         </div>
       );
@@ -200,7 +201,7 @@ function AdminApp() {
     return (
       <UISettingsContext.Provider value={uiSettingsValue}>
         <AppShell
-          version={coreInfo?.version ?? ui.loading}
+          version={coreInfo?.version ?? '—'}
           onLogout={handleLogout}
           coreUpdateFailed={coreUpdateFailed}
           coreUpdate={latestCore && coreInfo && compareVersions(latestCore.version, coreInfo.version) === 1 ? { version: latestCore.version, releaseURL: latestCore.release_url } : undefined}

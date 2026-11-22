@@ -12,6 +12,7 @@ import { useUI } from '../i18n/UI';
 import { useUISettings } from '../shell/settings';
 import { navigate } from '../shell/router';
 import { applyMergePatch, applyProfileOverrides, extractProfileOverrides, editableProfilePaths } from './pluginConfig';
+import { LoadingRows } from '../ui/EmptyState';
 
 export function PluginConfigPanel({ id }: { id: string }): JSX.Element {
   const ui = useUI();
@@ -132,7 +133,7 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
   return <div className="plugin-config-panel">
     {error && <p className="plugins-error-banner" role="alert">{error}</p>}
     {runtime && <p role="status">{runtime.State}{runtime.Warnings?.length ? `: ${runtime.Warnings.join('; ')}` : ''}</p>}
-    {loading ? <p role="status">{ui.loading}</p> : snapshot?.schema == null ? <p>{snapshot ? ui.noConfig : ''}</p> : <>
+    {loading ? <LoadingRows /> : snapshot?.schema == null ? <p>{snapshot ? ui.noConfig : ''}</p> : <>
       {saved && <p role="status">{ui.saveSuccess}</p>}
       {latest && <div className="config-pending-banner"><span>{ui.configConflict}</span><button type="button" onClick={() => { setSnapshot(latest); setLatest(null); }}>{ui.useLatestConfig}</button></div>}
       {isDefault && <p className="field-hint">{ui.profileDefaultConfigHint.replace('{plugin}', id)}</p>}

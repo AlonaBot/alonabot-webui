@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo, type JSX } from 'react';
 import { AlertCircle, Calendar, Pause, Play, RefreshCw, Search, X } from 'lucide-react';
 import { listPluginJobs, changePluginJob, type PluginJob } from '../api/packages';
 import { useUI } from '../i18n/UI';
+import { LoadingRows } from '../ui/EmptyState';
 
 export function PluginJobsPanel(props: { id: string }): JSX.Element {
   const { id } = props;
@@ -53,7 +54,7 @@ export function PluginJobsPanel(props: { id: string }): JSX.Element {
   }, [jobs, query]);
 
   if (loading) {
-    return <div className="panel-loading"><p role="status">{ui.loading}</p></div>;
+    return <LoadingRows />;
   }
 
   return (

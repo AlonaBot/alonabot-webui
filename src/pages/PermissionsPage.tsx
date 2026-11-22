@@ -10,6 +10,7 @@ import { commandDescription, commandOverride, commandTree, matchesCommand, scope
 import { CommandPolicyControls } from './CommandPolicyControls';
 import { CommandNamesDialog, type NamesDraft } from './CommandNamesDialog';
 import { PermissionsTabs } from './PermissionsTabs';
+import { LoadingRows } from '../ui/EmptyState';
 
 const policyValues: ToolPolicyValue[] = ['inherit', 'allow', 'confirm', 'deny'];
 const toolKey = (tool: ToolPolicy) => JSON.stringify([tool.plugin_id, tool.service]);
@@ -131,7 +132,7 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
       <button type="button" className="permission-expand" onClick={() => setCollapsed(previous => { const next = new Set(previous); for (const key of visibleKeys) { if (allCollapsed) next.delete(key); else next.add(key); } return next; })}>{allCollapsed ? <ChevronDown size={14} /> : <ChevronRight size={14} />}{allCollapsed ? ui.expandAll : ui.collapseAll}</button>
     </div>
     {error && <p className="plugins-error-banner" role="alert">{error}</p>}
-    {loading && <p role="status">{ui.loading}</p>}
+    {loading && <LoadingRows />}
     {!loading && tab === 'commands' && commandPackages.map(value => {
       const policy = policies[value.ID]; const open = !collapsed.has(value.ID);
       const conflicts = (policy?.shadows.length ?? 0) + (policy?.invalid_names.length ?? 0);

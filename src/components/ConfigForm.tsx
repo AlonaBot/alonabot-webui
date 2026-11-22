@@ -10,6 +10,7 @@ import { useUI } from '../i18n/UI';
 import { Disclosure } from '../ui/Disclosure';
 import { AdminAPIError } from '../api/client';
 import { type ConfigOption, type OptionsPage } from '../api/config';
+import { Spinner } from '../ui/EmptyState';
 
 export type ConfigFormProps = {
   schema: unknown;
@@ -277,7 +278,7 @@ export function OptionsFromControl({ field, value, onChange, attributes, options
         <button type="button" aria-label={ui.searchOptions} aria-expanded={open} onClick={() => setOpen(!open)}><Search size={16} /></button>
       </div>
       {open && <div className="options-dropdown">
-        {loading && <p role="status">{ui.loading}</p>}
+        {loading && <div className="options-loading"><Spinner size={16} /></div>}
         {page.options.map(option => <button type="button" key={option.value} className="option-item" aria-pressed={selected.includes(option.value)} onClick={() => choose(option.value)}>
           <span>{option.label}</span>{option.description && <small>{option.description}</small>}
         </button>)}
@@ -341,7 +342,7 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
       {!editingSecret && <button type="button" onClick={() => { setShowSecret(false); setRevealedSecret(null); setEditingSecret(true); }}>{ui.modify}</button>}
       {set && formContext?.onReveal && !revealedSecret && (
         <button type="button" onClick={handleReveal} disabled={revealing}>
-          {revealing ? ui.loading : ui.revealSecret}
+          {revealing ? <Spinner size={14} /> : ui.revealSecret}
         </button>
       )}
       {revealedSecret !== null && (

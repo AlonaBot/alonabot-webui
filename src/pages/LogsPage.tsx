@@ -36,6 +36,7 @@ import {
 } from './logsFormat';
 import { LogFilterPopover } from './LogFilterPopover';
 import { DiagnosticsDialog } from './DiagnosticsDialog';
+import { LoadingRows } from '../ui/EmptyState';
 
 const storageFilterKey = 'alonabot.webui.logs.filters';
 
@@ -497,8 +498,8 @@ export function LogsPage(): JSX.Element {
 
           {/* 记录列表 */}
           {filteredLogs.length === 0 ? (
-            <div className="logs-empty-view">
-              <span>{loading ? ui.loading : logs.length === 0 ? ui.logsEmpty : ui.logsNoMatching}</span>
+            loading ? <div className="logs-loading"><LoadingRows rows={8} height={28} /></div> : <div className="logs-empty-view">
+              <span>{logs.length === 0 ? ui.logsEmpty : ui.logsNoMatching}</span>
             </div>
           ) : (
             <div className="logs-record-list" role="log">
