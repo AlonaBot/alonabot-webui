@@ -3,7 +3,7 @@
 [![Go component](https://github.com/AlonaBot/alonabot-webui/actions/workflows/ci.yml/badge.svg)](https://github.com/AlonaBot/alonabot-webui/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-官方 WebUI通过 AlonaBot SDK 与 Core 通信，独立安装、升级和替换。组件版本为 `0.1.0`。
+官方 WebUI通过 AlonaBot SDK 与 Core 通信，独立安装、升级和替换。组件版本为 `0.2.0`。
 ## 开发
 
 需要 Go 1.27.1。SDK 版本固定在 `go.mod`；GORM 使用上游正式版本。
