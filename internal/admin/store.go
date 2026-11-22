@@ -22,7 +22,6 @@ import (
 
 	"github.com/AlonaBot/AlonaBot/contracts/manifest"
 	"github.com/AlonaBot/AlonaBot/contracts/pluginindex"
-	"github.com/AlonaBot/AlonaBot/contracts/release"
 	"github.com/AlonaBot/AlonaBot/sdk/sqlitedb"
 )
 
@@ -103,6 +102,7 @@ type githubRelease struct {
 	Assets []struct {
 		Name string `json:"name"`
 		URL  string `json:"browser_download_url"`
+		Size int64  `json:"size"`
 	} `json:"assets"`
 }
 
@@ -171,7 +171,7 @@ func (c *catalog) get(ctx context.Context, address, accept string) ([]byte, erro
 	limit := int64(remoteMetadataBytes)
 	if strings.HasSuffix(u.Path, "/contents/index.json") {
 		limit = remoteIndexBytes
-	} else if download && path.Base(u.Path) != "release.json" {
+	} else if download {
 		limit = remoteArchiveBytes
 	}
 	raw, readErr := readBounded(response.Body, limit, "GET "+address+" response")
@@ -291,7 +291,7 @@ func (c *catalog) publication(ctx context.Context, repo string) (githubRelease, 
 		return result, fmt.Errorf("GitHub release %s: %w", repo, err)
 	}
 	releaseURL, err := url.Parse(result.URL)
-	if err != nil || releaseURL.Scheme != "https" || releaseURL.Host != "github.com" || !strings.HasPrefix(strings.ToLower(releaseURL.Path), "/"+strings.ToLower(repo)+"/releases/") {
+	if err != nil || releaseURL.Scheme != "https" || releaseURL.Host != "github.com" || releaseURL.User != nil || releaseURL.RawQuery != "" || releaseURL.Fragment != "" || !strings.EqualFold(strings.TrimSuffix(releaseURL.Path, "/releases/tag/"+result.Tag), "/"+repo) || !strings.HasSuffix(releaseURL.Path, "/releases/tag/"+result.Tag) {
 		return result, fmt.Errorf("GitHub release %s: invalid release URL %q", repo, result.URL)
 	}
 	if !manifest.ValidVersion(strings.TrimPrefix(result.Tag, "v")) {
@@ -481,20 +481,13 @@ func selectStoreEntries(entries []storeEntry, role, query, order string) ([]stor
 }
 
 func (c *catalog) entry(ctx context.Context, entry pluginindex.Plugin) (storeEntry, error) {
-	// 1. 解析实际发布清单，核对索引、Release 与包内声明的身份。
+	// 1. 读取组件归档，核对索引、Release 与包内声明的身份。
 	value := storeEntry{Repo: entry.Repo, Role: entry.Role, Tags: entry.Tags}
 	if value.Tags == nil {
 		value.Tags = []string{}
 	}
-	_, releaseManifest, archive, err := c.packageArchive(ctx, entry.Repo)
+	_, declaration, icon, err := c.packageArchive(ctx, entry.Repo)
 	if err != nil {
-		return value, err
-	}
-	declaration, icon, err := readManifest(archive)
-	if err != nil {
-		return value, err
-	}
-	if err := identify(declaration.Manifest, releaseManifest); err != nil {
 		return value, err
 	}
 	if declaration.Manifest.Role != entry.Role {
@@ -524,7 +517,7 @@ func (c *catalog) entry(ctx context.Context, entry pluginindex.Plugin) (storeEnt
 	return value, nil
 }
 
-// 未发布 Release 由 latest 端点的 404 表示；其他 404（release.json、归档等）是坏资产，保留原错误。
+// 未发布 Release 由 latest 端点的 404 表示；其他资产 404是坏资产，保留原错误。
 func (c *catalog) checkHTTP(w http.ResponseWriter, r *http.Request) {
 	repo := r.URL.Query().Get("repo")
 	if !validRepo(repo) {
@@ -547,23 +540,16 @@ func (c *catalog) checkHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // inspect 返回发布前检查所需的展示身份；只读取最新 Release 与包内声明。
-// 不做验签与归档摘要比对：这些属于 Core 的安装预检，后台只结论“身份自洽”。
+// 安装前的平台、入口与受控解压检查由 Core 执行。
 func (c *catalog) inspect(ctx context.Context, repo string) (storeCheck, error) {
 	value := storeCheck{Repo: repo, Warnings: []string{}}
-	publication, releaseManifest, archive, err := c.packageArchive(ctx, repo)
+	publication, declaration, _, err := c.packageArchive(ctx, repo)
 	if err != nil {
-		return value, err
-	}
-	declaration, _, err := readManifest(archive)
-	if err != nil {
-		return value, err
-	}
-	if err := identify(declaration.Manifest, releaseManifest); err != nil {
 		return value, err
 	}
 	value.Role = declaration.Manifest.Role
 	// 仓库名用已验证来源的规范大小写：安装请求带的 Source 会被 Core 精确比较。
-	value.Repo = strings.TrimPrefix(releaseManifest.Source, "github.com/")
+	value.Repo = strings.TrimPrefix(declaration.Manifest.Source, "github.com/")
 	value.ID = declaration.Manifest.ID
 	value.Name = declaration.Manifest.Name
 	value.Version = declaration.Manifest.Version
@@ -576,56 +562,64 @@ func (c *catalog) inspect(ctx context.Context, repo string) (storeCheck, error) 
 	return value, nil
 }
 
-// identify 核对包内声明与 release.json 的身份，规则与 Core 安装预检一致：
-// 插件 ID、版本与来源必须相同，来源决定这个包实际属于哪个仓库。
-func identify(declaration *manifest.Manifest, publication *release.Release) error {
-	switch {
-	case declaration.ID != publication.PluginID:
-		return errors.New("package ID does not match release.json")
-	case declaration.Version != publication.Version:
-		return errors.New("package version does not match release.json")
-	case declaration.Source != publication.Source:
-		return fmt.Errorf("package source %q does not match release.json source %q", declaration.Source, publication.Source)
-	}
-	return nil
-}
-
-// packageArchive 读取最新 Release 的 release.json 与首个平台归档，核对来源声明与版本对齐。
-// release.Verify 在无签名时只做字段层面的解析与校验，不验签、不比对归档摘要。
-func (c *catalog) packageArchive(ctx context.Context, repo string) (githubRelease, *release.Release, []byte, error) {
+// packageArchive 选择唯一的平台归档，展示信息直接取自与仓库和标签一致的包内声明。
+func (c *catalog) packageArchive(ctx context.Context, repo string) (githubRelease, *manifest.Result, []byte, error) {
 	publication, err := c.publication(ctx, repo)
 	if err != nil {
-		return githubRelease{}, nil, nil, err
+		return publication, nil, nil, err
 	}
-	var releaseURL string
-	for _, asset := range publication.Assets {
-		if asset.Name == "release.json" {
-			releaseURL = asset.URL
-			break
+	// 商店读取展示信息，优先静态包，再按固定平台顺序选择。
+	suffixes := []string{"-any.tar.gz"}
+	for _, platform := range manifest.Platforms {
+		suffixes = append(suffixes, "-"+platform.OS+"-"+platform.Arch+".tar.gz")
+	}
+	for _, suffix := range suffixes {
+		index := -1
+		for i, asset := range publication.Assets {
+			if !strings.HasSuffix(asset.Name, suffix) {
+				continue
+			}
+			if index >= 0 {
+				return publication, nil, nil, fmt.Errorf("multiple component archives match %s", suffix)
+			}
+			index = i
 		}
+		if index < 0 {
+			continue
+		}
+		asset := publication.Assets[index]
+		u, err := url.Parse(asset.URL)
+		if err != nil || u.RawQuery != "" || u.Fragment != "" || !strings.EqualFold(strings.TrimSuffix(u.Path, "/releases/download/"+publication.Tag+"/"+asset.Name), "/"+repo) || !strings.HasSuffix(u.Path, "/releases/download/"+publication.Tag+"/"+asset.Name) {
+			return publication, nil, nil, errors.New("asset URL does not match the release tag and archive name")
+		}
+		archive, err := c.download(ctx, repo, asset.URL)
+		if err != nil {
+			return publication, nil, nil, err
+		}
+		if int64(len(archive)) != asset.Size {
+			return publication, nil, nil, errors.New("archive size does not match the GitHub asset")
+		}
+		declaration, icon, err := readManifest(archive)
+		if err != nil {
+			return publication, nil, nil, err
+		}
+		m := declaration.Manifest
+		if m.Version != strings.TrimPrefix(publication.Tag, "v") {
+			return publication, nil, nil, errors.New("package version does not match the GitHub release tag")
+		}
+		if !strings.EqualFold(m.Source, "github.com/"+repo) {
+			return publication, nil, nil, fmt.Errorf("package source %q does not match repository %s", m.Source, repo)
+		}
+		platform := m.OS + "-" + m.Arch
+		if m.OS == "any" && m.Arch == "any" {
+			platform = "any"
+		}
+		if asset.Name != m.ID+"-"+m.Version+"-"+platform+".tar.gz" {
+			return publication, nil, nil, errors.New("archive name does not match the package manifest")
+		}
+		return publication, declaration, icon, nil
 	}
-	if releaseURL == "" {
-		return publication, nil, nil, errors.New("release.json asset is missing")
-	}
-	raw, err := c.download(ctx, repo, releaseURL)
-	if err != nil {
-		return publication, nil, nil, err
-	}
-	releaseManifest, err := release.Verify(raw, nil, nil)
-	if err != nil {
-		return publication, nil, nil, err
-	}
-	if !strings.EqualFold(releaseManifest.Source, "github.com/"+repo) {
-		return publication, nil, nil, fmt.Errorf("release source %q does not match %s", releaseManifest.Source, repo)
-	}
-	if releaseManifest.Version != strings.TrimPrefix(publication.Tag, "v") {
-		return publication, nil, nil, errors.New("release version does not match GitHub tag")
-	}
-	archive, err := c.download(ctx, repo, releaseManifest.Assets[0].URL)
-	if err != nil {
-		return publication, nil, nil, err
-	}
-	return publication, releaseManifest, archive, nil
+	return publication, nil, nil, errors.New("release has no component archive")
 }
 
 func readManifest(archive []byte) (*manifest.Result, []byte, error) {
@@ -660,6 +654,12 @@ func archiveFile(archive []byte, name string, limit int64) ([]byte, error) {
 			return nil, fmt.Errorf("archive expanded content exceeds %d bytes", archiveExpandedBytes)
 		}
 		if errors.Is(err, io.EOF) {
+			if _, err := io.Copy(io.Discard, expanded); err != nil {
+				return nil, err
+			}
+			if expanded.N == 0 {
+				return nil, fmt.Errorf("archive expanded content exceeds %d bytes", archiveExpandedBytes)
+			}
 			break
 		}
 		if err != nil {

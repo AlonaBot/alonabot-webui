@@ -1,4 +1,4 @@
-# 从已审查 tag 构建并签名，发行正文直接读取 changelog。
+# 从已审查 tag 构建组件包，发行正文直接读取 changelog。
 name: Release
 on:
   push:
@@ -41,25 +41,17 @@ jobs:
           test "$(sed -n 's/^version: //p' plugin.yaml)" = "${TAG#v}"
           go build -mod=mod -o "$RUNNER_TEMP/alonabot" github.com/AlonaBot/AlonaBot/cmd/alonabot
           "$RUNNER_TEMP/alonabot" check .
-      - name: 构建签名的五平台包
-        env:
-          RELEASE_KEY: ${{ secrets.ALONABOT_RELEASE_KEY }}
+      - name: 构建五平台包
         shell: bash
         run: |
           set -euo pipefail
-          umask 077
-          key="$RUNNER_TEMP/release.key"
-          trap 'rm -f "$key"' EXIT
-          printf '%s' "$RELEASE_KEY" > "$key"
-          unset RELEASE_KEY
-          "$RUNNER_TEMP/alonabot" pack . --key "$key" --out release-assets \
+          "$RUNNER_TEMP/alonabot" pack . --out release-assets \
             --target linux/amd64 --target linux/arm64 --target windows/amd64 \
             --target darwin/amd64 --target darwin/arm64
-      - name: 核对官方公钥与许可证
+      - name: 核对许可证
         shell: bash
         run: |
           set -euo pipefail
-          cmp .github/release.pub release-assets/release.pub
           for package in release-assets/*.tar.gz; do tar -tzf "$package" | grep -x LICENSE; done
       - name: 生成正文并发布资产
         shell: bash
@@ -67,5 +59,5 @@ jobs:
           set -euo pipefail
           notes="$RUNNER_TEMP/release-notes.md"
           { cat "changelog/${TAG#v}/en-US.md"; printf '\n\n---\n\n'; cat "changelog/${TAG#v}/zh-CN.md"; } > "$notes"
-          gh release create "$TAG" --verify-tag --draft --title "$TAG" --notes-file "$notes" release-assets/*
+          gh release create "$TAG" --verify-tag --draft --title "$TAG" --notes-file "$notes" release-assets/*.tar.gz
           gh release edit "$TAG" --draft=false --latest
