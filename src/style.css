@@ -916,7 +916,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .logs-status-icon { color: var(--color-danger); flex-shrink: 0; }
 .logs-status-text { flex: 1; min-width: 140px; overflow-wrap: anywhere; white-space: pre-wrap; }
 .logs-reconnect-button { padding: 4px 8px; font-size: var(--text-xs); }
-.logs-empty-view { display: flex; align-items: center; justify-content: center; min-height: 200px; font-size: var(--text-sm); color: var(--color-console-dim); }
+.logs-empty-view { display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; min-height: 200px; font-size: var(--text-sm); color: var(--color-console-dim); }
 .logs-record-list { display: flex; flex-direction: column; gap: 6px; }
 .log-row { font-family: var(--font-mono); font-size: var(--text-xs); line-height: 1.6; }
 .log-row.level-critical { color: var(--color-critical); }
@@ -930,6 +930,11 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .log-col-location, .log-mobile-location { background: transparent; border: 0; border-radius: 0; color: inherit; font: inherit; padding: 0; text-align: left; }
 .log-col-location:hover, .log-mobile-location:hover { background: transparent; text-decoration: underline; }
 .log-col-msg, .log-mobile-message { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+/* 中等宽度时元数据占一行，消息另起一行占满宽度，避免被挤成窄列。 */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .log-row-desktop { grid-template-columns: 25ch 17ch 10ch minmax(0, 1fr); row-gap: 2px; }
+  .log-col-msg { grid-column: 1 / -1; padding-left: 2ch; }
+}
 .logs-tooltip-content { padding: 8px 12px; max-width: min(420px, calc(100vw - 32px)); background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--color-line); border-radius: var(--radius-sm); box-shadow: var(--shadow-popover); font-family: var(--font-mono); font-size: var(--text-xs); overflow-wrap: anywhere; z-index: 102; }
 .logs-tooltip-func { font-weight: 700; }
 .logs-tooltip-path { color: var(--color-ink-muted); }
