@@ -295,7 +295,7 @@ export function PluginsPage(): JSX.Element {
       const values: Record<string, LatestRelease> = {};
       const errors: string[] = [];
       results.forEach((result, i) => {
-        if (result.status === 'fulfilled') { const [id, release] = result.value; if (release) { values[id] = release; if (release.error) errors.push(id); } }
+        if (result.status === 'fulfilled') { const [id, release] = result.value; if (release) values[id] = release; }
         else errors.push(installed[i].ID);
       });
       setLatest(values); setUpdateFailures(errors);

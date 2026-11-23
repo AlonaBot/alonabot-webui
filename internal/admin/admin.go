@@ -66,7 +66,6 @@ func Register(p *sdk.Plugin) {
 	store := &catalog{client: client}
 	p.Route("GET", "/store").HandleFunc(store.storeHTTP)
 	p.Route("GET", "/store/check").HandleFunc(store.checkHTTP)
-	p.Route("GET", "/updates").HandleFunc(store.updatesHTTP)
 }
 
 func transaction(ctx context.Context, fn func(*sql.Tx) error) (err error) {

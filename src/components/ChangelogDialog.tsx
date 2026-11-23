@@ -40,11 +40,11 @@ export function ReleasePreview({ repo, onLoaded }: { repo: string; onLoaded?: (r
   const ui = useUI();
   const [release, setRelease] = useState<LatestRelease | null>(null);
   const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   useEffect(() => {
-    let active = true; setRelease(null); setFailed(false); setLoading(true);
-    getLatestRelease(repo).then(value => { if (active) { setRelease(value); if (value) onLoaded?.(value); } }).catch(() => { if (active) setFailed(true); }).finally(() => { if (active) setLoading(false); });
+    let active = true; setRelease(null); setFailed(null); setLoading(true);
+    getLatestRelease(repo).then(value => { if (active) { setRelease(value); if (value) onLoaded?.(value); } }).catch(error => { if (active) setFailed(error instanceof Error ? error.message : String(error)); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [repo]);
-  return <section className="release-preview"><h3>{ui.releasePreview}</h3><p className="muted">{ui.releaseSource}: {repo}</p>{failed && <p role="alert" className="form-error">{ui.updateCheckFailed}</p>}{loading && <p role="status">{ui.loadingUpdate}</p>}{!loading && !release && !failed && <p>{ui.noPublishedRelease}</p>}{release && <>{release.error && <p role="status" className="form-error">{ui.updateCheckFailed}<br />{ui.cacheTime}: {release.fetched_at}</p>}<h3>{release.version}</h3>{safeLink(release.release_url) && <a href={release.release_url} target="_blank" rel="noreferrer">GitHub <ExternalLink size={13} /></a>}<div className="data-dialog-body"><Markdown text={release.markdown} /></div></>}</section>;
+  return <section className="release-preview"><h3>{ui.releasePreview}</h3><p className="muted">{ui.releaseSource}: {repo}</p>{failed && <p role="alert" className="form-error">{ui.updateCheckFailed}<br />{failed}</p>}{loading && <p role="status">{ui.loadingUpdate}</p>}{!loading && !release && !failed && <p>{ui.noPublishedRelease}</p>}{release && <><h3>{release.version}</h3>{safeLink(release.release_url) && <a href={release.release_url} target="_blank" rel="noreferrer">GitHub <ExternalLink size={13} /></a>}<div className="data-dialog-body"><Markdown text={release.markdown} /></div></>}</section>;
 }

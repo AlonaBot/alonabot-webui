@@ -1,4 +1,4 @@
-/** FieldType 列出 config_schema.json 支持的控件类型。 */
+/** FieldType 列出 plugin_config_schema.json 支持的控件类型。 */
 export type FieldType = 'string' | 'text' | 'int' | 'float' | 'bool' | 'object' | 'list' | 'dict' | 'template' | 'template_list';
 
 /** OptionsFrom 描述配置字段的可搜索选项来源与过滤器。 */

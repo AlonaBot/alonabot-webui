@@ -86,15 +86,6 @@ type storeCheck struct {
 	Author      string   `json:"author,omitempty"`
 	Warnings    []string `json:"warnings"`
 }
-type latestRelease struct {
-	Repo       string `json:"repo"`
-	Version    string `json:"version"`
-	ReleaseURL string `json:"release_url"`
-	Markdown   string `json:"markdown"`
-	FetchedAt  string `json:"fetched_at"`
-	Stale      bool   `json:"stale"`
-	Error      string `json:"error,omitempty"`
-}
 type githubRelease struct {
 	Tag    string `json:"tag_name"`
 	URL    string `json:"html_url"`
@@ -298,43 +289,6 @@ func (c *catalog) publication(ctx context.Context, repo string) (githubRelease, 
 		return result, fmt.Errorf("GitHub release %s: invalid SemVer tag %q", repo, result.Tag)
 	}
 	return result, nil
-}
-
-func (c *catalog) updatesHTTP(w http.ResponseWriter, r *http.Request) {
-	repo := r.URL.Query().Get("repo")
-	if !validRepo(repo) {
-		invalid(w, errors.New("repo must be owner/repo"))
-		return
-	}
-	raw, at, stale, fetchErr, err := c.cached(r.Context(), "release:"+strings.ToLower(repo), func(ctx context.Context) ([]byte, error) {
-		publication, err := c.publication(ctx, repo)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(latestRelease{Repo: repo, Version: strings.TrimPrefix(publication.Tag, "v"), ReleaseURL: publication.URL, Markdown: publication.Body})
-	})
-	var upstream *upstreamError
-	if errors.As(fetchErr, &upstream) && upstream.status == http.StatusNotFound {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		respond(w, map[string]string{"code": "NO_RELEASE", "safe_message": "No release published"}, nil)
-		return
-	}
-	if err != nil {
-		respond(w, nil, err)
-		return
-	}
-	var value latestRelease
-	if err := json.Unmarshal(raw, &value); err != nil {
-		respond(w, nil, err)
-		return
-	}
-	value.FetchedAt = at
-	value.Stale = stale
-	if fetchErr != nil {
-		value.Error = fetchErr.Error()
-	}
-	respond(w, value, nil)
 }
 
 func (c *catalog) storeHTTP(w http.ResponseWriter, r *http.Request) {

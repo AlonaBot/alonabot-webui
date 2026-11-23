@@ -5,6 +5,7 @@ import { getDefaultLocale, setDefaultLocale, getLogLevels, setGlobalLogLevel, ro
 import { useUI } from '../i18n/UI';
 import { useUISettings } from '../shell/settings';
 import { Link } from '../shell/router';
+import { GitHubSettings } from './GitHubSettings';
 
 async function readSettings() {
   const [locale, logs, denies, diagnostics] = await Promise.all([getDefaultLocale(), getLogLevels(), getCoreDenies(), getCoreConfigDiagnostics()]);
@@ -76,6 +77,7 @@ export function SettingsPage(): JSX.Element {
       <SettingsRow title={ui.uiLanguage} description={ui.uiLanguageDesc}><select aria-label={ui.uiLanguage} value={locale} onChange={event => setLocale(event.target.value)}><option value="zh-CN">{ui.languageChinese}</option><option value="en-US">{ui.languageEnglish}</option></select></SettingsRow>
       <SettingsRow title={ui.themeMode} description={ui.themeModeDesc}><div className="theme-toggle-group">{([{ value: 'light', label: ui.themeLight, Icon: Sun }, { value: 'dark', label: ui.themeDark, Icon: Moon }, { value: 'system', label: ui.themeSystem, Icon: Laptop }] as const).map(({ value, label, Icon }) => <button key={value} type="button" className={`theme-toggle-btn ${theme === value ? 'is-active' : ''}`} aria-pressed={theme === value} onClick={() => setTheme(value)}><Icon size={14} />{label}</button>)}</div></SettingsRow>
     </section>
+    <GitHubSettings />
     <fieldset className="settings-fields" disabled={busy || loading}>
       <section className="settings-card"><h2 className="settings-card-title">{ui.security}</h2>
         <fieldset className="settings-fields" disabled={!data}>

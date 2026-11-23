@@ -15,11 +15,11 @@ import { ModelsPage } from './pages/ModelsPage';
 import { ProfilesPage } from './pages/ProfilesPage';
 import { LogsPage } from './pages/LogsPage';
 import chinese from '../i18n/zh-CN.json';
-import collections from '../fixtures/collections.config_schema.json';
+import collections from '../fixtures/collections.plugin_config_schema.json';
 import pluginChinese from '../fixtures/i18n/zh-CN.json';
-import nested from '../fixtures/nested.config_schema.json';
-import secrets from '../fixtures/secrets.config_schema.json';
-import templates from '../fixtures/templates.config_schema.json';
+import nested from '../fixtures/nested.plugin_config_schema.json';
+import secrets from '../fixtures/secrets.plugin_config_schema.json';
+import templates from '../fixtures/templates.plugin_config_schema.json';
 
 /** 路由条目定义。 */
 export type RouteEntry = {

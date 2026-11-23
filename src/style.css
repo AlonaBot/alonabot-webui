@@ -3479,3 +3479,6 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
 
 .login-bootstrap h2, .login-bootstrap p { margin: 0; }
 .login-bootstrap textarea { resize: none; }
+
+/* 下载示例包含完整原始 URL，在窄屏上按可用宽度换行。 */
+.settings-download-example { min-width: 0; overflow-wrap: anywhere; }
