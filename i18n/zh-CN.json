@@ -883,7 +883,7 @@
     "correctionsDesc": "设置文件里有无法识别或已自动修正的项",
     "directConnection": "不使用（直连）",
     "githubMirror": "GitHub 下载加速",
-    "githubMirrorDesc": "安装插件时从 GitHub 下载安装包所用的加速地址；下载内容仍按 sha256 校验",
+    "githubMirrorDesc": "组件安装包经这个前缀下载，下载后仍按 GitHub 公布的摘要校验，例如 https://ghfast.top/。",
     "goDownloadBase": "Go 下载来源",
     "goDownloadBaseDesc": "第一次从源码构建时下载 Go 工具链的地址",
     "goProxyDesc": "从源码构建时下载 Go 依赖所用的代理",
@@ -945,6 +945,14 @@
     "selection": "选择",
     "enableAll": "全部启用",
     "disableAll": "全部停用",
-    "invertEnabled": "反转"
+    "invertEnabled": "反转",
+    "githubDownloads": "组件下载",
+    "githubAPIBase": "GitHub API 基址",
+    "githubAPIBaseHint": "用于读取 Release 元数据，留空使用官方 GitHub API。",
+    "githubDownloadPrefix": "归档下载前缀",
+    "githubDownloadPrefixHint": "原样拼接在原始资产 URL 前，留空直连下载。",
+    "githubDownloadExample": "拼接示例：https://proxy.example/ + https://github.com/owner/repo/releases/download/v1.0.0/package.tar.gz",
+    "githubAPIBaseTrust": "通常留空。只有使用可信的 GitHub API 反代时才填写：安装包的校验摘要也从这里读取。",
+    "officialAPI": "官方 API"
   }
 }

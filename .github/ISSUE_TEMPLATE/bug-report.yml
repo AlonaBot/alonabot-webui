@@ -30,7 +30,7 @@ body:
     id: version
     attributes:
       label: 版本与系统 / Version and OS
-      placeholder: v0.1.0 或 commit SHA，linux/amd64
+      placeholder: v0.2.0 or commit SHA / 或提交号, linux/amd64
   - type: textarea
     id: logs
     attributes:

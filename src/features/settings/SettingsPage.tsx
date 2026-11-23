@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent, type JSX, type ReactNode } from 'r
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { HardDrive, KeyRound, Laptop, LogOut, Moon, Plus, Sun, Trash2, X } from 'lucide-react';
 import { rotateAdminToken } from '../../api/auth';
-import { clearBuildEnvironment, getBuildEnvironment, getCoreConfigDiagnostics, getCoreSleep, getDefaultLocale, getDownloadSettings, pruneCoreConfig, setCoreSleep, setDefaultLocale, setDownloadSettings, type CoreSleep, type DownloadSettings } from '../../api/core';
+import { clearBuildEnvironment, getBuildEnvironment, getCoreConfigDiagnostics, getCoreSleep, getDefaultLocale, getDownloadSettings, getGitHubSettings, setGitHubSettings, type GitHubSettings, pruneCoreConfig, setCoreSleep, setDefaultLocale, setDownloadSettings, type CoreSleep, type DownloadSettings } from '../../api/core';
 import { getLogLevels, setGlobalLogLevel, type GlobalLogLevel } from '../../api/logs';
 import { getCoreDenies, setCoreDenies } from '../../api/policies';
 import { useUI } from '../../i18n/UI';
@@ -73,6 +73,7 @@ export function SettingsPage(): JSX.Element {
   const diagnostics = useQuery({ queryKey: ['core-diagnostics'], queryFn: getCoreConfigDiagnostics });
   const sleep = useQuery({ queryKey: ['core-sleep'], queryFn: getCoreSleep });
   const downloads = useQuery({ queryKey: ['core-downloads'], queryFn: getDownloadSettings });
+  const github = useQuery({ queryKey: ['core-github'], queryFn: getGitHubSettings });
   const build = useQuery({ queryKey: ['build-environment'], queryFn: getBuildEnvironment });
   const [storeMirror, setStoreMirror] = useState(() => localStorage.getItem(storeMirrorKey) ?? 'auto');
   const [localeDraft, setLocaleDraft] = useState<string | null>(null);
@@ -89,6 +90,7 @@ export function SettingsPage(): JSX.Element {
     finally { for (const key of keys) void client.invalidateQueries({ queryKey: key }); }
   };
   const saveDownload = (patch: Partial<DownloadSettings>, note?: string) => write(() => setDownloadSettings(patch), [['core-downloads']], note);
+  const saveGitHub = (patch: Partial<GitHubSettings>) => write(() => setGitHubSettings({ ...github.data!, ...patch }), [['core-github']]);
   const sleepValue = sleepDraft ?? sleep.data;
 
   return <div className={styles.page}>
@@ -127,11 +129,18 @@ export function SettingsPage(): JSX.Element {
             presets={[{ value: '', label: ui.directConnection }, { value: 'http://host.docker.internal:7890', label: ui.proxyHostDocker }]}
             onCommit={value => saveDownload({ proxy: value }, ui.proxySavedRestart)} />
         </Row>
-        <Row title={ui.githubMirror} description={ui.githubMirrorDesc}>
-          <PresetField ariaLabel={ui.githubMirror} value={downloads.data.github_mirror} placeholder="https://ghfast.top/"
-            presets={[{ value: '', label: ui.directConnection }, { value: 'https://ghfast.top/', label: 'ghfast.top' }]}
-            onCommit={value => saveDownload({ github_mirror: value })} />
-        </Row>
+        {github.data && <>
+          <Row title={ui.githubMirror} description={ui.githubMirrorDesc}>
+            <PresetField ariaLabel={ui.githubMirror} value={github.data.github_download_prefix} placeholder="https://ghfast.top/"
+              presets={[{ value: '', label: ui.directConnection }, { value: 'https://ghfast.top/', label: 'ghfast.top' }]}
+              onCommit={value => saveGitHub({ github_download_prefix: value })} />
+          </Row>
+          <Row title={ui.githubAPIBase} description={ui.githubAPIBaseTrust}>
+            <PresetField ariaLabel={ui.githubAPIBase} value={github.data.github_api_base} placeholder="https://api.github.com"
+              presets={[{ value: '', label: ui.officialAPI }]}
+              onCommit={value => saveGitHub({ github_api_base: value })} />
+          </Row>
+        </>}
         <Row title={ui.storeRoute} description={ui.storeRouteDesc}>
           <Select aria-label={ui.storeRoute} value={['auto', 'github', 'jsdelivr'].includes(storeMirror) ? storeMirror : 'auto'}
             onValueChange={value => { localStorage.setItem(storeMirrorKey, value); setStoreMirror(value); toast.success(ui.saveSuccess); }}

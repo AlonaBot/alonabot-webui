@@ -1251,3 +1251,8 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
 .plugin-config-panel .config-field { grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); }
 .plugin-config-panel .config-field:last-of-type { border-bottom: 0; }
 @media (max-width: 767px) { .plugin-config-panel form { padding: 4px 16px; } }
+.login-bootstrap h2, .login-bootstrap p { margin: 0; }
+.login-bootstrap textarea { resize: none; }
+
+/* 下载示例包含完整原始 URL，在窄屏上按可用宽度换行。 */
+.settings-download-example { min-width: 0; overflow-wrap: anywhere; }

@@ -70,8 +70,19 @@ export async function setCoreSleep(value: Pick<CoreSleep, 'mode' | 'idle_timeout
   await request('/api/v1/core/sleep', jsonBody({ mode: value.mode, idle_timeout: value.idle_timeout }, 'PUT'));
 }
 
-/** 网络代理、GitHub 下载镜像与源码构建的下载来源；proxy 修改后重启 Core 生效。 */
-export type DownloadSettings = { proxy: string; github_mirror: string; go_download_base: string; goproxy: string };
+/** 网络代理与源码构建的下载来源；proxy 修改后重启 Core 生效。 */
+export type DownloadSettings = { proxy: string; go_download_base: string; goproxy: string };
+
+/** GitHub Release 元数据基址与下载前缀；API 基址决定资产摘要的信任根。 */
+export type GitHubSettings = { github_api_base: string; github_download_prefix: string };
+
+export function getGitHubSettings(): Promise<GitHubSettings> {
+  return request<GitHubSettings>('/api/v1/core/github');
+}
+
+export async function setGitHubSettings(value: GitHubSettings): Promise<void> {
+  await request<void>('/api/v1/core/github', jsonBody(value, 'PUT'));
+}
 
 export function getDownloadSettings(): Promise<DownloadSettings> {
   return request<DownloadSettings>('/api/v1/core/downloads');

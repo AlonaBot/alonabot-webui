@@ -883,7 +883,7 @@
     "correctionsDesc": "The settings file has unrecognized or automatically corrected entries",
     "directConnection": "None (direct)",
     "githubMirror": "GitHub download mirror",
-    "githubMirrorDesc": "Accelerator used to download plugin packages from GitHub; downloads are still checked against sha256",
+    "githubMirrorDesc": "Component packages download through this prefix and are still verified against GitHub digests, e.g. https://ghfast.top/.",
     "goDownloadBase": "Go download source",
     "goDownloadBaseDesc": "Where the Go toolchain is downloaded from on the first source build",
     "goProxyDesc": "Proxy for downloading Go dependencies during source builds",
@@ -945,6 +945,14 @@
     "selection": "Selection",
     "enableAll": "Enable all",
     "disableAll": "Disable all",
-    "invertEnabled": "Invert"
+    "invertEnabled": "Invert",
+    "githubDownloads": "Component downloads",
+    "githubAPIBase": "GitHub API base",
+    "githubAPIBaseHint": "Release metadata endpoint. Leave empty to use the official GitHub API.",
+    "githubDownloadPrefix": "Archive download prefix",
+    "githubDownloadPrefixHint": "Prepended verbatim to the original asset URL. Leave empty to download directly.",
+    "githubDownloadExample": "Example: https://proxy.example/ + https://github.com/owner/repo/releases/download/v1.0.0/package.tar.gz",
+    "githubAPIBaseTrust": "Usually empty. Only set a trusted GitHub API proxy: package digests are read from it too.",
+    "officialAPI": "Official API"
   }
 }

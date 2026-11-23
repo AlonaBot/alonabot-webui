@@ -68,7 +68,7 @@ export function InstalledPanel({ packages, loading, onOpenStore }: { packages: r
   };
   const updateFailed = (pkg: Package) => {
     const result = latest.get(repository(pkg.Source)?.toLowerCase() ?? '');
-    return result?.isError === true || !!result?.data?.error;
+    return result?.isError === true;
   };
 
   return <>
