@@ -792,7 +792,7 @@ details[open] .summary-hint { display: none; }
 /* 统计、商店与数据页面沿用外壳令牌及画板的留白。 */
 .data-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 14px 0 20px; }
 .data-toolbar input { flex: 1; min-width: 180px; max-width: 320px; }
-.data-toolbar select { width: auto; max-width: 240px; }
+.data-toolbar > button[data-variant] { flex: none; width: auto; min-width: 140px; max-width: 240px; }
 .data-toolbar button, .dialog-button { display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
 .muted { color: var(--color-ink-muted); }
 .block { display: block; }
@@ -896,7 +896,7 @@ details[open] .summary-hint { display: none; }
 .logs-group-label { flex: 1; }
 .logs-source-children { margin: 10px 0 0 24px; }
 .logs-source-name { overflow-wrap: anywhere; }
-select.logs-date-select { border-radius: var(--radius-sm); font-size: var(--text-sm); background: var(--color-surface-2); }
+button.logs-date-select { border-radius: var(--radius-sm); font-size: var(--text-sm); background: var(--color-surface-2); }
 .logs-popover-section input[type="date"] { margin-top: 8px; font-size: var(--text-sm); }
 .logs-history-date { display: block; margin-top: 8px; font-size: var(--text-xs); color: var(--color-ink-muted); }
 .logs-diagnostics-dialog { width: 480px; padding: 24px; }
@@ -1020,7 +1020,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .jobs-search-icon { position: absolute; top: 50%; left: 12px; transform: translateY(-50%); color: var(--color-ink-muted); }
 .jobs-search-box > .jobs-search-input { padding-left: 36px; }
 .conversations-toolbar > input { flex: 1; }
-.permissions-toolbar > select, .conversations-toolbar > select, .tools-batch-bar > select { width: auto; max-width: 100%; }
+.permissions-toolbar > button[data-variant], .tools-batch-bar > button[data-variant], .jobs-panel-header > button[data-variant] { flex: none; width: auto; min-width: 140px; max-width: 100%; }
 .jobs-table-container, .conversations-table-container { overflow-x: auto; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); }
 .jobs-table, .conversations-table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--text-sm); }
 .jobs-table th, .jobs-table td, .conversations-table th, .conversations-table td { padding: 16px 20px; border-bottom: 1px solid var(--color-line); vertical-align: top; }
@@ -1055,8 +1055,8 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .command-group-header > .command-policy-controls { margin-left: auto; }
 .command-group > .command-tree { padding-left: 30px; }
 .command-policy-controls { display: flex; align-items: center; gap: 14px; }
-.command-policy-controls > select { width: auto; max-width: 220px; border-color: transparent; border-radius: var(--radius); padding: 6px 10px; background: var(--color-surface-2); font-size: var(--text-sm); }
-.command-policy-controls > select.is-inherited { color: var(--color-ink-muted); }
+.command-policy-controls > button[data-variant] { width: auto; max-width: 220px; border-color: transparent; border-radius: var(--radius); padding: 6px 10px; background: var(--color-surface-2); font-size: var(--text-sm); }
+.command-policy-controls > button.is-inherited { color: var(--color-ink-muted); }
 .command-enabled-control { display: flex; align-items: center; gap: 6px; min-width: 44px; }
 
 .command-inherit-button { display: flex; align-items: center; justify-content: center; border: 0; padding: 0; background: transparent; font-size: var(--text-xs); color: var(--color-ink-muted); min-height: 16px; }
@@ -1104,7 +1104,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
   .plugin-config-panel .config-field, .plugin-config-panel .config-group .config-field { display: flex; flex-direction: column; gap: 12px; }
   .jobs-panel-header, .permissions-toolbar, .conversations-toolbar, .tools-batch-bar { flex-wrap: wrap; }
   .conversations-toolbar > input { flex-basis: 100%; }
-  .permissions-toolbar > select, .conversations-toolbar > select { flex: 1; }
+  .permissions-toolbar > button[data-variant] { flex: 1; }
   .permission-search { flex: 1 1 100%; width: 100%; }
   .permissions-toolbar .permission-expand { margin-left: 0; }
   .command-card-header { gap: 8px; }
