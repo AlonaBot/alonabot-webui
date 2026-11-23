@@ -528,8 +528,8 @@
     "policyDeny": "禁止",
     "policyInherit": "继承",
     "conversationKey": "会话键",
-    "conversationEntries": "条目数",
-    "conversationUpdatedAt": "最后更新",
+    "conversationEntries": "消息记录",
+    "conversationUpdatedAt": "最近活跃",
     "clearConversationConfirm": "确定要清除会话 {key} 吗？",
     "filterPlugin": "按插件筛选",
     "allPlugins": "全部插件",
@@ -916,6 +916,16 @@
     "modelCount": "{count} 个模型",
     "addedBadge": "已添加",
     "removeReferencedWarning": "取消勾选的模型正在使用中，保存后会清空这些设置：",
-    "providerNoModels": "还没有选择模型，点「管理模型」从列表里勾选。"
+    "providerNoModels": "还没有选择模型，点「管理模型」从列表里勾选。",
+    "chatPrivate": "私聊",
+    "chatGroup": "群",
+    "allAccounts": "全部账号",
+    "conversationsLoadFailed": "会话加载失败",
+    "noMatchingConversations": "没有符合筛选条件的会话",
+    "noConversationsYet": "还没有会话",
+    "noConversationsHint": "机器人在群或私聊里收到消息后，会话会出现在这里。",
+    "entriesCount": "{count} 条",
+    "conversationCleared": "已清除消息记录",
+    "clearConversationDesc": "清除「{name}」的 {count} 条消息记录？机器人会忘掉这段对话的上下文，此操作不能撤销。"
   }
 }

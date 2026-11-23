@@ -528,8 +528,8 @@
     "policyDeny": "Deny",
     "policyInherit": "Inherit",
     "conversationKey": "Conversation Key",
-    "conversationEntries": "Entries",
-    "conversationUpdatedAt": "Last updated",
+    "conversationEntries": "Messages",
+    "conversationUpdatedAt": "Last active",
     "clearConversationConfirm": "Are you sure you want to clear conversation {key}?",
     "filterPlugin": "Filter by plugin",
     "allPlugins": "All plugins",
@@ -916,6 +916,16 @@
     "modelCount": "{count} models",
     "addedBadge": "Added",
     "removeReferencedWarning": "Some unchecked models are in use. Saving clears these settings:",
-    "providerNoModels": "No models yet. Choose them with Manage models."
+    "providerNoModels": "No models yet. Choose them with Manage models.",
+    "chatPrivate": "Private",
+    "chatGroup": "Groups",
+    "allAccounts": "All accounts",
+    "conversationsLoadFailed": "Could not load conversations",
+    "noMatchingConversations": "No conversations match the filters",
+    "noConversationsYet": "No conversations yet",
+    "noConversationsHint": "Chats appear here after the bot receives a message in a group or private chat.",
+    "entriesCount": "{count}",
+    "conversationCleared": "Message history cleared",
+    "clearConversationDesc": "Clear {count} messages from \"{name}\"? The bot forgets this conversation's context. This cannot be undone."
   }
 }

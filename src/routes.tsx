@@ -8,7 +8,7 @@ import { PluginsPage } from './features/plugins/PluginsPage';
 import { UsersPage } from './pages/UsersPage';
 import { AccountsPage } from './features/accounts/AccountsPage';
 import { PermissionsPage } from './pages/PermissionsPage';
-import { ConversationsPage } from './pages/ConversationsPage';
+import { ConversationsPage } from './features/conversations/ConversationsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { ModelsPage } from './features/models/ModelsPage';
 import { ProfilesPage } from './pages/ProfilesPage';
