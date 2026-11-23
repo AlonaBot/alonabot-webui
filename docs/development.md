@@ -44,7 +44,7 @@ alonabot pack . --target darwin/arm64 --out bin
 Choose the target you need. For full integration, start `alonabot run --data-dir ./data` in a separate terminal, provide the CLI token following [management authentication](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.md#core-settings-and-http-entry-point), then install and enable the local package:
 
 ```fish
-alonabot install ./bin/alonabot-webui-admin-0.3.0-darwin-arm64.tar.gz --data-dir ./data --yes
+alonabot install ./bin/alonabot-webui-admin-0.3.1-darwin-arm64.tar.gz --data-dir ./data --yes
 alonabot enable alonabot-webui-admin --data-dir ./data
 ```
 
