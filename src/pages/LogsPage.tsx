@@ -15,16 +15,9 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useUI } from '../i18n/UI';
 import { SearchContext, type SearchItem } from '../shell/search';
-import {
-  getRecentLogs,
-  getLogHistory,
-  subscribeLogs,
-  listPackages,
-  listInstances,
-  type LogRecord,
-  type Package,
-  type AdapterInstance,
-} from '../api/admin';
+import { listInstances, type AdapterInstance } from '../api/instances';
+import { getRecentLogs, getLogHistory, subscribeLogs, type LogRecord } from '../api/logs';
+import { listPackages, type Package } from '../api/packages';
 import {
   type LogFilterState,
   type LogLevelKey,
@@ -43,6 +36,9 @@ import {
 } from './logsFormat';
 import { LogFilterPopover } from './LogFilterPopover';
 import { DiagnosticsDialog } from './DiagnosticsDialog';
+import { LoadingRows } from '../ui/EmptyState';
+import { Tooltip as Hint } from '../ui/Tooltip';
+import { Button } from '../ui/Button';
 
 const storageFilterKey = 'alonabot.webui.logs.filters';
 
@@ -122,6 +118,24 @@ export function LogsPage(): JSX.Element {
         else errors.push(String(pkgs.reason));
         if (insts.status === 'fulfilled') setInstances(insts.value);
         else errors.push(String(insts.reason));
+        // ?source=<组件 ID>（例如从「查看原因」跳来）：只看这个组件及其账号的日志，应用后从地址栏移除，刷新不再覆盖筛选。
+        const source = new URLSearchParams(window.location.search).get('source');
+        if (source) {
+          const plugins = pkgs.status === 'fulfilled' ? pkgs.value.map(pkg => pkg.ID) : [];
+          setFilter(current => ({
+            ...current,
+            levels: { ...current.levels, critical: true, error: true, warning: true, info: true },
+            sources: {
+              core: source === 'core',
+              plugins: Object.fromEntries([...plugins, source].map(id => [id, id === source])),
+              accounts: Object.fromEntries((insts.status === 'fulfilled' ? insts.value : []).map(instance => [instance.instance_id, instance.package_id === source])),
+              other: Object.fromEntries(Object.keys(current.sources.other).map(key => [key, false])),
+            },
+          }));
+          const url = new URL(window.location.href);
+          url.searchParams.delete('source');
+          window.history.replaceState(window.history.state, '', url);
+        }
         setSourcesError(errors.length ? errors.join('\n') : null);
       }
     });
@@ -385,36 +399,32 @@ export function LogsPage(): JSX.Element {
         <div className="logs-toolbar-right logs-desktop-only">
           {/* 实时开关 */}
           {filter.date === 'today' && (
-            <button
+            <Hint content={liveLabel}><button
               type="button"
               className={`logs-icon-button ${streamState === 'live' ? 'is-live-active' : ''}`}
               onClick={() => setIsLive(!isLive)}
-              title={liveLabel}
               aria-label={liveLabel}
               aria-pressed={isLive}
             >
               <Radio size={18} />
-            </button>
+            </button></Hint>
           )}
 
           {/* 清空按钮 */}
-          <button
+          <Hint content={ui.logsClearTip}><button
             type="button"
             className="logs-icon-button"
             onClick={handleClearLogs}
-            title={ui.logsClearTip}
             aria-label={ui.logsClear}
           >
             <Trash2 size={18} />
-          </button>
+          </button></Hint>
 
           {/* 导出诊断包按钮 */}
           <button
             type="button"
             className="logs-export-button"
             onClick={() => setDiagnosticsOpen(true)}
-            aria-label={ui.logsExport}
-            title={ui.logsExport}
           >
             <Download size={18} className="logs-export-icon" />
             <span className="logs-export-label">{ui.logsExport}</span>
@@ -504,8 +514,9 @@ export function LogsPage(): JSX.Element {
 
           {/* 记录列表 */}
           {filteredLogs.length === 0 ? (
-            <div className="logs-empty-view">
-              <span>{loading ? ui.loading : logs.length === 0 ? ui.logsEmpty : ui.logsNoMatching}</span>
+            loading ? <div className="logs-loading"><LoadingRows rows={8} height={18} /></div> : <div className="logs-empty-view">
+              <span>{logs.length === 0 ? ui.logsEmpty : ui.logsNoMatching}</span>
+              {logs.length > 0 && <Button size="sm" variant="soft" onClick={() => setFilter(createDefaultFilterState(filter.date))}>{ui.logsReset}</Button>}
             </div>
           ) : (
             <div className="logs-record-list" role="log">
@@ -521,7 +532,7 @@ export function LogsPage(): JSX.Element {
                   <div key={`${record.time}-${index}`} className={`log-row ${colorClass}`}>
                     {/* 桌面端单行对齐布局 */}
                     <div className="log-row-desktop logs-desktop-only">
-                      <span className="log-col log-col-time" title={record.time}>[{desktopTime}]</span>
+                      <span className="log-col log-col-time">[{desktopTime}]</span>
                       <span className="log-col log-col-source" title={sourceTag}>
                         [{sourceTag}]
                       </span>
@@ -535,7 +546,6 @@ export function LogsPage(): JSX.Element {
                               type="button"
                               className="log-col log-col-location"
                               onClick={() => void handleCopyLocation(location.fullPath)}
-                              title={location.fullPath}
                             >
                               [{location.display}]
                             </button>
@@ -575,7 +585,7 @@ export function LogsPage(): JSX.Element {
                     {/* 移动端两行布局 */}
                     <div className="log-row-mobile logs-mobile-only">
                       <div className="log-mobile-header">
-                        <span className="log-mobile-time" title={record.time}>{mobileTime}</span>
+                        <span className="log-mobile-time">{mobileTime}</span>
                         <span className="log-mobile-level">{levelDisplay}</span>
                         <span className="log-mobile-source">{sourceTag}</span>
                         {location && (
@@ -583,7 +593,6 @@ export function LogsPage(): JSX.Element {
                             type="button"
                             className="log-mobile-location"
                             onClick={() => void handleCopyLocation(location.fullPath)}
-                            title={location.fullPath}
                           >
                             {location.display}
                           </button>

@@ -1,31 +1,35 @@
+// 全局样式最先引入，组件的 CSS Modules 在层叠顺序上排在其后。
+import './styles/tokens.css';
+import './styles/base.css';
+import './style.css';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import * as Dialog from '@radix-ui/react-dialog';
 import { LanguageSwitch } from './components/LanguageSwitch';
+import { TokenRevealDialog } from './features/auth/TokenRevealDialog';
 import { UIContext } from './i18n/UI';
 import { pickLocale } from './i18n/catalog';
 import english from '../i18n/en-US.json';
 import chinese from '../i18n/zh-CN.json';
-import { routes, setCachedCore } from './routes';
+import { routes } from './routes';
 import { AppShell } from './shell/AppShell';
 import { navigate, usePath } from './shell/router';
 import { UISettingsContext, type UISettings } from './shell/settings';
-import {
-  AdminAPIError,
-  getCore,
-  logout,
-  onSessionExpired,
-  restoreSession,
-  setClientLocale,
-  type CoreInfo,
-} from './api/admin';
-import { LoginPage } from './pages/LoginPage';
+import { logout, restoreSession } from './api/auth';
+import { AdminAPIError, onSessionExpired, setClientLocale } from './api/client';
+import { getCore, type CoreInfo } from './api/core';
+import { LoginPage } from './features/auth/LoginPage';
 import { PluginDetailPage } from './pages/PluginDetailPage';
 import { getLatestRelease, type LatestRelease } from './api/webui';
 import { compareVersions } from './pages/versions';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { useTheme } from './theme/theme';
-import './style.css';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './queries/client';
+import { Toaster } from './ui/Toaster';
+import { TooltipProvider } from './ui/Tooltip';
+import { ErrorBoundary } from './ui/ErrorBoundary';
+import { Spinner } from './ui/EmptyState';
+import { PluginPageView } from './features/plugins/PluginPageView';
 
 const languageStorageKey = 'alonabot.webui.locale';
 const catalogs = { 'en-US': english, 'zh-CN': chinese };
@@ -51,8 +55,6 @@ function AdminApp() {
 
   // 令牌轮换后持有结果对话框，独立于已认证页面展示
   const [rotatedToken, setRotatedToken] = useState<string | null>(null);
-  const [tokenCopied, setTokenCopied] = useState(false);
-  const [tokenCopyError, setTokenCopyError] = useState<string | null>(null);
 
   const restore = async () => {
     setSessionState('checking');
@@ -74,7 +76,6 @@ function AdminApp() {
     setAppError(null);
     try {
       const core = await getCore();
-      setCachedCore(core);
       setCoreInfo(core);
     } catch (error) {
       setAppError(error instanceof Error ? error.message : String(error));
@@ -83,7 +84,6 @@ function AdminApp() {
 
   useEffect(() => {
     const unsubscribe = onSessionExpired(() => {
-      setCachedCore(null);
       setCoreInfo(null);
       setSessionState('unauthenticated');
       navigate('/login', { replace: true });
@@ -127,7 +127,7 @@ function AdminApp() {
     const labels = ui as Record<string, string>;
     if (currentPath === '/login') {
       document.title = `${ui.loginTitle} · AlonaBot`;
-    } else if (currentPath.startsWith('/components/')) {
+    } else if (currentPath.startsWith('/components/') || currentPath.startsWith('/pages/')) {
       document.title = `${ui.plugins} · AlonaBot`;
     } else {
       const activeRoute = routes.find(r => r.path === currentPath);
@@ -145,7 +145,6 @@ function AdminApp() {
   const handleLogout = useCallback(async () => {
     try {
       await logout();
-      setCachedCore(null);
       setCoreInfo(null);
       setSessionState('unauthenticated');
       navigate('/login', { replace: true });
@@ -155,9 +154,7 @@ function AdminApp() {
   }, []);
 
   const handleTokenRotated = useCallback((token: string) => {
-    setTokenCopied(false); setTokenCopyError(null);
     setRotatedToken(token);
-    setCachedCore(null);
     setCoreInfo(null);
     setSessionState('unauthenticated');
   }, []);
@@ -187,7 +184,7 @@ function AdminApp() {
               <button type="button" onClick={() => void restore()}>{ui.refresh}</button>
             </>
           ) : (
-            <p role="status">{ui.loading}</p>
+            <Spinner size={28} />
           )}
         </div>
       );
@@ -195,27 +192,18 @@ function AdminApp() {
 
     // 未登录时显示登录页（开发环境下允许直接查看 /dev/forms）
     if (sessionState === 'unauthenticated' && !(import.meta.env.DEV && currentPath === '/dev/forms')) {
-      return (
-        <div className="login-wrapper">
-          <div className="login-locale-bar">
-            <LanguageSwitch
-              value={locale}
-              onChange={handleSetLocale}
-            />
-          </div>
-          <LoginPage onAuthenticated={handleAuthenticated} />
-        </div>
-      );
+      return <LoginPage onAuthenticated={handleAuthenticated} locale={locale} onLocaleChange={handleSetLocale} />;
     }
 
     const matchedRoute = routes.find(r => r.path === currentPath);
     const isComponentDetail = currentPath.startsWith('/components/');
     const componentId = isComponentDetail ? decodeURIComponent(currentPath.slice('/components/'.length)) : '';
+    const pagePlugin = currentPath.startsWith('/pages/') ? decodeURIComponent(currentPath.slice('/pages/'.length)) : '';
 
     return (
       <UISettingsContext.Provider value={uiSettingsValue}>
         <AppShell
-          version={coreInfo?.version ?? ui.loading}
+          version={coreInfo?.version ?? '—'}
           onLogout={handleLogout}
           coreUpdateFailed={coreUpdateFailed}
           coreUpdate={latestCore && coreInfo && compareVersions(latestCore.version, coreInfo.version) === 1 ? { version: latestCore.version, releaseURL: latestCore.release_url } : undefined}
@@ -236,16 +224,20 @@ function AdminApp() {
             </div>
           ) : null}
 
-          {isComponentDetail && componentId ? (
-            <PluginDetailPage key={componentId} id={componentId} />
-          ) : matchedRoute ? (
-            matchedRoute.render()
-          ) : (
-            <div className="shell-empty-view">
-              <h2>AlonaBot WebUI</h2>
-              <p>{ui.pageUnavailable}</p>
-            </div>
-          )}
+          <ErrorBoundary key={currentPath}>
+            {pagePlugin ? (
+              <PluginPageView id={pagePlugin} />
+            ) : isComponentDetail && componentId ? (
+              <PluginDetailPage key={componentId} id={componentId} />
+            ) : matchedRoute ? (
+              matchedRoute.render()
+            ) : (
+              <div className="shell-empty-view">
+                <h2>AlonaBot WebUI</h2>
+                <p>{ui.pageUnavailable}</p>
+              </div>
+            )}
+          </ErrorBoundary>
         </AppShell>
       </UISettingsContext.Provider>
     );
@@ -254,72 +246,21 @@ function AdminApp() {
   return (
     <UIContext value={ui}>
       {renderContent()}
+      <Toaster />
 
-      {rotatedToken ? (
-        <Dialog.Root
-          open={true}
-          onOpenChange={open => {
-            if (!open) {
-              setRotatedToken(null);
-              navigate('/login', { replace: true });
-            }
-          }}
-        >
-          <Dialog.Portal>
-            <Dialog.Overlay className="dialog-overlay" />
-            <Dialog.Content className="dialog-content">
-              <Dialog.Title className="dialog-title">{ui.rotateTokenModalTitle}</Dialog.Title>
-              <Dialog.Description className="dialog-description">
-                {ui.rotateTokenModalWarning}
-              </Dialog.Description>
-              <div className="rotated-token-result">
-                <p>{ui.newTokenNotice}</p>
-                <div className="settings-input-row">
-                  <input
-                    type="text"
-                    readOnly
-                    value={rotatedToken}
-                    className="font-mono"
-                    onClick={e => (e.target as HTMLInputElement).select()}
-                  />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(rotatedToken);
-                        setTokenCopied(true);
-                        setTokenCopyError(null);
-                      } catch (error) {
-                        setTokenCopyError(error instanceof Error ? error.message : String(error));
-                      }
-                    }}
-                  >
-                    {tokenCopied ? ui.copied : ui.copyCommand}
-                  </button>
-                </div>
-              </div>
-              {tokenCopyError && <p role="alert">{tokenCopyError}</p>}
-              <div className="dialog-actions">
-                <button
-                  type="button"
-                  className="save-button"
-                  onClick={() => {
-                    setRotatedToken(null);
-                    navigate('/login', { replace: true });
-                  }}
-                >
-                  {ui.done}
-                </button>
-              </div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
-      ) : null}
+      {rotatedToken && <TokenRevealDialog token={rotatedToken} title={ui.rotateTokenModalTitle} description={ui.rotatedTokenNotice} confirmLabel={ui.signInAgain}
+        onConfirm={() => { setRotatedToken(null); navigate('/login', { replace: true }); }} />}
     </UIContext>
   );
 }
 
 const container = document.getElementById('root');
 if (container) {
-  createRoot(container).render(<AdminApp />);
+  createRoot(container).render(
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider delayDuration={300}>
+        <AdminApp />
+      </TooltipProvider>
+    </QueryClientProvider>,
+  );
 }

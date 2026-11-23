@@ -1,4 +1,4 @@
-import type { Package } from '../api/admin';
+import type { Package } from '../api/packages';
 import type { StoreEntry } from '../api/webui';
 import { compareVersions, repository } from './versions';
 

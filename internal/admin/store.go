@@ -6,14 +6,12 @@ import (
 	"compress/gzip"
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"path"
 	"regexp"
 	"sort"
 	"strconv"
@@ -21,7 +19,6 @@ import (
 	"time"
 
 	"github.com/AlonaBot/AlonaBot/contracts/manifest"
-	"github.com/AlonaBot/AlonaBot/contracts/pluginindex"
 	"github.com/AlonaBot/AlonaBot/sdk/sqlitedb"
 )
 
@@ -31,7 +28,7 @@ var repositoryPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
 const (
 	remoteFetchTimeout   = 20 * time.Second
 	remoteMetadataBytes  = 1 << 20
-	remoteIndexBytes     = 4 << 20
+	remoteSnapshotBytes  = 32 << 20 // store.json 内联各条目至多 1 MiB 的图标
 	remoteArchiveBytes   = 64 << 20
 	archiveExpandedBytes = 256 << 20
 	archiveFileBytes     = 128 << 20
@@ -121,7 +118,7 @@ func githubURL(u *url.URL, download bool) bool {
 	}
 	switch strings.ToLower(u.Host) {
 	case "api.github.com":
-		return !download && len(parts) >= 3 && parts[0] == "repos" && validRepo(parts[1]+"/"+parts[2]) && (len(parts) == 3 || len(parts) == 5 && (parts[3] == "releases" && parts[4] == "latest" || parts[3] == "contents" && parts[4] == "index.json"))
+		return !download && len(parts) == 5 && parts[0] == "repos" && validRepo(parts[1]+"/"+parts[2]) && parts[3] == "releases" && parts[4] == "latest"
 	case "github.com":
 		return download && len(parts) == 6 && validRepo(parts[0]+"/"+parts[1]) && parts[2] == "releases" && parts[3] == "download"
 	case "release-assets.githubusercontent.com", "objects.githubusercontent.com":
@@ -160,9 +157,7 @@ func (c *catalog) get(ctx context.Context, address, accept string) ([]byte, erro
 		return nil, err
 	}
 	limit := int64(remoteMetadataBytes)
-	if strings.HasSuffix(u.Path, "/contents/index.json") {
-		limit = remoteIndexBytes
-	} else if download {
+	if download {
 		limit = remoteArchiveBytes
 	}
 	raw, readErr := readBounded(response.Body, limit, "GET "+address+" response")
@@ -231,29 +226,108 @@ func (c *catalog) cached(ctx context.Context, key string, fetch func(context.Con
 	return raw, at, true, fetchErr, nil
 }
 
-// refreshStore 抓取索引与每个条目的展示快照并序列化，作为一次成功刷新的完整结果。
-func (c *catalog) refreshStore(ctx context.Context, source string) ([]byte, error) {
-	// Contents API 省略 ref，读取仓库默认分支；把索引与完整展示快照一起发布。
-	indexRaw, err := c.get(ctx, "https://api.github.com/repos/"+source+"/contents/index.json", "application/vnd.github.raw+json")
+// storeSnapshot 是插件源仓库 index 分支上的 store.json，由插件源的 CI 生成。
+type storeSnapshot struct {
+	Version int          `json:"version"`
+	Items   []storeEntry `json:"items"`
+}
+
+// snapshotURLs 返回按镜像设置读取 store.json 的地址；auto 同时尝试 GitHub 与 jsDelivr。
+// 自定义镜像是 GitHub 加速前缀，拼在 raw.githubusercontent.com 地址之前。
+func snapshotURLs(source, mirror string) ([]string, error) {
+	raw := "https://raw.githubusercontent.com/" + source + "/index/store.json"
+	jsdelivr := "https://cdn.jsdelivr.net/gh/" + source + "@index/store.json"
+	switch mirror {
+	case "", "auto":
+		return []string{raw, jsdelivr}, nil
+	case "github":
+		return []string{raw}, nil
+	case "jsdelivr":
+		return []string{jsdelivr}, nil
+	}
+	u, err := url.Parse(mirror)
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return nil, errors.New("mirror must be auto, github, jsdelivr or an https URL prefix")
+	}
+	return []string{strings.TrimRight(mirror, "/") + "/" + raw}, nil
+}
+
+// refreshStore 读取插件源的静态快照；多个地址并发请求，取第一个成功的结果。
+// 全部失败时返回所有地址的错误。
+func (c *catalog) refreshStore(ctx context.Context, source, mirror string) ([]byte, error) {
+	addresses, err := snapshotURLs(source, mirror)
 	if err != nil {
 		return nil, err
 	}
-	index, err := pluginindex.Parse(indexRaw)
-	if err != nil {
-		return nil, err
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	type result struct {
+		raw []byte
+		err error
 	}
-	items := []storeEntry{}
-	for _, entry := range index.Plugins {
-		value, err := c.entry(ctx, entry)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", entry.Repo, err)
+	results := make(chan result, len(addresses))
+	for _, address := range addresses {
+		go func() {
+			raw, err := c.fetchSnapshot(ctx, address)
+			results <- result{raw, err}
+		}()
+	}
+	var errs []error
+	for range addresses {
+		r := <-results
+		if r.err == nil {
+			return r.raw, nil
 		}
-		items = append(items, value)
+		errs = append(errs, r.err)
 	}
-	return json.Marshal(struct {
-		Index json.RawMessage `json:"index"`
-		Items []storeEntry    `json:"items"`
-	}{indexRaw, items})
+	return nil, errors.Join(errs...)
+}
+
+func (c *catalog) fetchSnapshot(ctx context.Context, address string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
+	if err != nil {
+		return nil, err
+	}
+	client := *c.client
+	client.Timeout = remoteFetchTimeout
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	raw, readErr := readBounded(response.Body, remoteSnapshotBytes, "GET "+address+" response")
+	if err := errors.Join(readErr, response.Body.Close()); err != nil {
+		return nil, err
+	}
+	if response.StatusCode != http.StatusOK {
+		return nil, &upstreamError{address: address, status: response.StatusCode, body: string(raw)}
+	}
+	// 1. 远端内容不可信：只保留格式正确、仓库与角色合法的条目。
+	var snapshot storeSnapshot
+	if err := json.Unmarshal(raw, &snapshot); err != nil {
+		return nil, fmt.Errorf("GET %s: parse store.json: %w", address, err)
+	}
+	if snapshot.Version != 1 {
+		return nil, fmt.Errorf("GET %s: unsupported store.json version %d", address, snapshot.Version)
+	}
+	items := make([]storeEntry, 0, len(snapshot.Items))
+	for _, entry := range snapshot.Items {
+		switch entry.Role {
+		case "plugin", "adapter", "agent", "webui":
+		default:
+			continue
+		}
+		if !validRepo(entry.Repo) || entry.ID == "" {
+			continue
+		}
+		if !strings.HasPrefix(entry.IconURL, "data:image/") {
+			entry.IconURL = ""
+		}
+		if entry.Tags == nil {
+			entry.Tags = []string{}
+		}
+		items = append(items, entry)
+	}
+	return json.Marshal(storeSnapshot{Version: 1, Items: items})
 }
 
 // snapshot 只读已持久化的成功快照；没有记录时 found 为 false，不触发任何远端请求。
@@ -308,6 +382,11 @@ func (c *catalog) storeHTTP(w http.ResponseWriter, r *http.Request) {
 		invalid(w, errors.New("limit must be an explicit positive integer"))
 		return
 	}
+	mirror := q.Get("mirror")
+	if _, err := snapshotURLs(source, mirror); err != nil {
+		invalid(w, err)
+		return
+	}
 	role := q.Get("role")
 	switch role {
 	case "", "plugin", "adapter", "agent", "webui":
@@ -337,7 +416,7 @@ func (c *catalog) storeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch refresh[0] {
 	case "true":
-		if raw, at, stale, fetchErr, err = c.cached(r.Context(), key, func(ctx context.Context) ([]byte, error) { return c.refreshStore(ctx, source) }); err != nil {
+		if raw, at, stale, fetchErr, err = c.cached(r.Context(), key, func(ctx context.Context) ([]byte, error) { return c.refreshStore(ctx, source, mirror) }); err != nil {
 			break
 		}
 	case "false":
@@ -352,14 +431,14 @@ func (c *catalog) storeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		// 尚无成功快照时执行正常首次抓取，与 refresh=true 相同。
-		raw, at, stale, fetchErr, err = c.cached(r.Context(), key, func(ctx context.Context) ([]byte, error) { return c.refreshStore(ctx, source) })
+		raw, at, stale, fetchErr, err = c.cached(r.Context(), key, func(ctx context.Context) ([]byte, error) { return c.refreshStore(ctx, source, mirror) })
 	default:
 		invalid(w, errors.New("refresh must be true or false"))
 		return
 	}
 	if err != nil {
 		var upstream *upstreamError
-		if errors.As(err, &upstream) && upstream.status == http.StatusNotFound && strings.HasSuffix(upstream.address, "/contents/index.json") {
+		if errors.As(err, &upstream) && upstream.status == http.StatusNotFound && strings.HasSuffix(upstream.address, "/store.json") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
 			respond(w, map[string]string{"code": "SOURCE_INDEX_MISSING", "safe_message": err.Error()}, nil)
@@ -432,43 +511,6 @@ func selectStoreEntries(entries []storeEntry, role, query, order string) ([]stor
 		return *left > *right
 	})
 	return items, len(items), counts
-}
-
-func (c *catalog) entry(ctx context.Context, entry pluginindex.Plugin) (storeEntry, error) {
-	// 1. 读取组件归档，核对索引、Release 与包内声明的身份。
-	value := storeEntry{Repo: entry.Repo, Role: entry.Role, Tags: entry.Tags}
-	if value.Tags == nil {
-		value.Tags = []string{}
-	}
-	_, declaration, icon, err := c.packageArchive(ctx, entry.Repo)
-	if err != nil {
-		return value, err
-	}
-	if declaration.Manifest.Role != entry.Role {
-		return value, errors.New("package role does not match the index entry")
-	}
-	// 2. 名称与图标来自包内声明，星数单独读取 GitHub 仓库信息。
-	value.ID = declaration.Manifest.ID
-	value.Name = declaration.Manifest.Name
-	value.Description = declaration.Manifest.Description
-	value.Author = declaration.Manifest.Author
-	value.Version = declaration.Manifest.Version
-	if icon != nil {
-		mime := map[string]string{".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp"}[path.Ext(declaration.Manifest.Icon)]
-		value.IconURL = "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(icon)
-	}
-	raw, err := c.get(ctx, "https://api.github.com/repos/"+entry.Repo, "application/vnd.github+json")
-	if err != nil {
-		return value, err
-	}
-	var repository struct {
-		Stars *int `json:"stargazers_count"`
-	}
-	if err := json.Unmarshal(raw, &repository); err != nil {
-		return value, err
-	}
-	value.Stars = repository.Stars
-	return value, nil
 }
 
 // 未发布 Release 由 latest 端点的 404 表示；其他资产 404是坏资产，保留原错误。

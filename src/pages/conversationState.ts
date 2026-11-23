@@ -1,4 +1,4 @@
-import type { ProfileAssignments } from '../api/admin';
+import type { ProfileAssignments } from '../api/profiles';
 
 /** conversationAssignment 只匹配会话指定及其成员键，保持不透明键原文。 */
 export function conversationAssignment(key: string, assignments: ProfileAssignments) {

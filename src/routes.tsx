@@ -3,15 +3,14 @@ import type { LucideIcon } from 'lucide-react';
 import { ShieldCheck, Bot, Box, LayoutDashboard, MessageSquare, Puzzle, ScrollText, Settings, Shield, SlidersHorizontal } from 'lucide-react';
 import { ConfigForm } from './components/ConfigForm';
 import { useUI } from './i18n/UI';
-import { type CoreInfo } from './api/admin';
-import { OverviewPage } from './pages/OverviewPage';
-import { PluginsPage } from './pages/PluginsPage';
+import { OverviewPage } from './features/overview/OverviewPage';
+import { PluginsPage } from './features/plugins/PluginsPage';
 import { UsersPage } from './pages/UsersPage';
-import { AccountsPage } from './pages/AccountsPage';
+import { AccountsPage } from './features/accounts/AccountsPage';
 import { PermissionsPage } from './pages/PermissionsPage';
-import { ConversationsPage } from './pages/ConversationsPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { ModelsPage } from './pages/ModelsPage';
+import { ConversationsPage } from './features/conversations/ConversationsPage';
+import { SettingsPage } from './features/settings/SettingsPage';
+import { ModelsPage } from './features/models/ModelsPage';
 import { ProfilesPage } from './pages/ProfilesPage';
 import { LogsPage } from './pages/LogsPage';
 import chinese from '../i18n/zh-CN.json';
@@ -31,17 +30,6 @@ export type RouteEntry = {
   navigation?: boolean;
   render: () => JSX.Element;
 };
-
-let cachedCore: CoreInfo | null = null;
-
-export function setCachedCore(core: CoreInfo | null) {
-  cachedCore = core;
-}
-
-function OverviewRouteWrapper(): JSX.Element {
-  const ui = useUI();
-  return cachedCore ? <OverviewPage core={cachedCore} /> : <p role="status">{ui.coreUnavailable}</p>;
-}
 
 const secretSet = { $secret_set: true };
 const formExamples = [
@@ -136,7 +124,7 @@ export const routes: RouteEntry[] = [
     label: 'overview',
     icon: LayoutDashboard,
     group: 'main',
-    render: () => <OverviewRouteWrapper />,
+    render: () => <OverviewPage />,
   },
   {
     id: 'plugins',

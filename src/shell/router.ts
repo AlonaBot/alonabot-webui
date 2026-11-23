@@ -26,17 +26,32 @@ export function usePath(): string {
   return path;
 }
 
+/** 读取当前地址的查询参数，地址变化（含仅查询串变化）时更新。 */
+export function useQueryParam(name: string): string | null {
+  const read = () => typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get(name);
+  const [value, setValue] = useState<string | null>(read);
+  useEffect(() => {
+    const sync = () => setValue(read());
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, [name]);
+  return value;
+}
+
 /**
  * 客户端页面导航，基于 HTML5 History API 实现。
+ * 进入新页面时回到顶部；只改查询串（同一页面内切换标签）时保持滚动位置。
  */
 export function navigate(path: string, options?: { replace?: boolean }): void {
   if (typeof window === 'undefined') {
     return;
   }
+  const samePage = new URL(path, window.location.href).pathname === window.location.pathname;
   if (options?.replace) {
     window.history.replaceState(null, '', path);
   } else {
     window.history.pushState(null, '', path);
+    if (!samePage) window.scrollTo(0, 0);
   }
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
@@ -45,6 +60,9 @@ interface LinkProps {
   to: string;
   className?: string;
   'aria-label'?: string;
+  'aria-current'?: 'page';
+  'data-disabled'?: boolean;
+  onClick?: () => void;
   children: React.ReactNode;
 }
 
@@ -65,6 +83,8 @@ export function Link(props: LinkProps): JSX.Element {
       return;
     }
     event.preventDefault();
+    if (props['data-disabled']) return;
+    props.onClick?.();
     navigate(props.to);
   };
 
@@ -74,6 +94,8 @@ export function Link(props: LinkProps): JSX.Element {
       href: props.to,
       className: props.className,
       'aria-label': props['aria-label'],
+      'aria-current': props['aria-current'],
+      'data-disabled': props['data-disabled'] || undefined,
       onClick: handleClick,
     },
     props.children,

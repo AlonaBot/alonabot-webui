@@ -18,7 +18,7 @@ npm ci
 npm run dev
 ```
 
-Open the address printed by Vite. `/dev/forms` previews configuration forms and JSON Merge Patch using local fixtures. Vite currently has no API proxy; open real management pages through Core's same-origin entry and sign in. Routes live in `src/routes.tsx`, translations in `i18n/`, and reusable theme/shell elements in `src/theme/` and `src/shell/`.
+Open the address printed by Vite. `/dev/forms` previews configuration forms and JSON Merge Patch using local fixtures. The dev server forwards `/api` and `/plugins` to Core at `http://127.0.0.1:7650` and rewrites Host and Origin to Core's origin: start Core, sign in on the dev page (or sign in at 7650 first; cookies are not port-specific), and front-end edits hot-reload against real data. The WebUI's own Go backend is still the version installed in Core; repack and reinstall after backend changes. Routes live in `src/routes.tsx`, translations in `i18n/`, and reusable theme/shell elements in `src/theme/` and `src/shell/`.
 
 ```fish
 npm run typecheck
@@ -68,7 +68,7 @@ Plugin details expose database tables, KV/file storage, export/clear, and Agent 
 
 Following the [plugin-page guide](https://github.com/AlonaBot/AlonaBot/blob/main/docs/plugin-guide.md#plugin-pages), the parent bridge answers each `translate` request with `text` using current language and request arguments. `hello` supplies language, theme, and token; `locale` supplies language updates. Browser verification uses a sandbox iframe to check initial showcase translation, fresh translations after language changes, themes, and shortcut forwarding.
 
-Profile tool-override candidates expand `identities` from the current [`ToolPolicy` definition](../src/api/admin.ts) into separate tools and operations. Identically named entries of both types are edited separately. Empty-identity rows representing only legacy global overrides add no candidates; saved profile overrides continue reading/writing under their original identities. Configuration and profile pages share `src/api/admin.ts`'s `ToolPolicy.identities: ('tool' | 'operation')[]`.
+Profile tool-override candidates expand `identities` from the current [`ToolPolicy` definition](../src/api/policies.ts) into separate tools and operations. Identically named entries of both types are edited separately. Empty-identity rows representing only legacy global overrides add no candidates; saved profile overrides continue reading/writing under their original identities. Configuration and profile pages share `src/api/policies.ts`'s `ToolPolicy.identities: ('tool' | 'operation')[]`.
 
 Configuration pages use `PluginConfigPanel({id})` and shared `ConfigForm`. The editing baseline is `pending.config ?? active`; saves use `active_generation`. A 409 retains the draft and permits explicitly adopting current configuration. Secret reauthentication, dynamic options, reply examples, and bilingual fields use the same form. Plugin-detail tabs scroll horizontally on one row. The Agent page entry is `pages/memory`; Core data tabs remain. The parent bridge binds in a layout effect to retain first-hello theme and language subscriptions.
 

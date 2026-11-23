@@ -1,5 +1,11 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type FormEvent, type JSX } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { PageHeader } from '../shell/PageHeader';
+import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
+import { Skeleton } from '../ui/EmptyState';
+import { TabBar } from '../ui/Tabs';
+import { toast } from '../ui/toast';
+import { ConfirmDialog, Dialog as SharedDialog } from '../ui/Dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   Check,
@@ -9,20 +15,10 @@ import {
   MoreHorizontal,
   Plus,
   Trash2,
-  X,
 } from 'lucide-react';
-import {
-  createProfile,
-  deleteProfile,
-  getProfilePlugins,
-  listPackages,
-  listProfiles,
-  onPackagesChanged,
-  updateProfile,
-  type Package,
-  type Profile,
-  type ProfilePlugin,
-} from '../api/admin';
+import { onPackagesChanged } from '../api/client';
+import { listPackages, type Package } from '../api/packages';
+import { createProfile, deleteProfile, getProfilePlugins, listProfiles, updateProfile, type Profile, type ProfilePlugin } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 import { navigate } from '../shell/router';
 import { SearchContext } from '../shell/search';
@@ -43,7 +39,6 @@ export function ProfilesPage(): JSX.Element {
   const [pluginsProfileID, setPluginsProfileID] = useState('');
   const [activeTab, setActiveTab] = useState<'ai' | 'platform' | 'plugins'>('ai');
   const [loading, setLoading] = useState(true);
-  const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
   // 对话框状态
   const [scopeDialogOpen, setScopeDialogOpen] = useState(false);
@@ -88,7 +83,6 @@ export function ProfilesPage(): JSX.Element {
   const loadData = useCallback(async () => {
     const version = ++requestVersion.current;
     setLoading(true);
-    setErrorBanner(null);
     try {
       const [profList, pkgList] = await Promise.all([
         listProfiles(),
@@ -101,7 +95,7 @@ export function ProfilesPage(): JSX.Element {
       setPluginsProfileID(targetID);
       if (targetID !== selectedProfileID) handleSelectProfile(targetID);
     } catch (err: unknown) {
-      if (version === requestVersion.current) setErrorBanner(err instanceof Error ? err.message : String(err));
+      if (version === requestVersion.current) toast.error(err);
     } finally {
       if (version === requestVersion.current) setLoading(false);
     }
@@ -211,8 +205,8 @@ export function ProfilesPage(): JSX.Element {
   };
 
   // 删除配置文件提交
-  const handleDeleteSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleDeleteSubmit = async (e?: FormEvent) => {
+    e?.preventDefault();
     if (currentProfile!.id === 'default') return;
     setDialogError(null);
     try {
@@ -225,14 +219,14 @@ export function ProfilesPage(): JSX.Element {
     }
   };
 
-  if (!currentProfile) return <div className="profiles-page">{errorBanner ? <p role="alert">{errorBanner}</p> : <p role="status">{ui.loading}</p>}</div>;
+  if (!currentProfile) return <div className="profiles-page"><Skeleton height={36} width={200} /><Skeleton height={200} /></div>;
 
-  const colorControl = <label className="dialog-form-field"><span>{ui.profileColor}</span><select aria-label={ui.profileColor} value={dialogColor} onChange={event => setDialogColor(event.target.value)}>{['teal', 'navy', 'amber', 'pink', 'green', 'purple', 'red', 'gray'].map(color => <option key={color} value={color}>{ui[`profileColor_${color}` as keyof typeof ui]}</option>)}</select></label>;
+  const colorControl = <label className="dialog-form-field"><span>{ui.profileColor}</span><Select variant="filled" aria-label={ui.profileColor} value={dialogColor} onValueChange={setDialogColor} options={['teal', 'navy', 'amber', 'pink', 'green', 'purple', 'red', 'gray'].map(color => ({ value: color, label: <><span className={`profile-dot profile-color-${color}`} style={{ display: 'inline-block', marginRight: 8 }} />{ui[`profileColor_${color}` as keyof typeof ui]}</> }))} /></label>;
   return (
     <div className="profiles-page">
       {/* 头部：● 名称 ⌄、会话数入口、⋯ 操作菜单 */}
-      <div className="profiles-header">
-        <div className="profiles-header-left">
+      <PageHeader
+        left={<div className="profiles-header-left">
           {/* 配置文件切换下拉菜单 */}
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
@@ -284,9 +278,8 @@ export function ProfilesPage(): JSX.Element {
           >
             {ui.sessionCount.replace('{count}', String(currentProfile.sessions))}
           </button>
-        </div>
-
-        <div className="profiles-header-right">
+        </div>}
+        right={<>
           {/* ⋯ 更多操作菜单 */}
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
@@ -337,50 +330,18 @@ export function ProfilesPage(): JSX.Element {
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
-        </div>
-      </div>
+        </>}
+      />
 
-      {errorBanner && (
-        <div className="plugins-error-banner" role="alert">
-          <span>{errorBanner}</span>
-          <button type="button" className="error-banner-close" aria-label={ui.close} onClick={() => setErrorBanner(null)}>
-            &times;
-          </button>
-        </div>
-      )}
-
-      {!agentPackage && !loading && <div className="profile-no-agent-banner"><span>{ui.noAgentInstalled}</span><button type="button" onClick={() => navigate('/components?tab=store')}>{ui.goToStore}</button></div>}
+      {!agentPackage && !loading && <div className="profile-no-agent-banner"><span>{ui.profileNeedsAgent}</span><Button size="sm" variant="soft" onClick={() => navigate('/models')}>{ui.setUpAgent}</Button></div>}
 
       {/* 子标签导航：AI / 平台与消息 / 插件 */}
-      <div className="profile-tabs">
-        {agentPackage && (
-          <button
-            type="button"
-            className={`profile-tab-btn ${activeTab === 'ai' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('ai')}
-          >
-            {ui.tabAI}
-          </button>
-        )}
-        <button
-          type="button"
-          className={`profile-tab-btn ${activeTab === 'platform' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('platform')}
-        >
-          {ui.tabPlatform}
-        </button>
-        <button
-          type="button"
-          className={`profile-tab-btn ${activeTab === 'plugins' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('plugins')}
-        >
-          {ui.tabPlugins}
-        </button>
-      </div>
+      <TabBar className="profile-tab-bar" value={activeTab} onValueChange={value => setActiveTab(value as typeof activeTab)} aria-label={ui.profiles}
+        items={[...(agentPackage ? [{ value: 'ai', label: ui.tabAI }] : []), { value: 'platform', label: ui.tabPlatform }, { value: 'plugins', label: ui.tabPlugins }]} />
 
       {/* 分区内容渲染 */}
       <div className="profile-tab-content" key={currentProfile.id}>
-        {pluginsProfileID !== currentProfile.id && <p role="status">{ui.loading}</p>}
+        {pluginsProfileID !== currentProfile.id && <Skeleton height={160} />}
         {pluginsProfileID === currentProfile.id && activeTab === 'ai' && agentPackage && agentProfilePlugin && (
           <ProfileAISection
             profileID={currentProfile.id}
@@ -410,164 +371,31 @@ export function ProfilesPage(): JSX.Element {
         onChanged={loadData}
       />
 
-      {/* 新建配置文件弹窗 */}
-      <Dialog.Root open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content profile-action-dialog" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.newProfile}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close" aria-label={ui.close}>
-                  <X size={18} />
-                </button>
-              </Dialog.Close>
-            </div>
-            <form onSubmit={handleCreateSubmit}>
-              <div className="dialog-form-body">
-                <label className="dialog-form-field">
-                  <span>{ui.profileName}</span>
-                  <input
-                    type="text"
-                    required
-                    placeholder={ui.profileNamePlaceholder}
-                    value={dialogName}
-                    autoFocus
-                    onChange={e => setDialogName(e.currentTarget.value)}
-                  />
-                </label>
-                {colorControl}
-                {dialogError && <p className="form-error" role="alert">{dialogError}</p>}
-              </div>
-              <div className="dialog-actions">
-                <button type="button" className="dialog-button" onClick={() => setCreateDialogOpen(false)}>
-                  {ui.close}
-                </button>
-                <button type="submit" className="dialog-button is-primary">
-                  {ui.createProfile}
-                </button>
-              </div>
-            </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      {/* 新建、复制、重命名共用同一个名称与颜色表单 */}
+      {([
+        [createDialogOpen, setCreateDialogOpen, ui.newProfile, ui.createProfile, handleCreateSubmit],
+        [copyDialogOpen, setCopyDialogOpen, ui.copyProfileTitle, ui.copyProfile, handleCopySubmit],
+        [renameDialogOpen, setRenameDialogOpen, ui.renameProfile, ui.save, handleRenameSubmit],
+      ] as const).map(([open, setOpen, title, submit, onSubmit]) => open && <SharedDialog key={title} open onOpenChange={setOpen} title={title} size="sm"
+        footer={<>
+          {dialogError && <p className="form-error" role="alert">{dialogError}</p>}
+          <Button onClick={() => setOpen(false)}>{ui.cancel}</Button>
+          <Button type="submit" form="profile-name-form" variant="primary">{submit}</Button>
+        </>}>
+        <form id="profile-name-form" className="dialog-form-body" onSubmit={onSubmit}>
+          <label className="dialog-form-field">
+            <span>{ui.profileName}</span>
+            <input type="text" required placeholder={ui.profileNamePlaceholder} value={dialogName} autoFocus onChange={e => setDialogName(e.currentTarget.value)} />
+          </label>
+          {colorControl}
+        </form>
+      </SharedDialog>)}
 
-      {/* 复制配置文件弹窗 */}
-      <Dialog.Root open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content profile-action-dialog" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.copyProfileTitle}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close" aria-label={ui.close}>
-                  <X size={18} />
-                </button>
-              </Dialog.Close>
-            </div>
-            <form onSubmit={handleCopySubmit}>
-              <div className="dialog-form-body">
-                <label className="dialog-form-field">
-                  <span>{ui.profileName}</span>
-                  <input
-                    type="text"
-                    required
-                    placeholder={ui.profileNamePlaceholder}
-                    value={dialogName}
-                    autoFocus
-                    onChange={e => setDialogName(e.currentTarget.value)}
-                  />
-                </label>
-                {colorControl}
-                {dialogError && <p className="form-error" role="alert">{dialogError}</p>}
-              </div>
-              <div className="dialog-actions">
-                <button type="button" className="dialog-button" onClick={() => setCopyDialogOpen(false)}>
-                  {ui.close}
-                </button>
-                <button type="submit" className="dialog-button is-primary">
-                  {ui.copyProfile}
-                </button>
-              </div>
-            </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-
-      {/* 重命名配置文件弹窗 */}
-      <Dialog.Root open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content profile-action-dialog" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.renameProfile}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close" aria-label={ui.close}>
-                  <X size={18} />
-                </button>
-              </Dialog.Close>
-            </div>
-            <form onSubmit={handleRenameSubmit}>
-              <div className="dialog-form-body">
-                <label className="dialog-form-field">
-                  <span>{ui.profileName}</span>
-                  <input
-                    type="text"
-                    required
-                    placeholder={ui.profileNamePlaceholder}
-                    value={dialogName}
-                    autoFocus
-                    onChange={e => setDialogName(e.currentTarget.value)}
-                  />
-                </label>
-                {colorControl}
-                {dialogError && <p className="form-error" role="alert">{dialogError}</p>}
-              </div>
-              <div className="dialog-actions">
-                <button type="button" className="dialog-button" onClick={() => setRenameDialogOpen(false)}>
-                  {ui.close}
-                </button>
-                <button type="submit" className="dialog-button is-primary">
-                  {ui.save}
-                </button>
-              </div>
-            </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-
-      {/* 删除配置文件确认弹窗 */}
-      <Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content profile-action-dialog" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.deleteProfile}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close" aria-label={ui.close}>
-                  <X size={18} />
-                </button>
-              </Dialog.Close>
-            </div>
-            <form onSubmit={handleDeleteSubmit}>
-              <div className="dialog-form-body">
-                <p className="dialog-delete-warning">
-                  {ui.deleteProfileConfirm.replace('{name}', currentProfile.name).replace('{count}', String(currentProfile.sessions))}
-                </p>
-                {dialogError && <p className="form-error" role="alert">{dialogError}</p>}
-              </div>
-              <div className="dialog-actions">
-                <button type="button" className="dialog-button" onClick={() => setDeleteDialogOpen(false)}>
-                  {ui.close}
-                </button>
-                <button type="submit" className="dialog-button is-danger">
-                  {ui.deleteProfile}
-                </button>
-              </div>
-            </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      {deleteDialogOpen && <ConfirmDialog open tone="danger" title={ui.deleteProfile} confirmLabel={ui.deleteProfile}
+        onOpenChange={setDeleteDialogOpen} onConfirm={() => handleDeleteSubmit()}>
+        <p className="dialog-delete-warning">{ui.deleteProfileConfirm.replace('{name}', currentProfile.name).replace('{count}', String(currentProfile.sessions))}</p>
+        {dialogError && <p className="form-error" role="alert">{dialogError}</p>}
+      </ConfirmDialog>}
     </div>
   );
 }

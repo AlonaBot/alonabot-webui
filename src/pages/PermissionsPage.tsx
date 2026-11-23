@@ -1,13 +1,17 @@
 import { useEffect, useState, useRef, type JSX } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { OptionSelect, CheckboxInput } from '../ui/NativeAdapters';
 import { RefreshCw, Edit2, ChevronDown, ChevronRight, Filter, RotateCcw } from 'lucide-react';
-import { listPackages, getPluginPolicies, setPluginPolicy, setCommandNames, resetCommandNames, getToolPolicies, setToolPolicy, setToolPolicies, packageIconURL, type Package, type PluginPolicies, type CommandPolicy, type CommandScope, type ToolPolicy, type ToolPolicyValue } from '../api/admin';
+import { listPackages, packageIconURL, type Package } from '../api/packages';
+import { getPluginPolicies, setPluginPolicy, setCommandNames, resetCommandNames, getToolPolicies, setToolPolicy, setToolPolicies, type PluginPolicies, type CommandPolicy, type CommandScope, type ToolPolicy, type ToolPolicyValue } from '../api/policies';
 import { useUI } from '../i18n/UI';
 import { useUISettings } from '../shell/settings';
 import { commandDescription, commandOverride, commandTree, matchesCommand, scopeEnabled, scopeKey, type CommandTree } from './permissionState';
 import { CommandPolicyControls } from './CommandPolicyControls';
 import { CommandNamesDialog, type NamesDraft } from './CommandNamesDialog';
 import { PermissionsTabs } from './PermissionsTabs';
+import { LoadingRows } from '../ui/EmptyState';
+import { Dialog as SharedDialog } from '../ui/Dialog';
+import { toast } from '../ui/toast';
 
 const policyValues: ToolPolicyValue[] = ['inherit', 'allow', 'confirm', 'deny'];
 const toolKey = (tool: ToolPolicy) => JSON.stringify([tool.plugin_id, tool.service]);
@@ -36,7 +40,7 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
   const labels: Record<ToolPolicyValue, string> = { inherit: ui.policyInherit, allow: ui.policyAllow, confirm: ui.policyConfirm, deny: ui.policyDeny };
   const effects = { read_only: ui.catReadOnly, write: ui.catWrite, destructive: ui.catDestructive, unspecified: ui.catUnspecified };
   const load = async () => {
-    setLoading(true); setError(null);
+    setError(null);
     try {
       const [all, directory] = await Promise.all([listPackages(), getToolPolicies()]);
       const installed = all.filter(value => !value.Uninstalled && value.Role !== 'webui');
@@ -52,7 +56,7 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
   useEffect(() => { setQuery(''); setSelected(new Set()); }, [tab]);
   const mutate = async (action: () => Promise<void>, pluginID?: string) => {
     if (writing.current) return false;
-    writing.current = true; setBusy(true); setError(null); setDialogError(null);
+    writing.current = true; setBusy(true); setDialogError(null);
     const errors: string[] = [];
     try { await action(); } catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
     try {
@@ -63,7 +67,7 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
       if (pluginID) setPolicies(previous => Object.fromEntries(Object.entries(previous).filter(([id]) => id !== pluginID))); else setTools(null);
     }
     const message = errors.length ? errors.join('\n') : null;
-    setError(message); setDialogError(message); setBusy(false); writing.current = false;
+    if (message) toast.error(message); setDialogError(message); setBusy(false); writing.current = false;
     return errors.length === 0;
   };
   const controls = (pluginID: string, scope: CommandScope, label: string, command?: CommandPolicy, enabledOnly = false) => <CommandPolicyControls
@@ -121,20 +125,20 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
   return <div className="permissions-page">
     <PermissionsTabs active={tab} />
     <div className="permissions-toolbar">
-      <select aria-label={ui.filterPlugin} value={plugin} onChange={event => { setPlugin(event.target.value); setSelected(new Set()); }}><option value="">{ui.allPlugins}</option>{packages.map(value => <option key={value.ID} value={value.ID}>{value.ID}</option>)}</select>
-      {tab === 'commands' ? <select aria-label={ui.filterPermission} value={permission} onChange={event => setPermission(event.target.value)}><option value="">{ui.allPermissions}</option><option value="everyone">{ui.permEveryone}</option><option value="chat_admin">{ui.permGroupAdmin}</option><option value="admin">{ui.permAdminOnly}</option><option value="custom">{ui.customPermissions}</option></select>
-        : <select aria-label={ui.allPolicies} value={toolPolicy} onChange={event => { setToolPolicyFilter(event.target.value); setSelected(new Set()); }}><option value="">{ui.allPolicies}</option>{policyValues.map(value => <option key={value} value={value}>{labels[value]}</option>)}</select>}
+      <OptionSelect aria-label={ui.filterPlugin} value={plugin} onChange={event => { setPlugin(event.target.value); setSelected(new Set()); }}><option value="">{ui.allPlugins}</option>{packages.map(value => <option key={value.ID} value={value.ID}>{value.Name || value.ID}</option>)}</OptionSelect>
+      {tab === 'commands' ? <OptionSelect aria-label={ui.filterPermission} value={permission} onChange={event => setPermission(event.target.value)}><option value="">{ui.allPermissions}</option><option value="everyone">{ui.permEveryone}</option><option value="chat_admin">{ui.permGroupAdmin}</option><option value="admin">{ui.permAdminOnly}</option><option value="custom">{ui.customPermissions}</option></OptionSelect>
+        : <OptionSelect aria-label={ui.allPolicies} value={toolPolicy} onChange={event => { setToolPolicyFilter(event.target.value); setSelected(new Set()); }}><option value="">{ui.allPolicies}</option>{policyValues.map(value => <option key={value} value={value}>{labels[value]}</option>)}</OptionSelect>}
       <div className="permission-search"><Filter size={16} /><input aria-label={tab === 'commands' ? ui.searchCommandPlaceholder : ui.searchToolPlaceholder} placeholder={tab === 'commands' ? ui.searchCommandPlaceholder : ui.searchToolPlaceholder} value={query} onChange={event => { setQuery(event.target.value); setSelected(new Set()); }} /></div>
       <button type="button" className="detail-icon-button" disabled={busy || loading} aria-label={ui.refresh} onClick={() => void load()}><RefreshCw size={16} /></button>
       <button type="button" className="permission-expand" onClick={() => setCollapsed(previous => { const next = new Set(previous); for (const key of visibleKeys) { if (allCollapsed) next.delete(key); else next.add(key); } return next; })}>{allCollapsed ? <ChevronDown size={14} /> : <ChevronRight size={14} />}{allCollapsed ? ui.expandAll : ui.collapseAll}</button>
     </div>
     {error && <p className="plugins-error-banner" role="alert">{error}</p>}
-    {loading && <p role="status">{ui.loading}</p>}
+    {loading && <LoadingRows />}
     {!loading && tab === 'commands' && commandPackages.map(value => {
       const policy = policies[value.ID]; const open = !collapsed.has(value.ID);
       const conflicts = (policy?.shadows.length ?? 0) + (policy?.invalid_names.length ?? 0);
       return <section key={value.ID} className="command-plugin-card">
-        <div className="command-card-header"><button type="button" className="command-disclosure" aria-expanded={open} onClick={() => toggle(value.ID)}>{open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}<img className="plugin-mini-icon" src={packageIconURL(value.ID)} alt="" /><strong>{value.ID}</strong><span className="command-count">{policy?.commands.length} {ui.commandsCount}</span></button>
+        <div className="command-card-header"><button type="button" className="command-disclosure" aria-expanded={open} onClick={() => toggle(value.ID)}>{open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}<img className="plugin-mini-icon" src={packageIconURL(value.ID)} alt="" /><strong>{value.Name || value.ID}</strong><span className="command-count">{policy?.commands.length} {ui.commandsCount}</span></button>
           {conflicts > 0 && <span className="command-conflict-badge">{conflicts} {ui.conflictWarning}</span>}
           {policy && controls(value.ID, { kind: 'plugin' }, value.ID, undefined, !open)}
         </div>
@@ -146,10 +150,10 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
         </div>}
       </section>;
     })}
-    {!loading && tab === 'tools' && <><div className="tools-batch-bar"><select aria-label={ui.toolCategory} value={category} onChange={event => { setCategory(event.target.value); setSelected(new Set()); }}><option value="">{ui.all}</option>{Object.entries(effects).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><label><input type="checkbox" checked={visibleTools.length > 0 && pickedTools.length === visibleTools.length} onChange={event => setSelected(event.target.checked ? new Set(visibleTools.map(toolKey)) : new Set())} />{ui.selectAll}</label><select aria-label={ui.toolOverride} value={batchPolicy} onChange={event => setBatchPolicy(event.target.value as ToolPolicyValue)}>{policyValues.map(value => <option key={value} value={value}>{labels[value]}</option>)}</select><button type="button" disabled={busy || pickedTools.length === 0 || tools === null} onClick={() => void mutate(() => setToolPolicies(pickedTools.map(tool => ({ plugin_id: tool.plugin_id, service: tool.service, policy: batchPolicy }))))}>{ui.batchSet} ({pickedTools.length})</button></div>
+    {!loading && tab === 'tools' && <><div className="tools-batch-bar"><OptionSelect aria-label={ui.toolCategory} value={category} onChange={event => { setCategory(event.target.value); setSelected(new Set()); }}><option value="">{ui.all}</option>{Object.entries(effects).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</OptionSelect><label><CheckboxInput type="checkbox" checked={visibleTools.length > 0 && pickedTools.length === visibleTools.length} onChange={event => setSelected(event.target.checked ? new Set(visibleTools.map(toolKey)) : new Set())} />{ui.selectAll}</label><OptionSelect aria-label={ui.toolOverride} value={batchPolicy} onChange={event => setBatchPolicy(event.target.value as ToolPolicyValue)}>{policyValues.map(value => <option key={value} value={value}>{labels[value]}</option>)}</OptionSelect><button type="button" disabled={busy || pickedTools.length === 0 || tools === null} onClick={() => void mutate(() => setToolPolicies(pickedTools.map(tool => ({ plugin_id: tool.plugin_id, service: tool.service, policy: batchPolicy }))))}>{ui.batchSet} ({pickedTools.length})</button></div>
       {toolPlugins.map(id => { const open = !collapsed.has(id); const rows = visibleTools.filter(tool => tool.plugin_id === id); return <section key={id} className="tool-plugin-card">
-        <div className="command-card-header"><button type="button" className="command-disclosure" aria-expanded={open} onClick={() => toggle(id)}>{open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}<img className="plugin-mini-icon" src={packageIconURL(id)} alt="" /><strong>{id}</strong><span className="command-count">{rows.length} {ui.toolsCount}</span></button></div>
-        {open && <div className="command-card-body">{rows.map(tool => <div key={tool.service} className="tool-row"><label><input type="checkbox" checked={selected.has(toolKey(tool))} onChange={event => { const next = new Set(selected); if (event.target.checked) next.add(toolKey(tool)); else next.delete(toolKey(tool)); setSelected(next); }} /><span><strong>{tool.service}</strong><span className="tool-metadata">{effects[tool.effect]} · {ui.toolDefault}: {labels[tool.default]}</span></span></label>
+        <div className="command-card-header"><button type="button" className="command-disclosure" aria-expanded={open} onClick={() => toggle(id)}>{open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}<img className="plugin-mini-icon" src={packageIconURL(id)} alt="" /><strong>{packages.find(value => value.ID === id)?.Name || id}</strong><span className="command-count">{rows.length} {ui.toolsCount}</span></button></div>
+        {open && <div className="command-card-body">{rows.map(tool => <div key={tool.service} className="tool-row"><label><CheckboxInput type="checkbox" checked={selected.has(toolKey(tool))} onChange={event => { const next = new Set(selected); if (event.target.checked) next.add(toolKey(tool)); else next.delete(toolKey(tool)); setSelected(next); }} /><span><strong>{tool.service}</strong><span className="tool-metadata">{effects[tool.effect]} · {ui.toolDefault}: {labels[tool.default]}</span></span></label>
           <div className="tool-policy-options" role="group" aria-label={`${ui.toolOverride} ${tool.service}`}>{policyValues.map(policy => <button key={policy} type="button" className={`tool-policy-option policy-${policy}`} aria-pressed={tool.override === policy} aria-label={labels[policy]} title={labels[policy]} disabled={busy} onClick={() => void mutate(() => setToolPolicy({ plugin_id: tool.plugin_id, service: tool.service, policy }))}>{policy === 'inherit' ? <RotateCcw size={14} /> : labels[policy]}</button>)}</div>
         </div>)}</div>}
       </section>; })}
@@ -160,6 +164,6 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
       if (!matrix.length || matrix.some(path => path.some(token => !token || token.startsWith('/')))) { setDialogError(ui.invalidCommandName); return; }
       void mutate(() => setCommandNames(names.plugin, names.command.route_id, matrix), names.plugin).then(success => { if (success) setNames(null); });
     }} onReset={() => { if (names) void mutate(() => resetCommandNames(names.plugin, names.command.route_id), names.plugin).then(success => { if (success) setNames(null); }); }} />
-    <Dialog.Root open={custom !== null} onOpenChange={open => { if (!open && !busy) setCustom(null); }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content"><Dialog.Title>{ui.customPermissions}</Dialog.Title><Dialog.Description>{ui.permissionsInputHint}</Dialog.Description>{dialogError && <p role="alert">{dialogError}</p>}<form onSubmit={async event => { event.preventDefault(); if (!custom || !policies[custom.plugin]) return; const permissions = custom.permissions.split(',').map(value => value.trim()).filter(Boolean); if (await mutate(() => setPluginPolicy(custom.plugin, commandOverride(policies[custom.plugin].overrides, custom.scope, { permissions })), custom.plugin)) setCustom(null); }}><input aria-label={ui.permissions} value={custom?.permissions ?? ''} onChange={event => custom && setCustom({ ...custom, permissions: event.target.value })} /><div className="dialog-actions"><button type="button" disabled={busy} onClick={() => setCustom(null)}>{ui.cancel}</button><button type="submit" disabled={busy || !custom || !policies[custom.plugin]}>{ui.save}</button></div></form></Dialog.Content></Dialog.Portal></Dialog.Root>
+    <SharedDialog open={custom !== null} onOpenChange={open => { if (!open && !busy) setCustom(null); }} title={ui.customPermissions} description={ui.permissionsInputHint}>{dialogError && <p role="alert">{dialogError}</p>}<form onSubmit={async event => { event.preventDefault(); if (!custom || !policies[custom.plugin]) return; const permissions = custom.permissions.split(',').map(value => value.trim()).filter(Boolean); if (await mutate(() => setPluginPolicy(custom.plugin, commandOverride(policies[custom.plugin].overrides, custom.scope, { permissions })), custom.plugin)) setCustom(null); }}><input aria-label={ui.permissions} value={custom?.permissions ?? ''} onChange={event => custom && setCustom({ ...custom, permissions: event.target.value })} /><div className="dialog-actions"><button type="button" disabled={busy} onClick={() => setCustom(null)}>{ui.cancel}</button><button type="submit" disabled={busy || !custom || !policies[custom.plugin]}>{ui.save}</button></div></form></SharedDialog>
   </div>;
 }

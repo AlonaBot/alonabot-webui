@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import type { ChangeEvent, FormEvent, JSX, ReactNode } from 'react';
 import { Eye, EyeOff, Search, X } from 'lucide-react';
 import { fieldsFromSchema } from '../schema/model';
@@ -6,7 +7,12 @@ import type { Field, Template } from '../schema/model';
 import { buildPatch, isSecretSet, MissingSecretsError } from '../schema/patch';
 import { fieldExamples, fieldText, templateText } from '../i18n/catalog';
 import { useUI } from '../i18n/UI';
-import { AdminAPIError, type ConfigOption, type OptionsPage } from '../api/admin';
+import { Disclosure } from '../ui/Disclosure';
+import { Checkbox } from '../ui/Checkbox';
+import { Switch } from '../ui/Switch';
+import { AdminAPIError } from '../api/client';
+import { type ConfigOption, type OptionsPage } from '../api/config';
+import { Spinner } from '../ui/EmptyState';
 
 export type ConfigFormProps = {
   schema: unknown;
@@ -23,6 +29,8 @@ export type ConfigFormProps = {
   onReveal?: (path: string[]) => Promise<string>;
   footer?: ReactNode;
   editablePaths?: readonly string[];
+  /** 为真时只直接显示必填项，其余顶层字段收进「高级设置」。用于新建账号这类首次填写的表单。 */
+  collapseOptional?: boolean;
 };
 
 interface FormContextValue {
@@ -267,18 +275,18 @@ export function OptionsFromControl({ field, value, onChange, attributes, options
         {label(entry)}<button type="button" aria-label={`${ui.removeRow} ${entry}`} onClick={() => choose(entry)}><X size={14} /></button>
       </span>)}</div> : <div className="option-current">{selected.map(entry => <span key={entry}>{label(entry)}</span>)}</div>}
       <div className="options-input-row">
-        <input {...attributes} required={field.required && selected.length === 0} value={query} placeholder={ui.searchOptions}
+        <Search size={16} aria-hidden />
+        <input {...attributes} required={field.required && selected.length === 0} value={query} placeholder={ui.searchOptions} aria-expanded={open}
           onFocus={() => setOpen(true)} onChange={event => { setQuery(event.currentTarget.value); setOpen(true); }} />
-        <button type="button" aria-label={ui.searchOptions} aria-expanded={open} onClick={() => setOpen(!open)}><Search size={16} /></button>
       </div>
       {open && <div className="options-dropdown">
-        {loading && <p role="status">{ui.loading}</p>}
+        {loading && <div className="options-loading"><Spinner size={16} /></div>}
         {page.options.map(option => <button type="button" key={option.value} className="option-item" aria-pressed={selected.includes(option.value)} onClick={() => choose(option.value)}>
           <span>{option.label}</span>{option.description && <small>{option.description}</small>}
         </button>)}
-        {!loading && page.options.length === 0 && <p>{ui.noMatches}</p>}
-        {page.more && <p>{ui.searchMoreOptions}</p>}
-        {query && !page.options.some(option => option.value === query) && <button type="button" onClick={() => choose(query)}>{ui.customValue}: <code>{query}</code></button>}
+        {!loading && page.options.length === 0 && <p className="options-empty">{ui.noMatches}</p>}
+        {page.more && <p className="options-empty">{ui.searchMoreOptions}</p>}
+        {query && !page.options.some(option => option.value === query) && <button type="button" className="option-item" onClick={() => choose(query)}><span>{ui.customValue}: <code>{query}</code></span></button>}
       </div>}
     </>}
   </div>;
@@ -296,9 +304,7 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
   const ui = useUI();
   const id = useId();
   const formContext = useContext(FormContext);
-  const [editingSecret, setEditingSecret] = useState(value === undefined);
   const [showSecret, setShowSecret] = useState(false);
-  const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [revealing, setRevealing] = useState(false);
   const [revealError, setRevealError] = useState<string | null>(null);
 
@@ -310,13 +316,13 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
   const attributes = { id, 'aria-describedby': text.hint ? `${id}-hint` : undefined, 'aria-invalid': missingValue || undefined };
   let control;
 
-  const handleReveal = async () => {
+  const handleRevealInto = async () => {
     if (!formContext?.onReveal) return;
     setRevealing(true);
     setRevealError(null);
     try {
-      const plaintext = await formContext.onReveal(path);
-      setRevealedSecret(plaintext);
+      onChange(await formContext.onReveal(path));
+      setShowSecret(true);
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError')) setRevealError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -324,34 +330,36 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
     }
   };
 
+
   if (value === null) {
     control = <div className="default-pending" role="status">
       <p>{ui.defaultPending}</p>
       <button type="button" onClick={() => onChange(editableValue(original))}>{ui.undoReset}</button>
     </div>;
   } else if (field.secret) {
-    const set = isSecretSet(value) || (typeof value === 'string' && value.length > 0);
+    // 一个密码框加显示开关：留空保持已保存的值，输入即替换。
+    const stored = isSecretSet(original) || (typeof original === 'string' && original.length > 0);
+    const text = typeof value === 'string' ? value : '';
+    const toggle = async () => {
+      if (!showSecret && text === '' && stored && formContext?.onReveal) {
+        await handleRevealInto();
+        return;
+      }
+      setShowSecret(!showSecret);
+    };
     control = <div className="secret-control">
-      <span role="status">{set ? ui.secretSet : ui.secretUnset}</span>
-      {!editingSecret && <button type="button" onClick={() => { setShowSecret(false); setRevealedSecret(null); setEditingSecret(true); }}>{ui.modify}</button>}
-      {set && formContext?.onReveal && !revealedSecret && (
-        <button type="button" onClick={handleReveal} disabled={revealing}>
-          {revealing ? ui.loading : ui.revealSecret}
-        </button>
-      )}
-      {revealedSecret !== null && (
-        <div className="revealed-secret">
-          <code>{revealedSecret}</code>
-          <button type="button" onClick={() => setRevealedSecret(null)}>{ui.hideSecret}</button>
-        </div>
-      )}
+      <div className="secret-input">
+        <input {...attributes} type={showSecret ? 'text' : 'password'} autoComplete="new-password"
+          required={field.required && !stored} value={text} placeholder={stored ? ui.secretKeepPlaceholder : undefined}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            const next = event.currentTarget.value;
+            // 清空输入时恢复为已保存的值，而不是提交空字符串。
+            onChange(next === '' && stored ? original : next);
+          }} />
+        <button type="button" className="secret-toggle" aria-label={showSecret ? ui.hideSecret : ui.showSecret} aria-pressed={showSecret}
+          disabled={revealing} onClick={() => void toggle()}>{showSecret ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+      </div>
       {revealError && <p role="alert" className="form-error-inline">{revealError}</p>}
-      {editingSecret && <><input {...attributes} type={showSecret ? 'text' : 'password'} autoComplete="new-password"
-        required={field.required} value={typeof value === 'string' ? value : ''}
-        onChange={(event: ChangeEvent<HTMLInputElement>) => { setRevealedSecret(null); onChange(event.currentTarget.value); }} />
-        <button type="button" aria-label={showSecret ? ui.hideSecret : ui.showSecret} aria-pressed={showSecret}
-          onClick={() => setShowSecret(!showSecret)}>{showSecret ? <EyeOff size={18} /> : <Eye size={18} />}</button></>}
-      <button type="button" onClick={() => { setEditingSecret(false); setShowSecret(false); setRevealedSecret(null); onChange(null); }}>{ui.clear}</button>
     </div>;
   } else {
     switch (field.type) {
@@ -370,8 +378,7 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
           original={original as Record<string, unknown>} path={path} messages={messages} missing={missing} onChange={onChange} />;
         break;
       case 'bool':
-        control = <input {...attributes} type="checkbox" role="switch" checked={value === true}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.checked)} />;
+        control = <Switch id={id} aria-describedby={attributes['aria-describedby']} checked={value === true} onCheckedChange={onChange} />;
         break;
       case 'int':
       case 'float':
@@ -400,11 +407,11 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
               onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.currentTarget.value)} />
           </div>;
         } else if (field.options) {
-          control = <select {...attributes} required={field.required} value={typeof value === 'string' ? value : ''}
+          control = <OptionSelect {...attributes} required={field.required} value={typeof value === 'string' ? value : ''}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.currentTarget.value)}>
             {!field.options.includes(value as string) && <option value="" />}
             {field.options.map((option, index) => <option key={option} value={option}>{text.labels?.[index] ?? option}</option>)}
-          </select>;
+          </OptionSelect>;
         } else {
           control = <input {...attributes} type="text" required={field.required} value={typeof value === 'string' ? value : ''}
             onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.currentTarget.value)} />;
@@ -418,12 +425,15 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
   const rawExamples = formContext ? fieldExamples(messages, field) : [];
   const visibleExamples = rawExamples.filter(ex => checkCondition(ex.condition, formContext?.rootEdited ?? {}));
 
+  // 只有值不同于缺省值时才给出「恢复默认」；密钥用自己的清除按钮。
+  const customized = !field.secret && value !== undefined && value !== null
+    && !(Object.hasOwn(field, 'defaultValue') && JSON.stringify(value) === JSON.stringify(field.defaultValue));
   const title = <>{text.description}{field.required && <span className="required-mark"> · {ui.required}</span>}</>;
   const body = <>
     {field.type === 'object' && <legend>{title}</legend>}
     <div className="field-heading">
       {field.type !== 'object' && <label htmlFor={id}>{title}</label>}
-      <button type="button" disabled={!editable} onClick={() => { setEditingSecret(false); setRevealedSecret(null); setShowSecret(false); onChange(null); }}>{ui.restoreDefault}</button>
+      {customized && <button type="button" disabled={!editable} onClick={() => { setShowSecret(false); onChange(null); }}>{ui.restoreDefault}</button>}
     </div>
     {text.hint && <p id={`${id}-hint`} className={field.obviousHint ? 'field-hint obvious-hint' : 'field-hint'}
 >{text.hint}</p>}
@@ -556,8 +566,15 @@ function FormEditor(props: ConfigFormProps) {
           details = details.parentElement?.closest('details') ?? null;
         }
       }}>
-        <Fields key={resetVersion} fields={fields} value={edited} original={props.value as Record<string, unknown>}
-          path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
+        {props.collapseOptional ? <>
+          <Fields key={resetVersion} fields={fields.filter(field => field.required)} value={edited} original={props.value as Record<string, unknown>}
+            path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
+          {fields.some(field => !field.required && !field.invisible) && <Disclosure summary={ui.advancedSettings}>
+            <Fields key={resetVersion} fields={fields.filter(field => !field.required)} value={edited} original={props.value as Record<string, unknown>}
+              path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
+          </Disclosure>}
+        </> : <Fields key={resetVersion} fields={fields} value={edited} original={props.value as Record<string, unknown>}
+          path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />}
         {error && <div role="alert" className="form-error">
           <p>{error instanceof MissingSecretsError ? ui.missingSecrets : ui.patchError}</p>
           <pre>{error.message}</pre>
@@ -609,10 +626,15 @@ function StaticListControl(props: FieldProps & { id: string }) {
   const serial = useRef(0);
   const rows = useRef(values.map(() => ({ id: serial.current++ })));
   const text = fieldText(props.messages, props.field);
-  if (props.field.options) return <select id={props.id} multiple required={props.field.required} value={values as string[]}
-    onChange={(event: ChangeEvent<HTMLSelectElement>) => props.onChange(Array.from<HTMLOptionElement, string>(event.currentTarget.selectedOptions, option => option.value))}>
-    {props.field.options.map((option, index) => <option key={option} value={option}>{text.labels?.[index] ?? option}</option>)}
-  </select>;
+  if (props.field.options) {
+    const options = props.field.options;
+    return <div id={props.id} className="option-checks" role="group" aria-label={text.description}>
+      {options.map((option, index) => <Checkbox key={option} label={text.labels?.[index] ?? option} checked={values.includes(option)}
+        // 按选项顺序写回，结果与原多选框一致。
+        onCheckedChange={on => props.onChange(options.filter(entry => entry === option ? on : values.includes(entry)))} />)}
+      {props.field.required && values.length === 0 && <input required value="" aria-label={ui.emptyCollection} onChange={() => {}} className="visually-hidden" />}
+    </div>;
+  }
   return <div id={props.id} className="list-control">
     {values.map((value, index) => <div key={rows.current[index].id} className="collection-row">
       {props.field.children ? <Fields fields={props.field.children} value={value as Record<string, unknown>}
@@ -678,14 +700,14 @@ function DictControl({ value = {}, onChange, id, required }: { value: Record<str
             onChange={(event: ChangeEvent<HTMLInputElement>) => change({ stored: event.currentTarget.value, text: event.currentTarget.value })} />
             : <button type="button" onClick={() => change({ editingSecret: true })}>{ui.modify}</button>}
         </div> : <>
-          <label>{ui.valueType}<select value={row.kind} onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+          <label>{ui.valueType}<OptionSelect value={row.kind} onChange={(event: ChangeEvent<HTMLSelectElement>) => {
             const kind = event.currentTarget.value as DictRow['kind'];
             change({ kind, text: kind === 'string' ? '' : kind === 'number' ? '0' : kind === 'boolean' ? 'false' : '{}' });
           }}><option value="string">{ui.stringValue}</option><option value="number">{ui.numberValue}</option>
-            <option value="boolean">{ui.booleanValue}</option><option value="json">{ui.jsonValue}</option></select></label>
-          <label>{ui.value}{row.kind === 'boolean' ? <select value={row.text}
+            <option value="boolean">{ui.booleanValue}</option><option value="json">{ui.jsonValue}</option></OptionSelect></label>
+          <label>{ui.value}{row.kind === 'boolean' ? <OptionSelect value={row.text}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => change({ text: event.currentTarget.value })}>
-            <option value="true">{ui.trueValue}</option><option value="false">{ui.falseValue}</option></select>
+            <option value="true">{ui.trueValue}</option><option value="false">{ui.falseValue}</option></OptionSelect>
             : <textarea value={row.text} className={row.kind === 'json' ? 'code-editor' : undefined} aria-invalid={!!parseError || undefined}
               ref={(input: HTMLTextAreaElement | null) => { input?.setCustomValidity(parseError ? row.kind === 'number' ? ui.invalidNumber : ui.invalidJSON : ''); }}
               onChange={(event: ChangeEvent<HTMLTextAreaElement>) => change({ text: event.currentTarget.value })} />}</label>
@@ -744,7 +766,7 @@ function TemplateControl(props: FieldProps & { id: string }) {
     const text = template && templateText(props.messages, template);
     const rowPath = many ? [...props.path, String(index)] : props.path;
     return <>
-      <select id={many ? undefined : props.id} aria-label={fieldText(props.messages, props.field).description}
+      <OptionSelect id={many ? undefined : props.id} aria-label={fieldText(props.messages, props.field).description}
         required={many || props.field.required} value={template?.key ?? ''}
         onChange={(event: ChangeEvent<HTMLSelectElement>) => {
           const chosen = props.field.templates!.find(candidate => candidate.key === event.currentTarget.value);
@@ -752,7 +774,7 @@ function TemplateControl(props: FieldProps & { id: string }) {
         }}>
         <option value="">{ui.chooseTemplate}</option>
         {props.field.templates!.map(candidate => <option key={candidate.key} value={candidate.key}>{templateText(props.messages, candidate).name}</option>)}
-      </select>
+      </OptionSelect>
       {text?.hint && <p className="field-hint">{text.hint}</p>}
       {template && <Fields key={template.key} fields={template.children} value={value![template.key] as Record<string, unknown>}
         original={(original && Object.hasOwn(original, template.key) ? original[template.key] : undefined) as Record<string, unknown>}
@@ -761,17 +783,18 @@ function TemplateControl(props: FieldProps & { id: string }) {
     </>;
   }
   if (!many) return editor(values[0], 0);
+  const missingIn = (index: number) => props.missing.some(path => path.startsWith(valuePath([...props.path, String(index)]) + '/'));
   return <div id={props.id} className="template-list">
     {values.map((value, index) => {
       const template = selection(value);
       const text = template && templateText(props.messages, template);
       return <div key={rows.current[index].id} className="collection-row">
-        <details open={props.missing.some(path => path.startsWith(valuePath([...props.path, String(index)]) + '/')) || undefined}>
-          <summary>{template ? label(template, value!) : ui.chooseTemplate}
-            {text?.hint && !template!.hideHintInList && <span className="summary-hint">{text.hint}</span>}
-          </summary>
+        {/* 有缺失字段时换 key 重新挂载，使该行自动展开。 */}
+        <Disclosure key={missingIn(index) ? 'missing' : 'ok'} defaultOpen={missingIn(index) || !template}
+          summary={template ? label(template, value!) : ui.chooseTemplate}
+          hint={text?.hint && !template!.hideHintInList ? text.hint : undefined}>
           {editor(value, index)}
-        </details>
+        </Disclosure>
         <button type="button" onClick={() => { rows.current.splice(index, 1); props.onChange(values.filter((_, at) => at !== index)); }}>{ui.removeRow}</button>
       </div>;
     })}

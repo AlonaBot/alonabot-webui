@@ -1,57 +1,35 @@
-import React, { type JSX } from 'react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import type { JSX } from 'react';
 import { LogOut } from 'lucide-react';
 import markSvg from '../assets/mark.svg?no-inline';
 import { useUI } from '../i18n/UI';
+import { Menu, MenuItem } from '../ui/Menu';
 import { GlobalSearch } from './GlobalSearch';
 import type { SearchItem } from './search';
-
-interface TopBarProps {
-  title?: string;
-  searchItems?: SearchItem[];
-  onLogout?: () => void;
-  openRequest?: number;
-  children?: React.ReactNode;
-}
+import styles from './TopBar.module.css';
 
 /**
- * 内容区顶部栏。
- * 桌面端右端常驻可自适应展开的全局搜索；移动端包含标志与当前页面名称，且可从标志菜单登出。
+ * 内容区顶栏：左右两个页面插槽（见 PageHeader）与全局搜索。
+ * 手机上额外显示标志与当前页面名，标志菜单可退出登录；插槽内容换行排在标题下方。
  */
-export function TopBar(props: TopBarProps): JSX.Element {
-  const { title, searchItems = [], onLogout, openRequest, children } = props;
+export function TopBar({ title, searchItems, openRequest, onLogout, leftRef, rightRef }: {
+  title: string;
+  searchItems: SearchItem[];
+  openRequest: number;
+  onLogout?: () => void;
+  leftRef: (node: HTMLElement | null) => void;
+  rightRef: (node: HTMLElement | null) => void;
+}): JSX.Element {
   const ui = useUI();
-
-  return (
-    <header className="shell-topbar">
-      <div className="topbar-left">
-        <div className="mobile-brand-slot">
-          {onLogout ? (
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <button type="button" className="mobile-brand-button" aria-label={ui.brandMenu}>
-                  <img src={markSvg} alt="AlonaBot" className="mobile-brand-mark" width={28} height={28} />
-                </button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content className="dropdown-menu-content" side="bottom" align="start">
-                  <DropdownMenu.Item className="dropdown-menu-item is-danger" onSelect={onLogout}>
-                    <LogOut size={15} />
-                    <span>{ui.logout}</span>
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
-          ) : (
-            <img src={markSvg} alt="AlonaBot" className="mobile-brand-mark" width={28} height={28} />
-          )}
-          {title ? <h1 className="mobile-page-title">{title}</h1> : null}
-        </div>
-        {children ? <div className="topbar-content-slot">{children}</div> : null}
-      </div>
-      <div className="topbar-right">
-        <GlobalSearch items={searchItems} openRequest={openRequest} />
-      </div>
-    </header>
-  );
+  const mark = <img src={markSvg} alt="" width={26} height={28} />;
+  return <header className={styles.bar}>
+    <div className={styles.mobileTitle}>
+      {onLogout ? <Menu trigger={<button type="button" className={styles.mark} aria-label={ui.brandMenu}>{mark}</button>}>
+        <MenuItem icon={<LogOut size={16} />} onSelect={onLogout}>{ui.logout}</MenuItem>
+      </Menu> : mark}
+      <h1>{title}</h1>
+    </div>
+    <div ref={leftRef} className={styles.left} />
+    <div ref={rightRef} className={styles.right} />
+    <GlobalSearch items={searchItems} openRequest={openRequest} />
+  </header>;
 }

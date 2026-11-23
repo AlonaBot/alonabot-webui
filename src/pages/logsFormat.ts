@@ -3,7 +3,9 @@
  * 遵循 ADMIN-API §8, CONTRACTS §14 与 DECISIONS D-158。
  */
 
-import type { AdapterInstance, LogRecord, Package } from '../api/admin';
+import type { AdapterInstance } from '../api/instances';
+import type { LogRecord } from '../api/logs';
+import type { Package } from '../api/packages';
 
 export type LogLevelKey = 'critical' | 'error' | 'warning' | 'info' | 'debug';
 

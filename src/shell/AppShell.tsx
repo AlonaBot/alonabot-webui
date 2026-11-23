@@ -1,125 +1,92 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { useCallback, useMemo, useState, type JSX, type ReactNode } from 'react';
+import { AppWindow } from 'lucide-react';
 import { useUI } from '../i18n/UI';
+import { installed, usePackages } from '../queries/packages';
 import { routes } from '../routes';
-import { listPackages, onPackagesChanged } from '../api/admin';
 import { MobileTabBar } from './MobileTabBar';
-import { navigate, usePath } from './router';
+import { PageHeaderSlots } from './PageHeader';
+import { navigate, usePath, useQueryParam } from './router';
 import { SearchContext, type SearchItem } from './search';
-// @ts-ignore macOS 大小写不敏感文件系统下避免 Sidebar.tsx 与 sidebar.ts 解析冲突
-import { Sidebar } from './Sidebar.tsx';
+import { Sidebar, type NavEntry } from './Sidebar';
 import { TopBar } from './TopBar';
+import styles from './AppShell.module.css';
+
+/** 插件页面在详情页里以标签打开；侧栏与搜索共用这个地址。 */
+export function pluginPagePath(pluginID: string, page: string): string {
+  return `/pages/${encodeURIComponent(pluginID)}?path=${encodeURIComponent(page)}`;
+}
 
 /**
- * 官方 WebUI 核心外壳组件。
- * 承载视觉令牌系统、桌面侧栏、顶栏全局搜索、移动端标签栏与路由视图内容。
+ * 管理界面外壳：桌面侧栏、顶栏（页面插槽 + 全局搜索）、内容区与手机底栏。
+ * 侧栏条目由内置页面与已安装插件声明的页面组成；没有 Agent 时「模型」置灰。
  */
-export function AppShell(props: {
+export function AppShell({ version, onLogout, coreUpdate, coreUpdateFailed, children }: {
   version: string;
   onLogout?: () => void;
   coreUpdate?: { version: string; releaseURL: string };
   coreUpdateFailed?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }): JSX.Element {
-  const { version, onLogout, coreUpdate, coreUpdateFailed, children } = props;
-  const currentPath = usePath();
   const ui = useUI();
+  const labels = ui as Record<string, string>;
+  const path = usePath();
+  const pagePath = useQueryParam('path');
+  const packageQuery = usePackages();
+  const packages = useMemo(() => installed(packageQuery.data), [packageQuery.data]);
+  const agentMissing = packageQuery.isSuccess && !packages.some(item => item.Role === 'agent');
 
-  // Agent 组件安装状态感知（明确为 false 时模型入口置灰并从搜索排除）
-  const [agentInstalled, setAgentInstalled] = useState<boolean | undefined>(undefined);
-  const [agentCheckError, setAgentCheckError] = useState<string | null>(null);
+  const pageEntries = useMemo<NavEntry[]>(() => packages.flatMap(item => (item.pages ?? []).map(page => ({
+    id: `page:${item.ID}:${page.path}`,
+    label: page.title,
+    icon: AppWindow,
+    to: pluginPagePath(item.ID, page.path),
+    active: path === `/pages/${encodeURIComponent(item.ID)}` && pagePath === page.path,
+    disabledReason: item.Enabled ? undefined : ui.pluginPageDisabled,
+  }))), [packages, path, pagePath, ui]);
+  const onPluginPage = pageEntries.some(entry => entry.active);
 
-  const agentRequest = useRef(0);
-  const checkAgentStatus = useCallback(async () => {
-    const revision = ++agentRequest.current;
-    try {
-      const packages = await listPackages();
-      if (revision !== agentRequest.current) return;
-      const installed = packages.some(p => p.Role === 'agent' && !p.Uninstalled);
-      setAgentInstalled(installed);
-      setAgentCheckError(null);
-    } catch (err) {
-      if (revision === agentRequest.current) setAgentCheckError(err instanceof Error ? err.message : String(err));
-    }
-  }, []);
+  const routeEntry = useCallback((route: typeof routes[number]): NavEntry => ({
+    id: route.id,
+    label: labels[route.label],
+    icon: route.icon,
+    to: route.path,
+    active: path === route.path || (path.startsWith(route.path + '/') && !(route.path === '/components' && onPluginPage)),
+    disabledReason: route.id === 'models' && agentMissing ? ui.modelsNeedAgent : undefined,
+  }), [labels, path, onPluginPage, agentMissing, ui]);
 
-  useEffect(() => {
-    void checkAgentStatus();
-  }, [currentPath, checkAgentStatus]);
+  const mainEntries = useMemo(() => [...routes.filter(route => route.group === 'main' && route.navigation !== false).map(routeEntry), ...pageEntries], [routeEntry, pageEntries]);
+  const bottomEntries = useMemo(() => routes.filter(route => route.group === 'bottom').map(routeEntry), [routeEntry]);
 
-  useEffect(() => {
-    const unsubscribe = onPackagesChanged(() => { void checkAgentStatus(); });
-    return () => { unsubscribe(); ++agentRequest.current; };
-  }, [checkAgentStatus]);
-
-  // 搜索项管理：合并系统路由项与动态注册项
-  const [registeredItems, setRegisteredItems] = useState<SearchItem[]>([]);
+  // 页面通过 SearchContext 注册的条目与内置页面、插件页面合并。
+  const [registered, setRegistered] = useState<SearchItem[]>([]);
   const [openRequest, setOpenRequest] = useState(0);
-
-  const register = useCallback((newItems: SearchItem[]) => {
-    setRegisteredItems(prev => [...prev, ...newItems]);
-    return () => {
-      setRegisteredItems(prev => prev.filter(item => !newItems.includes(item)));
-    };
+  const register = useCallback((items: SearchItem[]) => {
+    setRegistered(previous => [...previous, ...items]);
+    return () => setRegistered(previous => previous.filter(item => !items.includes(item)));
   }, []);
+  const searchContext = useMemo(() => ({ register, open: () => setOpenRequest(value => value + 1) }), [register]);
+  const searchItems = useMemo<SearchItem[]>(() => [
+    ...mainEntries.concat(bottomEntries).filter(entry => !entry.disabledReason).map(entry => ({
+      id: `nav-${entry.id}`, title: entry.label, section: ui.pageSection, icon: entry.icon, keywords: [entry.to], run: () => navigate(entry.to),
+    })),
+    ...registered.filter(item => !(agentMissing && item.id.startsWith('models-'))),
+  ], [mainEntries, bottomEntries, registered, agentMissing, ui]);
 
-  const open = useCallback(() => {
-    setOpenRequest(prev => prev + 1);
-  }, []);
+  const [left, setLeft] = useState<HTMLElement | null>(null);
+  const [right, setRight] = useState<HTMLElement | null>(null);
+  const slots = useMemo(() => ({ left, right }), [left, right]);
+  const title = [...mainEntries, ...bottomEntries].find(entry => entry.active)?.label ?? '';
 
-  const searchContextValue = useMemo(() => ({ register, open }), [register, open]);
-
-  // 将当前路由表默认注册为搜索项（section: '页面' / localized pageSection）
-  // 当明确为 agentInstalled === false 时，搜索省略模型路由
-  const routeSearchItems = useMemo<SearchItem[]>(() => {
-    return routes
-      .filter(r => !(agentInstalled === false && r.id === 'models'))
-      .map(r => {
-        const labelText = (ui as Record<string, string>)[r.label];
-        return {
-          id: `route-${r.id}`,
-          title: labelText,
-          section: ui.pageSection,
-          keywords: [r.path],
-          run: () => navigate(r.path),
-        };
-      });
-  }, [ui, agentInstalled]);
-
-  const allSearchItems = useMemo(() => {
-    return [...routeSearchItems, ...registeredItems.filter(item => !(agentInstalled === false && item.id.startsWith('models-')))];
-  }, [routeSearchItems, registeredItems, agentInstalled]);
-
-  // 解析当前页面标题（用于移动端顶栏与桌面顶栏）
-  const activeRoute = routes.find(r => r.path === currentPath || (r.id === 'plugins' && currentPath.startsWith('/components/')));
-  const currentTitle = activeRoute ? (ui as Record<string, string>)[activeRoute.label] : '';
-
-  return (
-    <SearchContext.Provider value={searchContextValue}>
-      <div className="app-shell">
-        <Sidebar
-          routes={routes}
-          version={version}
-          onLogout={onLogout}
-          coreUpdate={coreUpdate}
-          coreUpdateFailed={coreUpdateFailed}
-          agentInstalled={agentInstalled}
-        />
-
-        <div className="shell-main">
-          <TopBar title={currentTitle} searchItems={allSearchItems} onLogout={onLogout} openRequest={openRequest} />
-          {agentCheckError ? (
-            <div className="plugins-error-banner" role="alert">
-              <span>{agentCheckError}</span>
-              <button type="button" onClick={() => void checkAgentStatus()}>
-                {ui.refresh}
-              </button>
-            </div>
-          ) : null}
-          <main className="shell-content">{children}</main>
+  return <SearchContext.Provider value={searchContext}>
+    <PageHeaderSlots.Provider value={slots}>
+      <div className={styles.shell}>
+        <Sidebar entries={mainEntries} bottom={bottomEntries} version={version} onLogout={onLogout} coreUpdate={coreUpdate} coreUpdateFailed={coreUpdateFailed} />
+        <div className={styles.main}>
+          <TopBar title={title} searchItems={searchItems} openRequest={openRequest} onLogout={onLogout} leftRef={setLeft} rightRef={setRight} />
+          <main key={path} className={styles.content}>{children}</main>
         </div>
-
-        <MobileTabBar routes={routes} agentInstalled={agentInstalled} />
+        <MobileTabBar entries={[...mainEntries, ...bottomEntries]} />
       </div>
-    </SearchContext.Provider>
-  );
+    </PageHeaderSlots.Provider>
+  </SearchContext.Provider>;
 }

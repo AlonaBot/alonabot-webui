@@ -1,0 +1,24 @@
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.trigger:hover { border: 0; background: none; color: var(--color-accent-strong); }
+.chevron { flex: none; color: var(--color-ink-muted); transition: transform var(--dur) var(--ease-out); }
+.root[data-open] .chevron { transform: rotate(90deg); }
+.summary { min-width: 0; overflow-wrap: anywhere; }
+.hint { margin-left: auto; font-size: var(--text-xs); font-weight: 400; color: var(--color-ink-muted); }
+
+/* grid 行高从 0fr 过渡到 1fr，实现不需测量的高度动画。 */
+.panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-slow) var(--ease-in-out); }
+.root[data-open] .panel { grid-template-rows: 1fr; }
+.inner { min-height: 0; overflow: hidden; }
+.root[data-open] .inner { padding-top: var(--space-2); }

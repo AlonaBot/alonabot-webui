@@ -1,4 +1,6 @@
-import { AdminAPIError, getPluginConfig, requestPluginPage } from '../api/admin';
+import { AdminAPIError } from '../api/client';
+import { getPluginConfig } from '../api/config';
+import { requestPluginPage } from '../api/packages';
 import { pickLocale } from '../i18n/catalog';
 
 const channel = 'alonabot.plugin';

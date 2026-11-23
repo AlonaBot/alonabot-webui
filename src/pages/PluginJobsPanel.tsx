@@ -1,11 +1,9 @@
 import { useEffect, useState, useCallback, useMemo, type JSX } from 'react';
 import { AlertCircle, Calendar, Pause, Play, RefreshCw, Search, X } from 'lucide-react';
-import {
-  listPluginJobs,
-  changePluginJob,
-  type PluginJob,
-} from '../api/admin';
+import { listPluginJobs, changePluginJob, type PluginJob } from '../api/packages';
 import { useUI } from '../i18n/UI';
+import { LoadingRows } from '../ui/EmptyState';
+import { toast } from '../ui/toast';
 
 export function PluginJobsPanel(props: { id: string }): JSX.Element {
   const { id } = props;
@@ -18,7 +16,6 @@ export function PluginJobsPanel(props: { id: string }): JSX.Element {
   const [operatingId, setOperatingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
       const res = await listPluginJobs(id);
@@ -42,7 +39,7 @@ export function PluginJobsPanel(props: { id: string }): JSX.Element {
       await changePluginJob(id, job.job_id, action);
       await loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      toast.error(err);
     } finally {
       setOperatingId(null);
     }
@@ -57,7 +54,7 @@ export function PluginJobsPanel(props: { id: string }): JSX.Element {
   }, [jobs, query]);
 
   if (loading) {
-    return <div className="panel-loading"><p role="status">{ui.loading}</p></div>;
+    return <LoadingRows />;
   }
 
   return (

@@ -1,11 +1,15 @@
 import { createContext } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
-/** 全局搜索条目定义。 */
+/** 全局搜索条目。context 是所在位置（如「天气 › 配置」），value 是设置项的当前值，都显示在结果行里。 */
 export type SearchItem = {
   id: string;
   title: string;
   section: string;
   keywords?: string[];
+  icon?: LucideIcon;
+  context?: string;
+  value?: string;
   run: () => void;
 };
 
@@ -25,8 +29,9 @@ export function filterSearch(items: SearchItem[], query: string): SearchItem[] {
   for (const item of items) {
     const titleMatches = item.title.toLowerCase().includes(normalized);
     const keywordMatches = item.keywords?.some(kw => kw.toLowerCase().includes(normalized)) ?? false;
+    const contextMatches = item.context?.toLowerCase().includes(normalized) ?? false;
 
-    if (titleMatches || keywordMatches) {
+    if (titleMatches || keywordMatches || contextMatches) {
       const existing = sectionMap.get(item.section);
       if (existing) {
         existing.push(item);

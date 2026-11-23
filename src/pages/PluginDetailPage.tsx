@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState, type JSX } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { OptionSelect, CheckboxInput } from '../ui/NativeAdapters';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   Calendar,
@@ -18,44 +18,18 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import {
-  AdminAPIError,
-  changePackage,
-  getLogLevels,
-  isConfirmationError,
-  listPackages,
-  listGenerations,
-  packageIconURL,
-  rollbackPackage,
-  setPackageLogLevel,
-  uninstallPackage,
-  getAllowedInstances,
-  setAllowedInstances,
-  listInstances,
-  getPluginConfig,
-  getPluginRuntime,
-  getPluginSleepPolicy,
-  setPluginSleepPolicy,
-  patchPluginConfig,
-  type Generation,
-  type LogLevels,
-  type Package,
-  type SourceLogLevel,
-  type AllowedInstances,
-  type AdapterInstance,
-  type ConfigSnapshot,
-  listCoreOptions,
-  resolveCoreOptions,
-  type ConfigOption,
-  type PluginRuntime,
-  type SleepPolicy,
-} from '../api/admin';
+import { AdminAPIError, isConfirmationError } from '../api/client';
+import { getPluginConfig, patchPluginConfig, type ConfigSnapshot, listCoreOptions, resolveCoreOptions, type ConfigOption } from '../api/config';
+import { listInstances, type AdapterInstance } from '../api/instances';
+import { getLogLevels, setPackageLogLevel, type LogLevels, type SourceLogLevel } from '../api/logs';
+import { changePackage, listPackages, listGenerations, packageIconURL, rollbackPackage, uninstallPackage, getPluginRuntime, getPluginSleepPolicy, setPluginSleepPolicy, type Generation, type Package, type PluginRuntime, type SleepPolicy } from '../api/packages';
+import { getAllowedInstances, setAllowedInstances, type AllowedInstances } from '../api/policies';
 import { ChangelogDialog } from '../components/ChangelogDialog';
 import { StoragePanel } from './StoragePanel';
 import { ConversationsPanel } from './ConversationsPanel';
 import { DatabasePanel } from './DatabasePanel';
 import { useUI } from '../i18n/UI';
-import { Link, navigate } from '../shell/router';
+import { Link, navigate, useQueryParam } from '../shell/router';
 import { SearchContext } from '../shell/search';
 import { PluginConfigPanel } from './PluginConfigPanel';
 import { PluginJobsPanel } from './PluginJobsPanel';
@@ -63,6 +37,13 @@ import { useUISettings } from '../shell/settings';
 import { rawConfigPatch } from './rawConfig';
 import { PluginPageFrame } from '../components/PluginPageFrame';
 import { PluginSleepPanel } from './PluginSleepPanel';
+import { LoadingRows, Skeleton, Spinner } from '../ui/EmptyState';
+import { RadioGroup } from '../ui/RadioGroup';
+import { UninstallDialog } from '../features/plugins/PluginDialogs';
+import { usePackageActions } from '../features/plugins/usePackageActions';
+import { Dialog as SharedDialog } from '../ui/Dialog';
+import { toast } from '../ui/toast';
+import { Disclosure } from '../ui/Disclosure';
 
 /** PluginDetailPage 展示保留代次、回退确认及组件高级设置。 */
 export function PluginDetailPage(props: {
@@ -71,6 +52,7 @@ export function PluginDetailPage(props: {
 }): JSX.Element {
   const { id, generations } = props;
   const ui = useUI();
+  const actions = usePackageActions();
   const { locale } = useUISettings();
   const { register } = useContext(SearchContext);
 
@@ -88,17 +70,17 @@ export function PluginDetailPage(props: {
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'config' | `page:${string}` | 'jobs' | 'data' | 'versions' | 'advanced'>('config');
 
+  // 地址里的 ?tab= 决定当前标签，侧栏的插件页面入口与刷新后都能回到同一标签。
+  const tabParam = useQueryParam('tab');
   useEffect(() => {
-    const sync = () => { if (new URLSearchParams(window.location.search).get('tab') === 'config') setActiveTab('config'); };
-    sync(); window.addEventListener('popstate', sync);
-    return () => window.removeEventListener('popstate', sync);
-  }, []);
+    if (tabParam === 'config' || tabParam === 'jobs' || tabParam === 'data' || tabParam === 'versions' || tabParam === 'advanced') setActiveTab(tabParam);
+    else if (tabParam?.startsWith('page:')) setActiveTab(tabParam as `page:${string}`);
+  }, [tabParam]);
 
   // 发信许可与实例
   const [allowedInstances, setAllowedInstancesState] = useState<AllowedInstances | null>(null);
   const [allAdapterInstances, setAllAdapterInstances] = useState<AdapterInstance[]>([]);
   const [savingAllowed, setSavingAllowed] = useState(false);
-  const [allowedSaved, setAllowedSaved] = useState(false);
 
   const [allowedQuery, setAllowedQuery] = useState('');
   const [allowedOptions, setAllowedOptions] = useState<ConfigOption[]>([]);
@@ -111,14 +93,12 @@ export function PluginDetailPage(props: {
   const [rawConflict, setRawConflict] = useState<ConfigSnapshot | null>(null);
   const [rawJsonText, setRawJsonText] = useState('{}');
   const [savingRawJson, setSavingRawJson] = useState(false);
-  const [rawJsonSaved, setRawJsonSaved] = useState(false);
   const [rawJsonError, setRawJsonError] = useState<string | null>(null);
   const [dataView, setDataView] = useState<'database' | 'storage' | 'conversations'>('database');
 
   // 日志级别状态
   const [logLevels, setLogLevels] = useState<LogLevels | null>(null);
   const [savingLogLevel, setSavingLogLevel] = useState(false);
-  const [logLevelSavedMessage, setLogLevelSavedMessage] = useState(false);
   const [sleepPolicy, setSleepPolicy] = useState<SleepPolicy | null>(null);
   const [runtime, setRuntime] = useState<PluginRuntime | null>(null);
   const [sleepPolicyError, setSleepPolicyError] = useState<string | null>(null);
@@ -134,7 +114,6 @@ export function PluginDetailPage(props: {
 
   // 卸载对话框
   const [uninstallModalOpen, setUninstallModalOpen] = useState(false);
-  const [purgeLevel, setPurgeLevel] = useState<0 | 1 | 2>(0);
 
   // 409 确认对话框
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -176,7 +155,6 @@ export function PluginDetailPage(props: {
   };
 
   const loadData = async () => {
-    setLoading(true);
     setGenerationError(null);
     const report = (error: unknown) => setErrorBanner(previous => [previous, error instanceof Error ? error.message : String(error)].filter(Boolean).join('\n'));
     await Promise.all([
@@ -209,14 +187,12 @@ export function PluginDetailPage(props: {
 
   const handleSaveAllowedInstances = async (value: AllowedInstances) => {
     setSavingAllowed(true);
-    setAllowedSaved(false);
     try {
       await setAllowedInstances(id, value);
       setAllowedInstancesState(await getAllowedInstances(id));
-      setAllowedSaved(true);
-      setTimeout(() => setAllowedSaved(false), 3000);
+      toast.success(ui.saved);
     } catch (err: unknown) {
-      setErrorBanner(err instanceof Error ? err.message : String(err));
+      toast.error(err);
       try { setAllowedInstancesState(await getAllowedInstances(id)); } catch (error) { setErrorBanner(previous => `${previous}\n${error instanceof Error ? error.message : String(error)}`); setAllowedInstancesState(null); }
     } finally {
       setSavingAllowed(false);
@@ -226,12 +202,11 @@ export function PluginDetailPage(props: {
   const handleSaveRawJson = async () => {
     setSavingRawJson(true);
     setRawJsonError(null);
-    setRawJsonSaved(false);
     try {
       const parsed: unknown = JSON.parse(rawJsonText);
       const snapshot = rawSnapshot!;
       await patchPluginConfig(id, snapshot.active_generation, rawConfigPatch(snapshot.pending?.config ?? snapshot.active, parsed));
-      setRawJsonSaved(true);
+      toast.success(ui.saved);
       await loadData();
     } catch (error) {
       setRawJsonError(error instanceof Error ? error.message : String(error));
@@ -303,7 +278,7 @@ export function PluginDetailPage(props: {
         });
         setConfirmModalOpen(true);
       } else {
-        setErrorBanner(err instanceof Error ? err.message : String(err));
+        toast.error(err);
         await loadData();
       }
     }
@@ -315,7 +290,7 @@ export function PluginDetailPage(props: {
       await changePackage('restart', pkg.ID);
       await loadData();
     } catch (err: unknown) {
-      setErrorBanner(err instanceof Error ? err.message : String(err));
+      toast.error(err);
       await loadData();
     }
   };
@@ -326,30 +301,12 @@ export function PluginDetailPage(props: {
       await changePackage('reload', pkg.ID);
       await loadData();
     } catch (err: unknown) {
-      setErrorBanner(err instanceof Error ? err.message : String(err));
+      toast.error(err);
       await loadData();
     }
   };
 
-  const executeUninstall = async (confirm = false) => {
-    if (!pkg) return;
-    try {
-      await uninstallPackage(pkg.ID, purgeLevel, confirm);
-      setUninstallModalOpen(false);
-      navigate('/components', { replace: true });
-    } catch (err: unknown) {
-      if (isConfirmationError(err)) {
-        setConfirmAffected(err.affected);
-        setPendingConfirmAction(() => async () => {
-          await executeUninstall(true);
-        });
-        setConfirmModalOpen(true);
-      } else {
-        setErrorBanner(err instanceof Error ? err.message : String(err));
-        await loadData();
-      }
-    }
-  };
+
 
   const handleRollbackClick = (gen: Generation) => {
     setTargetGeneration(gen);
@@ -371,7 +328,7 @@ export function PluginDetailPage(props: {
         });
         setConfirmModalOpen(true);
       } else {
-        setErrorBanner(err instanceof Error ? err.message : String(err));
+        toast.error(err);
         await loadData();
       }
     }
@@ -380,13 +337,12 @@ export function PluginDetailPage(props: {
   const handleLogLevelChange = async (newLevel: SourceLogLevel) => {
     if (!pkg) return;
     setSavingLogLevel(true);
-    setLogLevelSavedMessage(false);
     try {
       const updated = await setPackageLogLevel(pkg.ID, newLevel);
       setLogLevels(updated);
-      setLogLevelSavedMessage(true);
+      toast.success(ui.logLevelSaved);
     } catch (err: unknown) {
-      setErrorBanner(err instanceof Error ? err.message : String(err));
+      toast.error(err);
       await loadData();
     } finally {
       setSavingLogLevel(false);
@@ -461,12 +417,11 @@ export function PluginDetailPage(props: {
 
           <div className="detail-title-info">
             <div className="detail-name-row">
-              <h1 className="detail-title font-mono">{id}</h1>
+              <h1 className="detail-title">{pkg?.Name || id}</h1>
               {renderStatus()}
             </div>
-            {pkg?.Source ? (
-              <span className="detail-source-badge font-mono">{pkg.Source}</span>
-            ) : null}
+            <span className="detail-source-badge font-mono">{pkg?.Source ?? id}</span>
+            {pkg?.Description && <p className="detail-description">{pkg.Description}</p>}
           </div>
 
           <div className="detail-actions-right">
@@ -523,7 +478,6 @@ export function PluginDetailPage(props: {
                   <DropdownMenu.Item
                     className="dropdown-menu-item is-danger"
                     onSelect={() => {
-                      setPurgeLevel(0);
                       setUninstallModalOpen(true);
                     }}
                   >
@@ -637,7 +591,7 @@ export function PluginDetailPage(props: {
               <div className="version-info-row">
                 <div className="version-meta-item">
                   <span className="version-meta-label">{ui.currentVersion}</span>
-                  <span className="version-meta-val font-mono">{pkg?.Version ?? ui.loading}</span>
+                  <span className="version-meta-val font-mono">{pkg?.Version ?? <Skeleton width={60} height={14} />}</span>
                 </div>
                 <div className="version-meta-item">
                   <span className="version-meta-label">{ui.activeGeneration}</span>
@@ -647,7 +601,7 @@ export function PluginDetailPage(props: {
             </div>
 
             <input aria-label={ui.filterGenerations} placeholder={ui.filterGenerations} value={generationQuery} onChange={event => setGenerationQuery(event.target.value)} />
-            {generationError ? <p role="alert">{generationError}</p> : loading ? <p role="status">{ui.loading}</p> : generationList.length > 0 ? (
+            {generationError ? <p role="alert">{generationError}</p> : loading ? <LoadingRows rows={2} /> : generationList.length > 0 ? (
               <div className="generations-list-container">
                 <table className="generations-table font-mono">
                   <thead>
@@ -713,14 +667,11 @@ export function PluginDetailPage(props: {
             <div className={`advanced-card${hasSleep ? ' runtime-card' : ''}`}>
               <div className="advanced-card-header">
                 <h3 className="advanced-card-title">{hasSleep ? ui.runtimeStatus : ui.logLevel}</h3>
-                {logLevelSavedMessage ? (
-                  <span className="log-saved-pill">{ui.logLevelSaved}</span>
-                ) : null}
               </div>
               <div className="advanced-card-body">
                 <div className={hasSleep ? 'settings-row' : 'log-level-selector-row'}>
                   {hasSleep && <div className="settings-label-col"><label htmlFor="plugin-log-level">{ui.logLevel}</label><p>{ui.pluginLogLevelDesc}</p></div>}
-                  <select
+                  <OptionSelect
                     id="plugin-log-level"
                     aria-label={ui.logLevel}
                     className="log-level-select font-mono"
@@ -729,7 +680,7 @@ export function PluginDetailPage(props: {
                     onChange={e => handleLogLevelChange(e.target.value as SourceLogLevel)}
                   >
                     <option value="inherit">
-                      {ui.logLevelInherit.replace('{level}', logLevels?.global ?? ui.loading)}
+                      {ui.logLevelInherit.replace('{level}', logLevels?.global ?? '…')}
                     </option>
                     <option value="debug">{ui.logDebug}</option>
                     <option value="info">{ui.logInfo}</option>
@@ -737,7 +688,7 @@ export function PluginDetailPage(props: {
                     <option value="error">{ui.logError}</option>
                     <option value="critical">{ui.logCritical}</option>
                     <option value="off">{ui.logOff}</option>
-                  </select>
+                  </OptionSelect>
                 </div>
                 {hasSleep && <PluginSleepPanel policy={sleepPolicy} runtime={runtime} policyError={sleepPolicyError} runtimeError={runtimeError} writeError={sleepWriteError} loading={sleepLoading} busy={savingSleep} onSubmit={saveSleep} />}
               </div>
@@ -748,40 +699,16 @@ export function PluginDetailPage(props: {
               <div className="advanced-card">
                 <div className="advanced-card-header">
                   <h3 className="advanced-card-title">{ui.allowedInstances}</h3>
-                  {allowedSaved && <span className="log-saved-pill">{ui.saved}</span>}
                 </div>
                 <div className="advanced-card-body">
                   <p className="field-hint">{ui.allowedInstancesDesc}</p>
-                  <div className="allowed-mode-controls">
-                    <label >
-                      <input
-                        type="radio"
-                        name="allowedMode"
-                        disabled={savingAllowed}
-                        checked={allowedInstances?.all ?? true}
-                        onChange={() => {
-                          const updated: AllowedInstances = { all: true, instances: [] };
-                          setAllowedInstancesState(updated);
-                          void handleSaveAllowedInstances(updated);
-                        }}
-                      />
-                      <span>{ui.allInstancesAllowed}</span>
-                    </label>
-                    <label >
-                      <input
-                        type="radio"
-                        name="allowedMode"
-                        disabled={savingAllowed}
-                        checked={!(allowedInstances?.all ?? true)}
-                        onChange={() => {
-                          const updated: AllowedInstances = { all: false, instances: allowedInstances?.instances ?? [] };
-                          setAllowedInstancesState(updated);
-                          void handleSaveAllowedInstances(updated);
-                        }}
-                      />
-                      <span>{ui.selectAllowedInstances}</span>
-                    </label>
-                  </div>
+                  <RadioGroup aria-label={ui.allowedInstances} disabled={savingAllowed} value={(allowedInstances?.all ?? true) ? 'all' : 'some'}
+                    options={[{ value: 'all', label: ui.allInstancesAllowed }, { value: 'some', label: ui.selectAllowedInstances }]}
+                    onValueChange={mode => {
+                      const updated: AllowedInstances = mode === 'all' ? { all: true, instances: [] } : { all: false, instances: allowedInstances?.instances ?? [] };
+                      setAllowedInstancesState(updated);
+                      void handleSaveAllowedInstances(updated);
+                    }} />
 
                   {allowedInstances && !allowedInstances.all && (
                     <div><input aria-label={ui.searchInstances} placeholder={ui.searchInstances} value={allowedQuery} onChange={event => setAllowedQuery(event.target.value)} />
@@ -796,7 +723,7 @@ export function PluginDetailPage(props: {
                           const checked = allowedInstances.instances.includes(instanceID);
                           return (
                             <label key={instanceID} >
-                              <input
+                              <CheckboxInput
                                 type="checkbox"
                                 checked={checked}
                                 disabled={savingAllowed}
@@ -825,12 +752,8 @@ export function PluginDetailPage(props: {
             {/* 完整 JSON 配置编辑 */}
             {configAvailable && (
               <div className="advanced-card">
-                <div className="advanced-card-header">
-                  <h3 className="advanced-card-title">{ui.rawJsonEdit}</h3>
-                  {rawJsonSaved && <span className="log-saved-pill">{ui.saved}</span>}
-                </div>
+                <Disclosure summary={ui.rawJsonEdit} hint={ui.rawConfigDesc}>
                 <div className="advanced-card-body">
-                  <p className="field-hint">{ui.rawConfigDesc}</p>
                   {rawJsonError && (
                     <div className="plugins-error-banner" role="alert">
                       <span>{rawJsonError}</span>
@@ -851,10 +774,11 @@ export function PluginDetailPage(props: {
                       disabled={savingRawJson || !rawSnapshot || rawConflict !== null}
                       onClick={handleSaveRawJson}
                     >
-                      {savingRawJson ? ui.loading : ui.save}
+                      {savingRawJson ? <Spinner size={14} /> : ui.save}
                     </button>
                   </div>
                 </div>
+                </Disclosure>
               </div>
             )}
 
@@ -871,7 +795,6 @@ export function PluginDetailPage(props: {
                   type="button"
                   className="dialog-button is-danger"
                   onClick={() => {
-                    setPurgeLevel(0);
                     setUninstallModalOpen(true);
                   }}
                 >
@@ -885,20 +808,9 @@ export function PluginDetailPage(props: {
       </div>
 
       {/* 回退确认对话框 */}
-      <Dialog.Root open={rollbackModalOpen} onOpenChange={setRollbackModalOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content plugins-dialog-content" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.rollbackTitle}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close-button" aria-label={ui.close}>
-                  <X size={16} />
-                </button>
-              </Dialog.Close>
-            </div>
+      <SharedDialog open={rollbackModalOpen} onOpenChange={setRollbackModalOpen} title={ui.rollbackTitle} size="lg">
 
-            {errorBanner && <p className="plugins-error-banner" role="alert">{errorBanner}</p>}
+
             <p className="dialog-subtitle">
               {ui.rollbackDesc
                 .replace('{id}', id)
@@ -924,95 +836,19 @@ export function PluginDetailPage(props: {
               >
                 {ui.confirm}
               </button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+            </div></SharedDialog>
 
-      {/* 卸载对话框 */}
-      <Dialog.Root open={uninstallModalOpen} onOpenChange={setUninstallModalOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content plugins-dialog-content" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.uninstallTitle}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close-button" aria-label={ui.close}>
-                  <X size={16} />
-                </button>
-              </Dialog.Close>
-            </div>
-
-            {errorBanner && <p className="plugins-error-banner" role="alert">{errorBanner}</p>}
-            <p className="dialog-subtitle">
-              {ui.uninstallDesc.replace('{id}', id)}
-            </p>
-
-            <div className="dialog-radio-group">
-              <label className="dialog-radio-item">
-                <input
-                  type="radio"
-                  name="detail-purge-level"
-                  checked={purgeLevel === 0}
-                  onChange={() => setPurgeLevel(0)}
-                />
-                <span className="radio-text">{ui.purge0}</span>
-              </label>
-              <label className="dialog-radio-item">
-                <input
-                  type="radio"
-                  name="detail-purge-level"
-                  checked={purgeLevel === 1}
-                  onChange={() => setPurgeLevel(1)}
-                />
-                <span className="radio-text">{ui.purge1}</span>
-              </label>
-              <label className="dialog-radio-item">
-                <input
-                  type="radio"
-                  name="detail-purge-level"
-                  checked={purgeLevel === 2}
-                  onChange={() => setPurgeLevel(2)}
-                />
-                <span className="radio-text">{ui.purge2}</span>
-              </label>
-            </div>
-
-            <div className="dialog-actions">
-              <button
-                type="button"
-                className="dialog-button"
-                onClick={() => setUninstallModalOpen(false)}
-              >
-                {ui.cancel}
-              </button>
-              <button
-                type="button"
-                className="dialog-button is-danger"
-                onClick={() => executeUninstall(false)}
-              >
-                {ui.actionUninstall}
-              </button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      {uninstallModalOpen && pkg && <UninstallDialog pkg={pkg} onClose={() => setUninstallModalOpen(false)} onUninstall={async purge => {
+        const done = await actions.uninstall(pkg, purge);
+        if (done) navigate('/components', { replace: true });
+        return done;
+      }} />}
+      {actions.dialogs}
 
       {/* 409 确认对话框 */}
-      <Dialog.Root open={confirmModalOpen} onOpenChange={open => { if (!confirming) { setConfirmModalOpen(open); if (!open) setPendingConfirmAction(null); } }}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content plugins-dialog-content" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.confirmAffectedTitle}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close-button" aria-label={ui.close}>
-                  <X size={16} />
-                </button>
-              </Dialog.Close>
-            </div>
+      <SharedDialog open={confirmModalOpen} onOpenChange={open => { if (!confirming) { setConfirmModalOpen(open); if (!open) setPendingConfirmAction(null); } }} title={ui.confirmAffectedTitle} size="lg">
 
-            {errorBanner && <p className="plugins-error-banner" role="alert">{errorBanner}</p>}
+
             <p className="dialog-subtitle">{ui.confirmAffectedDesc}</p>
 
             <ul className="affected-items-list font-mono">
@@ -1042,16 +878,13 @@ export function PluginDetailPage(props: {
                   setConfirmModalOpen(false);
                   setConfirming(true);
                   try { await action?.(); }
-                  catch (error) { setErrorBanner(error instanceof Error ? error.message : String(error)); await loadData(); }
+                  catch (error) { toast.error(error); await loadData(); }
                   finally { setConfirming(false); }
                 }}
               >
                 {ui.confirmContinue}
               </button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+            </div></SharedDialog>
     </div>
   );
 }

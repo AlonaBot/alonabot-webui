@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { OptionSelect } from '../ui/NativeAdapters';
 import { ArrowUp, Download, Folder, FolderPlus, Pencil, Plus, Trash2, Upload } from 'lucide-react';
-import { AdminAPIError, clearPluginData, deletePluginFile, deletePluginKV, downloadPluginFile, exportPluginData, getPluginKV, listPluginFiles, listPluginKV, makePluginDirectory, renamePluginFile, setPluginKV, uploadPluginFile } from '../api/admin';
+import { AdminAPIError } from '../api/client';
+import { clearPluginData, deletePluginFile, deletePluginKV, downloadPluginFile, exportPluginData, getPluginKV, listPluginFiles, listPluginKV, makePluginDirectory, renamePluginFile, setPluginKV, uploadPluginFile } from '../api/data';
 import { useUI } from '../i18n/UI';
-import { Pagination } from '../components/Pagination';
+import { Pagination } from '../ui/Pagination';
 import { ActionDialog } from '../components/ActionDialog';
+import { Skeleton } from '../ui/EmptyState';
 
 export function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -66,8 +69,8 @@ export function StoragePanel({ id }: { id: string }) {
     <div className="time-range-pills"><button className={`time-range-pill ${view === 'summary' ? 'is-active' : ''}`} onClick={() => setView('summary')}>{ui.storage}</button><button className={`time-range-pill ${view === 'kv' ? 'is-active' : ''}`} onClick={() => setView('kv')}>KV</button><button className={`time-range-pill ${view === 'files' ? 'is-active' : ''}`} onClick={() => setView('files')}>{ui.files}</button></div>
     {error && <pre className="form-error" role="alert">{error}</pre>}
     {view === 'summary' && <>
-      <section className="storage-section"><h3>KV</h3><div className="storage-row"><div>{kv ? `${kv.total} ${ui.key}` : ui.loading}{kvError && <pre role="alert">{kvError}</pre>}</div><button onClick={() => setView('kv')}>{ui.view}</button></div></section>
-      <section className="storage-section"><h3>{ui.files}</h3><div className="storage-row"><div>{files ? `${files.entries.length} ${ui.entries}` : ui.loading}{fileError && <pre role="alert">{fileError}</pre>}</div><button onClick={() => setView('files')}>{ui.view}</button></div></section>
+      <section className="storage-section"><h3>KV</h3><div className="storage-row"><div>{kv ? `${kv.total} ${ui.key}` : <Skeleton width={80} height={14} />}{kvError && <pre role="alert">{kvError}</pre>}</div><button onClick={() => setView('kv')}>{ui.view}</button></div></section>
+      <section className="storage-section"><h3>{ui.files}</h3><div className="storage-row"><div>{files ? `${files.entries.length} ${ui.entries}` : <Skeleton width={80} height={14} />}{fileError && <pre role="alert">{fileError}</pre>}</div><button onClick={() => setView('files')}>{ui.view}</button></div></section>
       <section className="storage-section"><h3>{ui.allPluginData}</h3><div className="storage-row"><div>{ui.exportData}<p>{ui.exportDataDesc}</p></div><button onClick={() => void run(async () => downloadBlob(await exportPluginData(id), `${id}-data.zip`))}><Download size={14} /> {ui.exportData}</button></div><div className="storage-row"><div>{ui.clearData}<p>{ui.clearDataDesc}</p></div><button className="dialog-button is-danger" onClick={() => setConfirm({ title: ui.clearData, text: ui.clearDataDesc, run: async () => { await clearPluginData(id, true); setPage(1); setPath(''); await Promise.all([loadKV(), loadFiles()]); } })}>{ui.clearData}</button></div></section>
     </>}
     {view === 'kv' && <div className="storage-browser"><div className="data-toolbar"><input aria-label={ui.kvPrefix} placeholder={ui.kvPrefix} value={prefix} onChange={e => { setPrefix(e.target.value); setPage(1); }} /><button onClick={() => void loadKV()}>{ui.refresh}</button><button onClick={() => setEditing({ key: '', value: '', encoding: 'text', new: true })}><Plus size={15} />{ui.newKey}</button></div>{kvError && <pre role="alert" className="form-error">{kvError}</pre>}
@@ -78,13 +81,13 @@ export function StoragePanel({ id }: { id: string }) {
     </div>}
     {editing && <ActionDialog title={ui.editValue} onClose={() => setEditing(null)} onConfirm={async () => { let value; try { value = kvInput(editing.value, editing.encoding); } catch { throw new Error(ui.invalidBase64); } await setPluginKV(id, editing.key, value); await loadKV(); }}>
       <label className="dialog-field-label">{ui.key}<input value={editing.key} disabled={!editing.new} onChange={e => setEditing({ ...editing, key: e.target.value })} /></label>
-      <label className="dialog-field-label">{ui.encoding}<select value={editing.encoding} onChange={e => {
+      <label className="dialog-field-label">{ui.encoding}<OptionSelect value={editing.encoding} onChange={e => {
         const encoding = e.target.value;
         try {
           const value = encoding === 'base64' ? btoa(Array.from(new TextEncoder().encode(editing.value), byte => String.fromCharCode(byte)).join('')) : new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(atob(editing.value), c => c.charCodeAt(0)));
           setEditing({ ...editing, encoding, value });
         } catch (err) { setError(String(err)); }
-      }}><option value="text">{ui.textValue}</option><option value="base64">{ui.base64Value}</option></select></label>
+      }}><option value="text">{ui.textValue}</option><option value="base64">{ui.base64Value}</option></OptionSelect></label>
       <label className="dialog-field-label">{ui.value}<textarea className="font-mono" value={editing.value} onChange={e => setEditing({ ...editing, value: e.target.value })} /></label>
     </ActionDialog>}
     {directory !== null && <ActionDialog title={ui.newDirectory} onClose={() => setDirectory(null)} onConfirm={async () => { await makePluginDirectory(id, childPath(directory)); await loadFiles(); }}><label>{ui.name}<input value={directory} onChange={e => setDirectory(e.target.value)} /></label></ActionDialog>}

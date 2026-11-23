@@ -1,5 +1,5 @@
-import { adminRequest, AdminAPIError } from './admin';
-export { adminRequest } from './admin';
+import { adminRequest, AdminAPIError } from './client';
+export { adminRequest } from './client';
 
 export type StatisticsRange = '24h' | '7d' | '30d';
 export type HourBucket = { hour: string; incoming: number; outgoing: number; send_errors: number; accounts: { instance_id: string; incoming: number; outgoing: number }[]; commands: { plugin_id: string; route_id: string; command_name: string; result: 'ok' | 'error' | 'denied'; count: number; duration_ms: number }[] };
@@ -14,7 +14,8 @@ export type LatestRelease = { repo: string; version: string; release_url: string
 const root = '/plugins/alonabot-webui-admin';
 export function getStatistics(range: StatisticsRange): Promise<Statistics> { return adminRequest(`${root}/stats?${new URLSearchParams({ range })}`); }
 export function listSeenUsers(): Promise<SeenUser[]> { return adminRequest(`${root}/users`); }
-export function getStore(input: { source: string; role: string; q: string; sort: StoreSort; offset: number; limit: number; refresh: boolean }): Promise<StorePage> { return adminRequest(`${root}/store?${new URLSearchParams({ ...input, offset: String(input.offset), limit: String(input.limit), refresh: String(input.refresh) })}`); }
+export type StoreMirror = 'auto' | 'github' | 'jsdelivr' | (string & {});
+export function getStore(input: { source: string; mirror: StoreMirror; role: string; q: string; sort: StoreSort; offset: number; limit: number; refresh: boolean }): Promise<StorePage> { return adminRequest(`${root}/store?${new URLSearchParams({ ...input, offset: String(input.offset), limit: String(input.limit), refresh: String(input.refresh) })}`); }
 export function checkStoreRepo(repo: string): Promise<StoreCheck> { return adminRequest(`${root}/store/check?${new URLSearchParams({ repo })}`); }
 export async function getLatestRelease(repo: string): Promise<LatestRelease | null> {
   try { return await adminRequest<LatestRelease>(`/api/v1/core/github/release?${new URLSearchParams({ source: repo })}`); }

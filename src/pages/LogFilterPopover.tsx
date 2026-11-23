@@ -1,4 +1,5 @@
 import { useState, type JSX } from 'react';
+import { OptionSelect, CheckboxInput } from '../ui/NativeAdapters';
 import * as Popover from '@radix-ui/react-popover';
 import { Filter, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { useUI } from '../i18n/UI';
@@ -7,7 +8,8 @@ import {
   type LogLevelKey,
   createDefaultFilterState,
 } from './logsFormat';
-import type { Package, AdapterInstance } from '../api/admin';
+import type { AdapterInstance } from '../api/instances';
+import type { Package } from '../api/packages';
 
 interface LogFilterPopoverProps {
   filter: LogFilterState;
@@ -209,7 +211,7 @@ export function LogFilterPopover(props: LogFilterPopoverProps): JSX.Element {
                   const count = counts[key];
                   return (
                     <label key={key} className="logs-checkbox-row">
-                      <input
+                      <CheckboxInput
                         type="checkbox"
                         checked={checked}
                         onChange={() => handleLevelToggle(key)}
@@ -244,7 +246,7 @@ export function LogFilterPopover(props: LogFilterPopoverProps): JSX.Element {
                 {/* Core */}
                 {(!normalizedSearch || 'core'.includes(normalizedSearch)) && (
                   <label className="logs-checkbox-row logs-source-parent">
-                    <input
+                    <CheckboxInput
                       type="checkbox"
                       checked={filter.sources.core}
                       onChange={handleCoreToggle}
@@ -267,7 +269,7 @@ export function LogFilterPopover(props: LogFilterPopoverProps): JSX.Element {
                         {pluginsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       </button>
                       <label className="logs-checkbox-row logs-group-label">
-                        <input
+                        <CheckboxInput
                           type="checkbox"
                           checked={packages.length > 0 && selectedPluginsCount === packages.length}
                           onChange={handleAllPluginsToggle}
@@ -281,7 +283,7 @@ export function LogFilterPopover(props: LogFilterPopoverProps): JSX.Element {
                       <div className="logs-source-children">
                         {filteredPackages.map(pkg => (
                           <label key={pkg.ID} className="logs-checkbox-row logs-source-child">
-                            <input
+                            <CheckboxInput
                               type="checkbox"
                               checked={filter.sources.plugins[pkg.ID] ?? true}
                               onChange={() => handlePluginToggle(pkg.ID)}
@@ -308,7 +310,7 @@ export function LogFilterPopover(props: LogFilterPopoverProps): JSX.Element {
                         {accountsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       </button>
                       <label className="logs-checkbox-row logs-group-label">
-                        <input
+                        <CheckboxInput
                           type="checkbox"
                           checked={instances.length > 0 && selectedAccountsCount === instances.length}
                           onChange={handleAllAccountsToggle}
@@ -322,7 +324,7 @@ export function LogFilterPopover(props: LogFilterPopoverProps): JSX.Element {
                       <div className="logs-source-children">
                         {filteredInstances.map(inst => (
                           <label key={inst.instance_id} className="logs-checkbox-row logs-source-child">
-                            <input
+                            <CheckboxInput
                               type="checkbox"
                               checked={filter.sources.accounts[inst.instance_id] ?? true}
                               onChange={() => handleAccountToggle(inst.instance_id)}
@@ -354,7 +356,7 @@ export function LogFilterPopover(props: LogFilterPopoverProps): JSX.Element {
                       <div className="logs-source-children">
                         {filteredOther.map(tag => (
                           <label key={tag} className="logs-checkbox-row logs-source-child">
-                            <input
+                            <CheckboxInput
                               type="checkbox"
                               checked={filter.sources.other[tag] ?? true}
                               onChange={() => handleOtherToggle(tag)}
@@ -372,7 +374,7 @@ export function LogFilterPopover(props: LogFilterPopoverProps): JSX.Element {
             {/* 日期筛选 */}
             <div className="logs-popover-section">
               <span className="logs-section-title">{ui.logsDate}</span>
-              <select
+              <OptionSelect
                 className="logs-date-select"
                 aria-label={ui.logsDate}
                 value={filter.date === 'today' ? 'today' : 'history'}
@@ -387,7 +389,7 @@ export function LogFilterPopover(props: LogFilterPopoverProps): JSX.Element {
               >
                 <option value="today">{ui.logsDateToday}</option>
                 <option value="history">{ui.logsDateHistory}</option>
-              </select>
+              </OptionSelect>
               {filter.date !== 'today' && (
                 <label className="logs-history-date">
                   <span>{ui.logsDateCore}</span>

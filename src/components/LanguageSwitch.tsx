@@ -1,12 +1,11 @@
-import type { ChangeEvent } from 'react';
+import type { JSX } from 'react';
+import { Languages } from 'lucide-react';
 import { useUI } from '../i18n/UI';
+import { Select } from '../ui/Select';
 
-/** LanguageSwitch 选择 WebUI 的语言，与聊天回复的语言分别管理。 */
-export function LanguageSwitch(props: { value: string; onChange: (tag: string) => void }) {
+/** 选择 WebUI 的界面语言，与机器人回复的语言分别管理。 */
+export function LanguageSwitch({ value, onChange }: { value: string; onChange: (tag: string) => void }): JSX.Element {
   const ui = useUI();
-  return <label className="language-switch">{ui.language}
-    <select value={props.value} onChange={(event: ChangeEvent<HTMLSelectElement>) => props.onChange(event.currentTarget.value)}>
-      <option value="en-US">{ui.english}</option><option value="zh-CN">{ui.chinese}</option>
-    </select>
-  </label>;
+  return <Select variant="pill" value={value} onValueChange={onChange} aria-label={ui.language}
+    options={[{ value: 'zh-CN', label: <><Languages size={15} aria-hidden style={{ verticalAlign: '-2px', marginRight: 6 }} />{ui.chinese}</> }, { value: 'en-US', label: <><Languages size={15} aria-hidden style={{ verticalAlign: '-2px', marginRight: 6 }} />{ui.english}</> }]} />;
 }

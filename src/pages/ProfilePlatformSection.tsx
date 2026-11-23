@@ -1,10 +1,10 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent, type JSX } from 'react';
+import { Button } from '../ui/Button';
+import { Skeleton } from '../ui/EmptyState';
+import { Switch } from '../ui/Switch';
+import { toast } from '../ui/toast';
 import { Plus, X } from 'lucide-react';
-import {
-  getProfilePlatform,
-  putProfilePlatform,
-  type ProfilePlatform,
-} from '../api/admin';
+import { getProfilePlatform, putProfilePlatform, type ProfilePlatform } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 
 /** ProfilePlatformSection 负责展示与编辑配置文件的平台与消息设置。 */
@@ -14,8 +14,6 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
 
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [errorBanner, setErrorBanner] = useState<string | null>(null);
-  const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
   const [defaultPlatform, setDefaultPlatform] = useState<ProfilePlatform | null>(null);
   const [currentPlatform, setCurrentPlatform] = useState<ProfilePlatform | null>(null);
@@ -31,8 +29,6 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
   const [forwardThreshold, setForwardThreshold] = useState<number | null>(null);
 
   const loadData = async (clearError = true) => {
-    setLoading(true);
-    if (clearError) setErrorBanner(null);
     try {
       const current = await getProfilePlatform(profileID);
       setCurrentPlatform(current);
@@ -50,7 +46,7 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
       setForwardThreshold(current.reply.forward_threshold);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setErrorBanner(previous => !clearError && previous ? previous + '\n' + message : message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -94,8 +90,6 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
   // 提交保存
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setErrorBanner(null);
-    setSuccessBanner(null);
 
     // 校验前缀：若非跟随默认或为 default，前缀数组必须非空
     if (profileID === 'default' && (!prefixes || prefixes.length === 0)) {
@@ -120,14 +114,14 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
     setBusy(true);
     try {
       await putProfilePlatform(profileID, payload);
-      setSuccessBanner(ui.saveSuccess);
+      toast.success(ui.saveSuccess);
     } catch (err: unknown) {
-      setErrorBanner(err instanceof Error ? err.message : String(err));
+      toast.error(err);
     } finally { await loadData(false); setBusy(false); }
   };
 
   if (!currentPlatform || !defaultPlatform) {
-    return <div className="profile-section-loading"><p role={errorBanner ? "alert" : "status"}>{errorBanner ?? ui.loading}</p></div>;
+    return <div className="profile-section-loading"><Skeleton height={160} /></div>;
   }
 
   // 默认值解析（供非 default 配置文件显示基线）
@@ -138,20 +132,6 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
 
   return (
     <form className="profile-platform-section" onSubmit={handleSubmit}>
-      {errorBanner && (
-        <div className="plugins-error-banner" role="alert">
-          <span>{errorBanner}</span>
-          <button type="button" className="error-banner-close" aria-label={ui.close} onClick={() => setErrorBanner(null)}>
-            &times;
-          </button>
-        </div>
-      )}
-
-      {successBanner && (
-        <div className="plugins-success-banner" role="status">
-          <span>{successBanner}</span>
-        </div>
-      )}
 
       <fieldset className="config-edit-fields" disabled={busy || loading}>
       {/* 命令设置卡片 */}
@@ -254,15 +234,7 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
                 </div>
               )}
             </div>
-            <label className="plugin-switch-label">
-              <input
-                type="checkbox"
-                aria-label={ui.mentionSender}
-                checked={mentionSender !== null ? mentionSender : defMention}
-                onChange={e => setMentionSender(e.currentTarget.checked)}
-              />
-              <span className="plugin-switch-slider" />
-            </label>
+            <Switch aria-label={ui.mentionSender} checked={mentionSender !== null ? mentionSender : defMention} onCheckedChange={setMentionSender} />
           </div>
 
           {/* 引用原消息 */}
@@ -281,15 +253,7 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
                 </div>
               )}
             </div>
-            <label className="plugin-switch-label">
-              <input
-                type="checkbox"
-                aria-label={ui.quoteOriginal}
-                checked={quote !== null ? quote : defQuote}
-                onChange={e => setQuote(e.currentTarget.checked)}
-              />
-              <span className="plugin-switch-slider" />
-            </label>
+            <Switch aria-label={ui.quoteOriginal} checked={quote !== null ? quote : defQuote} onCheckedChange={setQuote} />
           </div>
 
           {/* 回复前缀 */}
@@ -335,16 +299,14 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
                 </div>
               )}
             </div>
-            <input type="number" className="profile-text-input" aria-label={ui.forwardThreshold} required min={0} step={1}
-              value={forwardThreshold ?? defThreshold} onChange={event => setForwardThreshold(event.target.valueAsNumber)} />
+            <input inputMode="numeric" pattern="[0-9]*" className="profile-text-input" aria-label={ui.forwardThreshold} required
+              value={forwardThreshold ?? defThreshold} onChange={event => setForwardThreshold(event.target.value === '' ? 0 : Number(event.target.value))} />
           </div>
         </div>
       </div>
 
       <div className="profile-actions-bar">
-        <button type="submit" className="save-button">
-          {ui.save}
-        </button>
+        <Button type="submit" variant="primary" loading={busy}>{ui.save}</Button>
       </div>
       </fieldset>
     </form>

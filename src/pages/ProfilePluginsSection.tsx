@@ -1,6 +1,10 @@
 import { useEffect, useState, type JSX } from 'react';
+import { toast } from '../ui/toast';
+import { Switch } from '../ui/Switch';
 import { ChevronRight } from 'lucide-react';
-import { getPluginConfig, patchProfilePlugin, pruneProfilePlugin, type ConfigSnapshot, type Package, type ProfilePlugin } from '../api/admin';
+import { getPluginConfig, type ConfigSnapshot } from '../api/config';
+import { type Package } from '../api/packages';
+import { patchProfilePlugin, pruneProfilePlugin, type ProfilePlugin } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 import { fieldText, pickLocale } from '../i18n/catalog';
 import { fieldsFromSchema, type Field } from '../schema/model';
@@ -13,7 +17,6 @@ export function ProfilePluginsSection({ profileID, packages, plugins, onChanged 
 }): JSX.Element {
   const ui = useUI();
   const { locale } = useUISettings();
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState('');
   const [snapshots, setSnapshots] = useState<Record<string, ConfigSnapshot>>({});
@@ -29,13 +32,13 @@ export function ProfilePluginsSection({ profileID, packages, plugins, onChanged 
         else errors.push(result.reason instanceof Error ? result.reason.message : String(result.reason));
       }
       setSnapshots(Object.fromEntries(entries));
-      if (errors.length) setError(errors.join('\n'));
+      if (errors.length) toast.error(errors.join('\n'));
     });
     return () => { active = false; };
   }, [summaryIDs]);
   async function mutate(action: () => Promise<unknown>) {
-    setError(null); setBusy(true);
-    try { await action(); } catch (error) { setError(error instanceof Error ? error.message : String(error)); }
+    setBusy(true);
+    try { await action(); } catch (error) { toast.error(error); }
     finally { await onChanged(); setBusy(false); }
   }
   function fieldLabel(pluginID: string, path: string) {
@@ -52,20 +55,32 @@ export function ProfilePluginsSection({ profileID, packages, plugins, onChanged 
     const field = find(fieldsFromSchema(snapshot.schema));
     return field ? fieldText(messages, field).description : path;
   }
+  const shown = plugins.filter(plugin => `${plugin.plugin_id} ${packages.find(pkg => pkg.ID === plugin.plugin_id)?.Name ?? ''}`.toLowerCase().includes(query.toLowerCase()));
+  // 批量操作只作用于当前筛选出、且全局已启用的插件。
+  const switchable = shown.filter(plugin => packages.find(pkg => pkg.ID === plugin.plugin_id)?.Enabled);
+  const setAll = (want: (plugin: ProfilePlugin) => boolean) => void mutate(async () => {
+    for (const plugin of switchable) if (plugin.enabled !== want(plugin)) await patchProfilePlugin(profileID, plugin.plugin_id, { enabled: want(plugin) });
+  });
   return <div className="profile-plugins-section">
-    {error && <p role="alert" className="plugins-error-banner">{error}</p>}
-    <input aria-label={ui.searchPlugins} placeholder={ui.searchPlugins} value={query} onChange={event => setQuery(event.target.value)} />
+    <div className="profile-batch-bar">
+      <input aria-label={ui.searchPlugins} placeholder={ui.searchPlugins} value={query} onChange={event => setQuery(event.target.value)} />
+      <div className="profile-batch-tools" role="group" aria-label={ui.selection}>
+        <button type="button" disabled={busy || switchable.every(plugin => plugin.enabled)} onClick={() => setAll(() => true)}>{ui.enableAll}</button>
+        <button type="button" disabled={busy || switchable.every(plugin => !plugin.enabled)} onClick={() => setAll(() => false)}>{ui.disableAll}</button>
+        <button type="button" disabled={busy || switchable.length === 0} onClick={() => setAll(plugin => !plugin.enabled)}>{ui.invertEnabled}</button>
+      </div>
+    </div>
     <fieldset className="config-edit-fields" disabled={busy}><div className="profile-card">
-      {plugins.filter(plugin => plugin.plugin_id.toLowerCase().includes(query.toLowerCase())).map(plugin => {
+      {shown.map(plugin => {
         const pkg = packages.find(pkg => pkg.ID === plugin.plugin_id);
         const disabled = !pkg?.Enabled;
         const valid = Object.keys(plugin.overrides).filter(path => !plugin.invalid.some(invalid => invalid.path === path));
         return <div key={plugin.plugin_id} className={`profile-card-row profile-plugin-row ${disabled ? 'is-globally-disabled' : ''}`}>
-          <div className="profile-plugin-info"><span className="profile-plugin-name">{plugin.plugin_id}</span><div className="profile-plugin-meta">
+          <div className="profile-plugin-info"><span className="profile-plugin-name">{pkg?.Name || plugin.plugin_id}</span><div className="profile-plugin-meta">
             <span>{disabled ? ui.pluginDisabled : valid.length ? ui.overrideItemCount.replace('{count}', String(valid.length)).replace('{items}', valid.map(path => fieldLabel(plugin.plugin_id, path)).join(', ')) : ui.followDefault}</span>
             {plugin.invalid.length > 0 && <div className="profile-invalid-list">{plugin.invalid.map(invalid => <small key={invalid.path}><code>{invalid.path}</code>: {invalid.reason}</small>)}<button type="button" onClick={() => void mutate(() => pruneProfilePlugin(profileID, plugin.plugin_id))}>{ui.pruneOverrides}</button></div>}
           </div></div>
-          <div className="profile-plugin-controls"><label className="plugin-switch-label"><input type="checkbox" role="switch" aria-label={`${ui.actionEnable} ${plugin.plugin_id}`} disabled={disabled} checked={plugin.enabled} onChange={event => void mutate(() => patchProfilePlugin(profileID, plugin.plugin_id, { enabled: event.target.checked }))} /><span className="plugin-switch-slider" /></label><button type="button" className="profile-plugin-arrow-btn" disabled={disabled} aria-label={ui.pluginConfigAction.replace('{plugin}', plugin.plugin_id)} onClick={() => navigate(`/components/${encodeURIComponent(plugin.plugin_id)}?tab=config&profile=${encodeURIComponent(profileID)}`)}><ChevronRight size={18} /></button></div>
+          <div className="profile-plugin-controls"><Switch aria-label={`${ui.actionEnable} ${plugin.plugin_id}`} checked={plugin.enabled} onCheckedChange={checked => void mutate(() => patchProfilePlugin(profileID, plugin.plugin_id, { enabled: checked }))} disabled={disabled} /><button type="button" className="profile-plugin-arrow-btn" disabled={disabled} aria-label={ui.pluginConfigAction.replace('{plugin}', plugin.plugin_id)} onClick={() => navigate(`/components/${encodeURIComponent(plugin.plugin_id)}?tab=config&profile=${encodeURIComponent(profileID)}`)}><ChevronRight size={18} /></button></div>
         </div>;
       })}
       {plugins.length === 0 && <p className="profile-scope-empty">{ui.noEntries}</p>}

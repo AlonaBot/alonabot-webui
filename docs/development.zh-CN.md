@@ -16,7 +16,7 @@ npm ci
 npm run dev
 ```
 
-打开 Vite 输出的地址。`/dev/forms` 可以用本地 fixture 预览配置表单与 JSON Merge Patch。当前 Vite 配置没有 API 代理；真实管理页面从 Core 的同源入口打开并登录。路由登记在 `src/routes.tsx`，界面文案通过 `i18n/` 提供，主题与外壳复用 `src/theme/` 和 `src/shell/`。
+打开 Vite 输出的地址。`/dev/forms` 可以用本地 fixture 预览配置表单与 JSON Merge Patch。开发服务器把 `/api` 与 `/plugins` 转发到 `http://127.0.0.1:7650` 的 Core，并把 Host 与 Origin 改写为 Core 的来源：先启动 Core，在开发页登录（或先在 7650 登录，Cookie 不区分端口），改动前端后页面直接热更新并使用真实数据。WebUI 自己的 Go 后台仍是 Core 里已安装的版本，改后台要重新打包安装。路由登记在 `src/routes.tsx`，界面文案通过 `i18n/` 提供，主题与外壳复用 `src/theme/` 和 `src/shell/`。
 
 ```fish
 npm run typecheck
@@ -60,7 +60,7 @@ alonabot enable alonabot-webui-admin --data-dir ./data
 
 父桥按 [插件页面指南](https://github.com/AlonaBot/AlonaBot/blob/main/docs/plugin-guide.zh-CN.md#插件页面) 在每次 `translate` 请求时用当前语言和请求参数返回 `text`；`hello` 交付语言、主题与令牌，`locale` 事件交付语言。浏览器验证用沙箱 iframe 验证 showcase 首次翻译、切换语言后重新取词、主题与快捷键转发。
 
-配置文件的工具覆盖候选按现行 [`ToolPolicy` 定义](../src/api/admin.ts)的 `identities` 展开为独立工具与操作；同名两类分别编辑，仅有旧全局覆盖的空身份行没有新增候选。已保存的配置文件覆盖按原身份继续读写。配置与配置文件页面共用 `src/api/admin.ts` 的 `ToolPolicy.identities: ('tool' | 'operation')[]`。
+配置文件的工具覆盖候选按现行 [`ToolPolicy` 定义](../src/api/policies.ts)的 `identities` 展开为独立工具与操作；同名两类分别编辑，仅有旧全局覆盖的空身份行没有新增候选。已保存的配置文件覆盖按原身份继续读写。配置与配置文件页面共用 `src/api/policies.ts` 的 `ToolPolicy.identities: ('tool' | 'operation')[]`。
 
 配置页面使用 `PluginConfigPanel({id})` 与共享 `ConfigForm`：编辑基线为 `pending.config ?? active`，保存使用 `active_generation`，409 保留草稿并允许显式采用最新配置；secret 再认证、动态选项、回复示例及双语字段沿用同一表单。插件详情标签单行横滚，Agent 页面入口为 `pages/memory`（记忆），Core 数据标签保留。父桥在 layout effect 提前绑定，保留首次 hello 的主题与语言订阅。
 
