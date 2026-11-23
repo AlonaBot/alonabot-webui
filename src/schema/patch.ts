@@ -12,19 +12,24 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-/** isSecretSet 只接受恰好包含 $secret_set: true 的对象。 */
-export function isSecretSet(value: unknown): boolean {
-  return isObject(value) && Object.keys(value).length === 1 && Object.hasOwn(value, '$secret_set') && value.$secret_set === true;
+/** isSecretMask 识别 Core 交付的凭证设置状态。 */
+export function isSecretMask(value: unknown): value is { $secret_set: boolean } {
+  return isObject(value) && Object.keys(value).length === 1 && Object.hasOwn(value, '$secret_set') && typeof value.$secret_set === 'boolean';
 }
 
-function equal(left: unknown, right: unknown): boolean {
+/** isSecretSet 只接受恰好包含 $secret_set: true 的对象。 */
+export function isSecretSet(value: unknown): boolean {
+  return isSecretMask(value) && value.$secret_set;
+}
+
+export function equalConfigValue(left: unknown, right: unknown): boolean {
   if (left === right) return true;
   if (Array.isArray(left) && Array.isArray(right)) {
-    return left.length === right.length && left.every((value, index) => equal(value, right[index]));
+    return left.length === right.length && left.every((value, index) => equalConfigValue(value, right[index]));
   }
   if (isObject(left) && isObject(right)) {
     const keys = Object.keys(left);
-    return keys.length === Object.keys(right).length && keys.every(key => Object.hasOwn(right, key) && equal(left[key], right[key]));
+    return keys.length === Object.keys(right).length && keys.every(key => Object.hasOwn(right, key) && equalConfigValue(left[key], right[key]));
   }
   return false;
 }
@@ -45,7 +50,7 @@ function missingSecrets(value: unknown, path: string[], missing: string[]) {
 
 // undefined 只表示此节点无需补丁，null 保留 RFC 7396 的删除含义。
 function diff(original: unknown, edited: unknown, path: string[], missing: string[]): unknown {
-  if (equal(original, edited)) return undefined;
+  if (equalConfigValue(original, edited)) return undefined;
   if (isSecretSet(edited)) {
     missing.push(pointer(path));
     return undefined;
@@ -65,7 +70,7 @@ function diff(original: unknown, edited: unknown, path: string[], missing: strin
     const patch = Object.fromEntries(entries);
     if (isSecretSet(patch)) {
       for (const [key, value] of Object.entries(edited)) {
-        if (key === '$secret_set' || !Object.hasOwn(before, key) || !equal(before[key], value) || value === null || isSecretSet(value)) continue;
+        if (key === '$secret_set' || !Object.hasOwn(before, key) || !equalConfigValue(before[key], value) || value === null || isSecretSet(value)) continue;
         // 空对象补丁保留已有对象，包括其中的 null 与 secret；原样重发会改变其含义。
         const preserved = isObject(value) ? {} : value;
         const masked: string[] = [];
@@ -111,7 +116,7 @@ function replacementValue(value: unknown, field: Field): unknown {
 }
 
 function fieldDiff(original: unknown, edited: unknown, field: Field, path: string[], missing: string[]): unknown {
-  if (edited === null || isSecretSet(edited) || equal(original, edited)) {
+  if (edited === null || isSecretSet(edited) || equalConfigValue(original, edited)) {
     return diff(original, edited, path, missing);
   }
   if (field.secret) {
@@ -145,7 +150,7 @@ function fieldsDiff(original: Record<string, unknown>, edited: Record<string, un
   const entries: [string, unknown][] = [];
   for (const field of fields) {
     if (field.invisible || !Object.hasOwn(edited, field.key)) continue;
-    if (field.condition && !Object.entries(field.condition).every(([key, expected]) => Object.hasOwn(edited, key) && equal(edited[key], expected))) continue;
+    if (field.condition && !Object.entries(field.condition).every(([key, expected]) => Object.hasOwn(edited, key) && equalConfigValue(edited[key], expected))) continue;
     const previous = Object.hasOwn(original, field.key) ? original[field.key] : undefined;
     const change = fieldDiff(previous, edited[field.key], field, [...path, field.key], missing);
     if (change !== undefined && !(field.type === 'object' && isObject(change) && Object.keys(change).length === 0)) {

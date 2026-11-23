@@ -68,6 +68,14 @@
 .formSkeleton { display: flex; flex-direction: column; gap: var(--space-3); }
 .form { display: flex; flex-direction: column; gap: var(--space-4); }
 .schema { min-width: 0; margin: 0; padding: 0; border: 0; }
+.accountSettings { margin-bottom: var(--space-4); }
+.accountSettingsFrame {
+  display: block;
+  width: 100%;
+  height: min(600px, calc(100dvh - 160px));
+  border: 0;
+  color-scheme: normal;
+}
 /* 适配器表单仍由 ConfigForm 渲染，这里让它的输入框与对话框其余字段一样用浅底样式。 */
 .schema :global(:is(input:not([type=checkbox]):not([type=radio]), select, textarea)) { height: auto; min-height: var(--control-h-lg); padding: 10px var(--space-3); border: 1.5px solid transparent; border-radius: 10px; background: var(--color-surface-2); font-size: var(--text-sm); }
 .schema :global(:is(input, select, textarea):focus) { border-color: var(--color-accent); background: var(--color-surface); outline: none; }

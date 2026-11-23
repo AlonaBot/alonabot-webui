@@ -35,7 +35,7 @@ export function AppShell({ version, onLogout, coreUpdate, coreUpdateFailed, chil
   const packages = useMemo(() => installed(packageQuery.data), [packageQuery.data]);
   const agentMissing = packageQuery.isSuccess && !packages.some(item => item.Role === 'agent');
 
-  const pageEntries = useMemo<NavEntry[]>(() => packages.flatMap(item => (item.pages ?? []).map(page => ({
+  const pageEntries = useMemo<NavEntry[]>(() => packages.flatMap(item => (item.pages ?? []).filter(page => page.purpose !== 'instance_config').map(page => ({
     id: `page:${item.ID}:${page.path}`,
     label: page.title,
     icon: AppWindow,

@@ -53,6 +53,20 @@ export function applyMergePatch(target: unknown, patch: unknown): unknown {
   return result;
 }
 
+/** 合入页面补丁时，延续草稿中已重置、随后被页面重新建起的对象。 */
+export function applyPatchToDraftBase(base: Record<string, unknown>, draft: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+  const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
+  function beforeMerge(original: unknown, edited: unknown, change: unknown): unknown {
+    if (!isRecord(change)) return original;
+    if (edited === null) return {};
+    if (!isRecord(original) || !isRecord(edited)) return original;
+    return Object.fromEntries(Object.entries(original).map(([key, value]) => [key,
+      Object.hasOwn(edited, key) && Object.hasOwn(change, key) ? beforeMerge(value, edited[key], change[key]) : value,
+    ]));
+  }
+  return applyMergePatch(beforeMerge(base, draft, patch), patch) as Record<string, unknown>;
+}
+
 /**
  * applyProfileOverrides 将有效的配置文件覆盖值应用到 Active 配置基线上。
  * invalid 中的路径排除在有效覆盖之外。

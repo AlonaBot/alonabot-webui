@@ -6,6 +6,7 @@ import { assignInstanceProfile, listProfiles } from '../../api/profiles';
 import { createInstance, getInstanceSchema } from '../../api/instances';
 import type { Package } from '../../api/packages';
 import { ConfigForm } from '../../components/ConfigForm';
+import { applyMergePatch } from '../../pages/pluginConfig';
 import { useUI } from '../../i18n/UI';
 import { Button } from '../../ui/Button';
 import { ConfirmDialog, Dialog } from '../../ui/Dialog';
@@ -14,7 +15,10 @@ import { RadioGroup } from '../../ui/RadioGroup';
 import { Select } from '../../ui/Select';
 import { toast } from '../../ui/toast';
 import { usePackageActions } from '../plugins/usePackageActions';
+import { AccountSettingsPage } from './AccountSettingsPage';
 import styles from './Accounts.module.css';
+
+const emptyConfig = {};
 
 /** 官方适配器：未安装时也列在选项里，选中后可一键安装再继续填写。 */
 export const officialAdapters = [
@@ -62,6 +66,7 @@ export function AddAccountDialog({ packages, onClose }: { packages: readonly Pac
   const label = (id: string) => id === 'telegram' ? ui.adapterTelegram : id === 'onebot11' ? ui.adapterOneBot : id;
   const instanceID = name.trim();
   const messages = adapterFieldMessages(ui, adapterID);
+  const settingsPage = choice?.pkg?.pages?.find(page => page.purpose === 'instance_config');
 
   const create = async (patch: Record<string, unknown>, confirmed = false) => {
     if (!choice?.pkg || !instanceID) return;
@@ -111,7 +116,10 @@ export function AddAccountDialog({ packages, onClose }: { packages: readonly Pac
         {adapterID === 'telegram' && <p className={styles.tip}>{ui.botTokenHint}</p>}
         <fieldset disabled={pending} className={styles.schema}>
           {/* 实例选项端点要求实例已存在，创建前沿用表单的普通文本输入。 */}
-          <ConfigForm schema={schema.data} value={{}} messages={messages} collapseOptional onSubmit={patch => void create(patch)}
+          <ConfigForm key={choice.pkg.ID} schema={schema.data} value={emptyConfig} messages={messages} collapseOptional
+            draftAction={settingsPage && ((draft, applyPatch) => <AccountSettingsPage id={choice.pkg!.ID} page={settingsPage}
+              mode="create" instanceID={instanceID} schema={schema.data} draft={draft} applyPatch={applyPatch} />)}
+            onSubmit={(patch, base) => void create(base ? applyMergePatch(base, patch) as Record<string, unknown> : patch)}
             footer={<>
               <label className={styles.field}>
                 <span>{ui.configProfile}</span>
@@ -120,7 +128,7 @@ export function AddAccountDialog({ packages, onClose }: { packages: readonly Pac
               </label>
               <div className={styles.footer}>
                 <Button onClick={onClose} disabled={pending}>{ui.cancel}</Button>
-                <Button type="submit" variant="primary" loading={pending} disabled={!instanceID}>{ui.add}</Button>
+                <Button type="submit" variant="primary" loading={pending} disabled={!instanceID}>{settingsPage ? ui.save : ui.add}</Button>
               </div>
             </>} />
         </fieldset>

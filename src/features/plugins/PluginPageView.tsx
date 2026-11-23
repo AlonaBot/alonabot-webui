@@ -15,6 +15,7 @@ export function PluginPageView({ id }: { id: string }): JSX.Element {
   const pkg = installed(packages.data).find(item => item.ID === id);
   const page = pkg?.pages?.find(item => item.path === path);
   if (!pkg || !page) return <EmptyState icon={<AppWindow size={22} />} title={ui.pluginPageMissing} />;
+  if (page.purpose === 'instance_config') return <EmptyState icon={<AppWindow size={22} />} title={ui.pluginPageAccountOnly} />;
   if (!pkg.Enabled) return <EmptyState icon={<AppWindow size={22} />} title={ui.pluginPageDisabled} />;
   return <PluginPageFrame key={`${id}:${path}`} id={id} path={page.path} title={page.title} />;
 }

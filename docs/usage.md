@@ -6,6 +6,8 @@ Install the official WebUI on Core v0.2.0 or later, open the Core address (defau
 
 The sidebar opens overview, plugins, accounts, models, profiles, conversations, logs, permissions, and system settings. Install components from the plugin store, configure adapter instances under accounts, manage providers and models under models, and use profiles to select conversation settings and tool policies.
 
+When an adapter provides a setup page, select **Account settings** while adding or editing an account to scan a QR code or authorize the account. Review the marked changes in the form, then select **Save**.
+
 Plugin details expose configuration, jobs, plugin pages, database tables, KV/file storage, export, and clearing. Agent entries include conversation summaries and clearing; its pages show conversation contents and memory. Confirm the target and retain needed backups before clearing data.
 
 Configuration forms edit `pending.config ?? active` and save with `active_generation`. A 409 response preserves the draft and allows explicitly adopting the latest configuration. Secret changes require reauthentication. The interface supports English and Simplified Chinese, themes, sidebar order and visibility, global search, and mobile navigation.
