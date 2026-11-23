@@ -70,6 +70,10 @@ export function InstallDialog({ initialMode, onClose, onInstall }: {
               {source.trim() !== '' && repo === null ? ui.repositoryInvalid : mode === 'build' ? ui.installFromSourceHint : ui.installFromRepoHint}
             </small>
           </label>
+          {mode === 'build' && <div className={styles.buildNotice}>
+            <p>{ui.sourceBuildRequirements}</p>
+            <button type="button" className={styles.linkButton} onClick={() => { onClose(); navigate('/settings'); }}>{ui.sourceBuildSettingsLink}</button>
+          </div>}
           {mode === 'build' && <label className={styles.field}>
             <span>{ui.sourceRef}</span>
             <input className={styles.input} value={ref} onChange={event => setRef(event.target.value)} placeholder={ui.sourceRefPlaceholder} spellCheck={false} disabled={pending} />

@@ -964,6 +964,8 @@
     "sessionAccessEmptyAllow": "The allowlist is empty, so no session gets replies.",
     "sessionAccessEmptyDeny": "The blocklist is empty, so every session can use the bot.",
     "addSessions": "Add sessions",
-    "globalDeniedChats": "These sessions are blocked globally, for every profile"
+    "globalDeniedChats": "These sessions are blocked globally, for every profile",
+    "sourceBuildRequirements": "Ordinary plugins build lightly; components with large dependencies (such as the Agent) need about 2 GB of free memory. The first build also downloads the Go toolchain and dependencies. On small machines, install large components from a Release, or run alonabot pack on your own computer and upload the archive.",
+    "sourceBuildSettingsLink": "Change GOPROXY or set a network proxy in Settings"
   }
 }
