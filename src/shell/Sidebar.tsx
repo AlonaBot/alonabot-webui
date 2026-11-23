@@ -227,4 +227,3 @@ function EditRow({ entry, visible, onVisibleChange }: { entry: NavEntry; visible
     <button type="button" ref={sortable.setActivatorNodeRef} className={styles.editGrip} aria-label={ui.reorderItem.replace('{label}', entry.label)} {...sortable.attributes} {...sortable.listeners}><GripVertical size={16} /></button>
   </div>;
 }
-

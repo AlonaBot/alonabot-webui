@@ -809,7 +809,7 @@ export function PluginDetailPage(props: {
 
       {/* 回退确认对话框 */}
       <SharedDialog open={rollbackModalOpen} onOpenChange={setRollbackModalOpen} title={ui.rollbackTitle} size="lg">
-            
+
 
             <p className="dialog-subtitle">
               {ui.rollbackDesc
@@ -847,7 +847,7 @@ export function PluginDetailPage(props: {
 
       {/* 409 确认对话框 */}
       <SharedDialog open={confirmModalOpen} onOpenChange={open => { if (!confirming) { setConfirmModalOpen(open); if (!open) setPendingConfirmAction(null); } }} title={ui.confirmAffectedTitle} size="lg">
-            
+
 
             <p className="dialog-subtitle">{ui.confirmAffectedDesc}</p>
 

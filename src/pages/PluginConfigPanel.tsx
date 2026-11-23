@@ -148,13 +148,13 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
       </fieldset>
     </>}
     <SharedDialog open={confirmation !== null} onOpenChange={open => { if (!open) setConfirmation(null); }} title={confirmation === 'reload' ? ui.actionReload : confirmation === 'prune' ? ui.pruneConfig : ui.discardPending} description={confirmation === 'reload' ? ui.profileReloadConfirm : confirmation === 'prune' ? ui.prunePluginConfirm : ui.discardPendingConfirm}>
-      
-      
+
+
       {confirmation === 'reload' && <ul><li>{id}</li></ul>}
       {confirmation === 'prune' && <ul>{snapshot?.unknown.map(path => <li key={path}><code>{path}</code></li>)}</ul>}
       <div className="dialog-actions"><button type="button" onClick={() => setConfirmation(null)}>{ui.cancel}</button><button type="button" onClick={() => { const action = confirmation; setConfirmation(null); if (action === 'reload') void reload(); else void mutate(() => action === 'prune' ? prunePluginConfig(id) : discardPluginConfig(id)); }}>{ui.confirm}</button></div></SharedDialog>
     <SharedDialog open={reauthOpen} onOpenChange={open => { if (!open) closeReauth(); }} title={ui.reauthTitle} description={ui.reauthPrompt}>
-      
+
       <form onSubmit={async event => {
         event.preventDefault(); const request = pendingReveal.current; if (!request) return;
         setRevealing(true); setReauthError(null);

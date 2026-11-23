@@ -702,14 +702,14 @@
 }
 
 @media (max-width: 767px) {
-  
+
 
   .detail-title-row { gap: 12px; }
-  
-  
-  
 
-  
+
+
+
+
 }
 
 /* 统计、商店与数据页面沿用外壳令牌及画板的留白。 */
@@ -1014,7 +1014,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 @media (max-width: 767px) {
   .plugin-config-panel .config-field, .plugin-config-panel .config-group .config-field { display: flex; flex-direction: column; gap: 12px; }
   .jobs-panel-header, .permissions-toolbar, .tools-batch-bar { flex-wrap: wrap; }
-  
+
   .permissions-toolbar > button[data-variant] { flex: 1; }
   .permission-search { flex: 1 1 100%; width: 100%; }
   .permissions-toolbar .permission-expand { margin-left: 0; }
@@ -1026,15 +1026,15 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
   .route-item-row > .command-policy-controls { margin-left: auto; }
   .command-group > .command-tree { padding-left: 12px; }
   .command-policy-controls { gap: 8px; }
-  
+
   .command-name-row { gap: 0; padding: 4px; }
   .command-name-row .detail-icon-button { padding: 4px; }
-  
+
   .settings-row { display: flex; flex-direction: column; align-items: stretch; padding: 16px 0; gap: 12px; }
-  
-  
-  
-  
+
+
+
+
   .plugin-page-frame { min-height: 420px; }
 }
 
@@ -1122,11 +1122,11 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .dialog-delete-warning { font-size: var(--text-sm); color: var(--color-ink); line-height: 1.5; margin: 0; }
 .profile-section-loading { padding: 32px 0; text-align: center; color: var(--color-ink-muted); font-size: var(--text-sm); }
 @media (max-width: 767px) {
-  
+
   .profile-card-row { flex-direction: column; align-items: flex-start; gap: 12px; }
   .profile-tool-actions { width: 100%; justify-content: space-between; }
   .profile-plugin-controls { width: 100%; justify-content: space-between; }
-  
+
 }
 fieldset.config-field { border: 0; padding: 0; min-width: 0; }
 .config-field:disabled { opacity: .6; }
@@ -1164,7 +1164,7 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
 .profile-color-red { background: var(--color-danger); }
 .profile-color-gray { background: var(--color-ink-muted); }
 @media (max-width: 767px) {
-  
+
   .profiles-header-left { flex: 1; gap: 4px; }
   .profile-card-row.profile-plugin-row { flex-direction: row; align-items: center; }
   .profile-plugin-controls { width: auto; }
@@ -1200,7 +1200,7 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
 @media (max-width: 767px) {
   .runtime-card select.log-level-select, .sleep-policy-controls { width: 100%; }
   .sleep-policy-summary > div, .sleep-runtime-records > div { grid-template-columns: 1fr; gap: 4px; }
-  
+
 }
 
 .options-loading { display: grid; place-items: center; padding: 10px; }

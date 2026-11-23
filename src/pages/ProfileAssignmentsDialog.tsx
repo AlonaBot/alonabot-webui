@@ -43,7 +43,7 @@ export function ProfileAssignmentsDialog({ profile, open, onOpenChange, onChange
   const dedicated = assignments?.sessions.filter(item => item.profile === profile.id && matches(item.instance + item.session)) ?? [];
   const inherited = assignments ? chats.filter(chat => chatProfile(assignments, chat.instance_id, chat.session) === profile.id && !assignments.sessions.some(item => item.instance === chat.instance_id && item.session === chat.session) && matches(chat.instance_id + chat.session + chat.title)) : [];
   return <SharedDialog open={open} onOpenChange={onOpenChange} title={<>{ui.scopeDialogTitle.replace('{name}', profile.name)}</>}>
-      
+
       {!assignments ? <Skeleton height={120} /> : <fieldset className="config-edit-fields profile-scope-body" disabled={busy}>
         <input aria-label={ui.searchScope} placeholder={ui.searchScope} value={query} onChange={event => setQuery(event.target.value)} />
         <section className="profile-scope-section"><h3 className="profile-scope-section-title">{ui.accountDefault}</h3><div className="profile-card">

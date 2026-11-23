@@ -14,8 +14,8 @@ export function CommandNamesDialog({ draft, setDraft, busy, error, onSave, onRes
   const ui = useUI();
   const dragging = useRef<number | null>(null);
   return <SharedDialog open={draft !== null} onOpenChange={open => { if (!open && !busy) setDraft(null); }} title={ui.editNames} description={<>{ui.declaredPrompt}{draft?.command.declared_names.map(path => path.join(' ')).join(' · ')}{ui.commandNameOrderHint}</>}>
-      
-      
+
+
       <form onSubmit={event => { event.preventDefault(); onSave(); }}>
         {draft?.names.map((name, index) => <div key={index} className="command-name-row" onDragOver={event => event.preventDefault()} onDrop={event => {
           event.preventDefault();

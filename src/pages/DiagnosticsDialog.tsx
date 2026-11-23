@@ -60,7 +60,7 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
 
   return (
     <SharedDialog open={open} onOpenChange={onOpenChange} title={ui.exportDiagnosticsTitle} size="lg">
-          
+
 
           <div className="diagnostics-dialog-body">
             {/* 时间范围选择 */}
