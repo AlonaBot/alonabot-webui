@@ -37,9 +37,9 @@
 .dict-row label { display: block; font-size: 13px; color: var(--color-ink-muted); margin-bottom: 8px; }
 .dict-row input, .dict-row textarea, .dict-row select { display: block; margin-top: 4px; }
 :where(summary) { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
-.summary-hint { display: block; margin-left: 18px; color: var(--color-ink-muted); font-size: 13px; font-weight: 400; }
+
 :where(details[open] summary) { margin-bottom: 14px; }
-details[open] .summary-hint { display: none; }
+
 .form-error, [aria-invalid=true] { color: var(--color-danger); border-color: var(--color-danger); }
 .form-error { background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface)); padding: 12px; margin-bottom: 16px; border-radius: 6px; }
 :where(pre) { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
@@ -160,59 +160,8 @@ details[open] .summary-hint { display: none; }
 }
 
 /* 对话框 Dialog 样式 */
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(13, 18, 30, 0.45);
-  backdrop-filter: blur(2px);
-  z-index: 100;
-}
-
-.dialog-content {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-dialog);
-  z-index: 101;
-  max-width: 90vw;
-  max-height: 85vh;
-  overflow-y: auto;
-  outline: none;
-}
-
-.dialog-close-button {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-ink-muted);
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.dialog-close-button:hover {
-  background-color: var(--color-surface-2);
-  color: var(--color-ink);
-}
 
 /* 「编辑侧栏」对话框 */
-
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.dialog-title {
-  font-size: var(--text-md);
-  font-weight: 700;
-}
 
 .dialog-subtitle {
   font-size: var(--text-xs);
@@ -364,11 +313,6 @@ details[open] .summary-hint { display: none; }
 }
 
 /* 对话框通用样式 */
-.plugins-dialog-content {
-  padding: 24px;
-  max-width: 480px;
-  width: 90vw;
-}
 
 .dialog-form-body {
   display: flex;
@@ -381,29 +325,6 @@ details[open] .summary-hint { display: none; }
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-.dialog-radio-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 16px 0 20px 0;
-}
-
-.dialog-radio-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: var(--text-sm);
-  cursor: pointer;
-  padding: 8px 12px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  transition: border-color 0.15s ease;
-}
-
-.dialog-radio-item:hover {
-  border-color: var(--color-accent);
 }
 
 .affected-items-list {
@@ -758,11 +679,7 @@ details[open] .summary-hint { display: none; }
 }
 
 /* 页面规则只作用于本切片，避免改变外壳与原表单的排版。 */
-.plugins-dialog-content .dialog-actions { gap: 8px; }
-.plugins-dialog-content .dialog-button.is-danger {
-  color: var(--color-danger);
-  background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface));
-}
+
 .plugins-dialog-content :is(.affected-items-list, .dialog-schema-form-box, .dialog-form-body, .plugins-error-banner) {
   margin-top: 12px;
 }
@@ -786,7 +703,7 @@ details[open] .summary-hint { display: none; }
   
   
 
-  .plugins-dialog-content { padding: 20px; }
+  
 }
 
 /* 统计、商店与数据页面沿用外壳令牌及画板的留白。 */
@@ -899,10 +816,7 @@ details[open] .summary-hint { display: none; }
 button.logs-date-select { border-radius: var(--radius-sm); font-size: var(--text-sm); background: var(--color-surface-2); }
 .logs-popover-section input[type="date"] { margin-top: 8px; font-size: var(--text-sm); }
 .logs-history-date { display: block; margin-top: 8px; font-size: var(--text-xs); color: var(--color-ink-muted); }
-.logs-diagnostics-dialog { width: 480px; padding: 24px; }
-.logs-diagnostics-dialog .dialog-header { align-items: flex-start; gap: 12px; }
-.logs-diagnostics-dialog .dialog-title { margin: 0 0 16px; font-size: var(--text-lg); }
-.logs-diagnostics-dialog .dialog-subtitle { margin: 0; }
+
 .diagnostics-dialog-body { display: flex; flex-direction: column; gap: 16px; margin: 16px 0; }
 .diagnostics-field { display: flex; align-items: center; gap: 12px; background: var(--color-surface-2); padding: 8px 12px; border-radius: var(--radius-sm); }
 .diagnostics-field-label { font-size: var(--text-sm); flex: 1; white-space: nowrap; }
@@ -976,7 +890,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 /* T-09.9：仅补充配置、权限、会话和设置页面。 */
 .plugin-detail-page .detail-tabs { overflow-x: auto; overflow-y: hidden; }
 .plugin-detail-page .detail-tab-button { flex-shrink: 0; white-space: nowrap; }
-.plugin-config-panel, .plugin-jobs-panel, .permissions-page, .conversations-page { min-width: 0; }
+.plugin-config-panel, .plugin-jobs-panel, .permissions-page { min-width: 0; }
 .config-edit-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
 .config-pending-banner, .config-diagnostics-banner { padding: 16px; border: 1px solid var(--color-line); border-radius: var(--radius); margin-bottom: 20px; background: var(--color-surface-2); }
 .config-pending-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
@@ -1001,7 +915,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .option-item { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 4px; width: 100%; border: 0; }
 .option-item[aria-pressed=true] { color: var(--color-accent); background: var(--color-accent-soft); }
 .option-item small, .option-current { color: var(--color-ink-muted); font-size: var(--text-sm); overflow-wrap: anywhere; }
-.options-chips-list, .allowed-mode-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.options-chips-list { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .option-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--color-line); border-radius: var(--radius-sm); padding: 4px 8px; background: var(--color-surface-2); max-width: 100%; overflow-wrap: anywhere; }
 .option-chip button { display: inline-flex; padding: 2px; border: 0; background: transparent; }
 .field-examples { display: grid; gap: 12px; margin-top: 12px; }
@@ -1012,28 +926,26 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .example-image-alt { color: var(--color-danger); font-size: var(--text-sm); }
 .plugin-page-frame { display: block; width: 100%; min-height: 560px; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); }
 .allowed-instances-list { display: grid; gap: 8px; margin-top: 12px; }
-.allowed-instances-list label, .allowed-mode-controls label { display: flex; align-items: center; gap: 8px; }
+.allowed-instances-list label { display: flex; align-items: center; gap: 8px; }
 .allowed-instances-list .text-muted { font-size: var(--text-xs); }
 .config-json-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
-.jobs-panel-header, .permissions-toolbar, .conversations-toolbar, .tools-batch-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.jobs-panel-header, .permissions-toolbar, .tools-batch-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 .jobs-search-box { position: relative; flex: 1; }
 .jobs-search-icon { position: absolute; top: 50%; left: 12px; transform: translateY(-50%); color: var(--color-ink-muted); }
 .jobs-search-box > .jobs-search-input { padding-left: 36px; }
-.conversations-toolbar > input { flex: 1; }
+
 .permissions-toolbar > button[data-variant], .tools-batch-bar > button[data-variant], .jobs-panel-header > button[data-variant] { flex: none; width: auto; min-width: 140px; max-width: 100%; }
-.jobs-table-container, .conversations-table-container { overflow-x: auto; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); }
-.jobs-table, .conversations-table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--text-sm); }
-.jobs-table th, .jobs-table td, .conversations-table th, .conversations-table td { padding: 16px 20px; border-bottom: 1px solid var(--color-line); vertical-align: top; }
-.jobs-table th, .conversations-table th { color: var(--color-ink-muted); background: var(--color-surface-2); font-weight: 500; white-space: nowrap; }
-.jobs-table tbody tr:last-child td, .conversations-table tbody tr:last-child td { border-bottom: 0; }
+.jobs-table-container { overflow-x: auto; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); }
+.jobs-table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--text-sm); }
+.jobs-table th, .jobs-table td { padding: 16px 20px; border-bottom: 1px solid var(--color-line); vertical-align: top; }
+.jobs-table th { color: var(--color-ink-muted); background: var(--color-surface-2); font-weight: 500; white-space: nowrap; }
+.jobs-table tbody tr:last-child td { border-bottom: 0; }
 .job-trigger-badge, .job-paused-pill, .renamed-badge { font-size: var(--text-xs); padding: 3px 8px; border-radius: var(--radius-sm); background: var(--color-surface-2); color: var(--color-ink-muted); }
 .job-paused-pill { color: var(--color-warning-ink); }
 .job-toggle-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .job-toggle-btn.is-resume { color: var(--color-success); }
 .panel-empty-card { display: grid; justify-items: center; gap: 12px; padding: 64px 24px; color: var(--color-ink-muted); }
-.pagination-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; color: var(--color-ink-muted); font-size: var(--text-sm); }
-.pagination-controls { display: flex; gap: 6px; flex-wrap: wrap; }
-.page-number-button[aria-current=page] { color: var(--color-accent); border-color: var(--color-accent); background: var(--color-accent-soft); }
+
 .command-plugin-card, .tool-plugin-card { border-radius: var(--radius-lg); background: var(--color-surface); margin-bottom: 8px; overflow: hidden; }
 .permissions-page .detail-tabs { margin-bottom: 8px; }
 .permissions-page .detail-tab-button, .users-page .detail-tab-button { text-decoration: none; }
@@ -1072,11 +984,9 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .policy-diagnostics { margin: 12px 0; color: var(--color-danger); font-size: var(--text-sm); }
 .policy-diagnostics button { margin-left: 8px; }
 .command-empty { color: var(--color-ink-muted); }
-.command-names-dialog { width: 480px; padding: 24px; }
-.command-names-dialog .dialog-title { font-size: var(--text-lg); }
-.command-names-dialog .dialog-description { margin: 16px 0; }
+
 .command-name-row { display: flex; gap: 4px; align-items: center; margin: 8px 0; padding: 4px 8px; border: 1px solid var(--color-line); border-radius: var(--radius); }
-.command-names-dialog .command-name-row > input { flex: 1; border: 0; padding: 4px; }
+
 .command-name-drag { display: flex; color: var(--color-ink-muted); cursor: grab; }
 .command-primary-label { color: var(--color-ink-muted); font-size: var(--text-xs); white-space: nowrap; }
 .command-add-name { display: flex; align-items: center; gap: 8px; width: 100%; border: 1px dashed var(--color-line); padding: 8px 12px; border-radius: var(--radius); color: var(--color-ink-muted); margin: 8px 0 16px; }
@@ -1099,11 +1009,10 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .settings-label-col strong { font-weight: 500; }
 .settings-label-col p { margin: 0; color: var(--color-ink-muted); font-size: var(--text-xs); }
 
-.dialog-description { color: var(--color-ink-muted); font-size: var(--text-sm); }
 @media (max-width: 767px) {
   .plugin-config-panel .config-field, .plugin-config-panel .config-group .config-field { display: flex; flex-direction: column; gap: 12px; }
-  .jobs-panel-header, .permissions-toolbar, .conversations-toolbar, .tools-batch-bar { flex-wrap: wrap; }
-  .conversations-toolbar > input { flex-basis: 100%; }
+  .jobs-panel-header, .permissions-toolbar, .tools-batch-bar { flex-wrap: wrap; }
+  
   .permissions-toolbar > button[data-variant] { flex: 1; }
   .permission-search { flex: 1 1 100%; width: 100%; }
   .permissions-toolbar .permission-expand { margin-left: 0; }
@@ -1115,7 +1024,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
   .route-item-row > .command-policy-controls { margin-left: auto; }
   .command-group > .command-tree { padding-left: 12px; }
   .command-policy-controls { gap: 8px; }
-  .command-names-dialog { padding: 20px 16px; }
+  
   .command-name-row { gap: 0; padding: 4px; }
   .command-name-row .detail-icon-button { padding: 4px; }
   
@@ -1123,7 +1032,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
   
   
   
-  .pagination-footer { align-items: flex-start; flex-direction: column; }
+  
   .plugin-page-frame { min-height: 420px; }
 }
 
@@ -1186,7 +1095,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .profile-tool-remove-btn:hover { color: var(--color-danger); background: var(--color-surface-2); }
 .profile-add-tool-btn { width: 100%; border: 0; background: transparent; color: var(--color-accent); font-weight: 500; padding: 14px 0; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: var(--text-sm); border-radius: var(--radius); }
 .profile-add-tool-btn:hover { background: var(--color-accent-soft); }
-.profile-add-tool-dialog { width: 480px; max-width: calc(100vw - 32px); }
+
 .profile-tool-candidates-list { display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto; }
 .profile-tool-candidate-row { display: flex; align-items: center; justify-content: space-between; border: 0; background: transparent; padding: 10px 12px; border-radius: var(--radius); cursor: pointer; text-align: left; }
 .profile-tool-candidate-row:hover { background: var(--color-surface-2); }
@@ -1200,7 +1109,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .profile-plugin-arrow-btn:hover { color: var(--color-accent); }
 .profile-no-agent-banner { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--color-surface); border-radius: var(--radius-lg); margin-bottom: 20px; box-shadow: var(--shadow-sm); gap: 12px; }
 .plugin-config-panel { display: flex; flex-direction: column; gap: 16px; }
-.profile-scope-dialog { width: 560px; max-width: calc(100vw - 32px); }
+
 .profile-scope-body { display: flex; flex-direction: column; gap: 20px; max-height: 440px; overflow-y: auto; padding-right: 4px; }
 .profile-scope-section { display: flex; flex-direction: column; gap: 8px; }
 .profile-scope-section-header { display: flex; align-items: center; justify-content: space-between; }
@@ -1209,7 +1118,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .profile-add-session-btn { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--color-accent); font-size: var(--text-xs); cursor: pointer; padding: 2px 4px; }
 .profile-session-info { display: flex; flex-direction: column; gap: 2px; }
 .profile-scope-empty { padding: 16px; text-align: center; color: var(--color-ink-muted); font-size: var(--text-sm); }
-.profile-action-dialog { width: 440px; max-width: calc(100vw - 32px); }
+
 .dialog-delete-warning { font-size: var(--text-sm); color: var(--color-ink); line-height: 1.5; margin: 0; }
 .profile-section-loading { padding: 32px 0; text-align: center; color: var(--color-ink-muted); font-size: var(--text-sm); }
 @media (max-width: 767px) {
@@ -1217,7 +1126,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
   .profile-card-row { flex-direction: column; align-items: flex-start; gap: 12px; }
   .profile-tool-actions { width: 100%; justify-content: space-between; }
   .profile-plugin-controls { width: 100%; justify-content: space-between; }
-  .profile-add-tool-dialog, .profile-scope-dialog, .profile-action-dialog { width: calc(100vw - 32px); }
+  
 }
 fieldset.config-field { border: 0; padding: 0; min-width: 0; }
 .config-field:disabled { opacity: .6; }
@@ -1233,7 +1142,7 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
 .profile-persona-popover { width: min(320px, calc(100vw - 32px)); max-height: var(--radix-popover-content-available-height); overflow-y: auto; padding: 12px; background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--color-line); border-radius: var(--radius); box-shadow: var(--shadow-popover); z-index: 100; }
 .profile-persona-popover .options-dropdown { position: static; max-height: 40vh; box-shadow: none; margin: 8px 0; }
 .profile-persona-popover > button { margin-top: 8px; }
-.profile-scope-dialog, .profile-add-tool-dialog, .profile-action-dialog { padding: 20px; }
+
 .profile-row-info, .profile-tool-info, .profile-plugin-info, .profile-session-info { min-width: 0; overflow-wrap: anywhere; }
 .profile-manual-session, .profile-invalid-list { display: grid; gap: 8px; }
 .profile-scope-body { margin: 12px 0; }
