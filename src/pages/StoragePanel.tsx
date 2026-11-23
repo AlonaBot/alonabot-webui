@@ -18,7 +18,8 @@ export function kvInput(value: string, encoding: string): { text: string } | { v
   atob(value);
   return { value_base64: value };
 }
-export function StoragePanel({ id }: { id: string }) {
+/** hasDatabase 为假时组件还没有数据库文件，读取 KV 失败按空列表显示。 */
+export function StoragePanel({ id, hasDatabase = true }: { id: string; hasDatabase?: boolean }) {
   const ui = useUI();
   const kvSequence = useRef(0);
   const fileSequence = useRef(0);
@@ -40,7 +41,7 @@ export function StoragePanel({ id }: { id: string }) {
   async function loadKV() {
     const sequence = ++kvSequence.current;
     setKVError('');
-    try { const result = await listPluginKV(id, { prefix, offset: (page - 1) * 20, limit: 20 }); if (sequence !== kvSequence.current) return; setKV(result); setPage(current => Math.min(current, Math.max(1, Math.ceil(result.total / 20)))); } catch (err) { if (sequence === kvSequence.current) { setKV(null); setKVError(String(err)); } }
+    try { const result = await listPluginKV(id, { prefix, offset: (page - 1) * 20, limit: 20 }); if (sequence !== kvSequence.current) return; setKV(result); setPage(current => Math.min(current, Math.max(1, Math.ceil(result.total / 20)))); } catch (err) { if (sequence !== kvSequence.current) return; if (hasDatabase) { setKV(null); setKVError(String(err)); } else setKV({ items: [], total: 0 }); }
   }
   async function loadFiles() {
     const sequence = ++fileSequence.current;

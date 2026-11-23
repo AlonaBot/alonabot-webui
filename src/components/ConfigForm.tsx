@@ -762,6 +762,11 @@ function DictControl({ value = {}, onChange, id, required }: { value: Record<str
   </div>;
 }
 
+/** schemaDefaults 返回 Schema 声明的缺省值，用作新建配置的初始草稿。 */
+export function schemaDefaults(schema: unknown): Record<string, unknown> {
+  return templateDefaults(fieldsFromSchema(schema));
+}
+
 // 新行与新选模板预填声明过的默认值，读取的配置仍由 SDK 补齐。
 function templateDefaults(fields: Field[]): Record<string, unknown> {
   return Object.fromEntries(fields.flatMap(field => Object.hasOwn(field, 'defaultValue') ? [[field.key, structuredClone(field.defaultValue)]]

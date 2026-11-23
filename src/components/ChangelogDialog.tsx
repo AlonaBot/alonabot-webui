@@ -10,7 +10,7 @@ import { compareVersions, unreadEntries } from '../pages/versions';
 import { Markdown, safeLink } from './Markdown';
 import { Dialog as SharedDialog } from '../ui/Dialog';
 
-export function ChangelogDialog({ component, version, open, automatic = false, onClose }: { component: string; version: string; open: boolean; automatic?: boolean; onClose: () => void }) {
+export function ChangelogDialog({ component, name, version, open, automatic = false, onClose }: { component: string; name?: string; version: string; open: boolean; automatic?: boolean; onClose: () => void }) {
   const ui = useUI();
   const locale = ui === chinese.messages ? 'zh-CN' : 'en-US';
   const [entries, setEntries] = useState<Changelog['entries']>([]);
@@ -40,7 +40,7 @@ export function ChangelogDialog({ component, version, open, automatic = false, o
     setSaving(true);
     try { if (entries.length) await setSeenVersion(component, entries[0].version); onClose(); } catch (err) { setError(String(err)); } finally { setSaving(false); }
   }
-  return <SharedDialog open={visible} onOpenChange={value => { if (!value) void close(); }} title={<>{ui.changelog} · {component}</>} size="lg">{error && <pre role="alert" className="form-error">{error}</pre>}{loading && <Skeleton height={120} />}<div className="data-dialog-body" lang={actualLocale}>{entries.map(entry => <article className="changelog-entry" key={entry.version}><h3 className="font-mono">{entry.version} <small className="muted">{entry.date}</small></h3><Markdown text={entry.markdown} /></article>)}{!loading && !entries.length && !error && <p>{ui.noChangelog}</p>}</div></SharedDialog>;
+  return <SharedDialog open={visible} onOpenChange={value => { if (!value) void close(); }} title={<>{ui.changelog} · {name ?? component}</>} size="lg">{error && <pre role="alert" className="form-error">{error}</pre>}{loading && <Skeleton height={120} />}<div className="data-dialog-body" lang={actualLocale}>{entries.map(entry => <article className="changelog-entry" key={entry.version}><h3 className="font-mono">{entry.version} <small className="muted">{entry.date}</small></h3><Markdown text={entry.markdown} /></article>)}{!loading && !entries.length && !error && <p>{ui.noChangelog}</p>}</div></SharedDialog>;
 }
 
 export function ReleasePreview({ repo, onLoaded }: { repo: string; onLoaded?: (release: LatestRelease) => void }) {

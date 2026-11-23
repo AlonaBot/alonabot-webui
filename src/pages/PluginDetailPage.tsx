@@ -19,10 +19,10 @@ import {
   X,
 } from 'lucide-react';
 import { AdminAPIError, isConfirmationError } from '../api/client';
-import { getPluginConfig, patchPluginConfig, type ConfigSnapshot, listCoreOptions, resolveCoreOptions, type ConfigOption } from '../api/config';
+import { getPluginConfig, listCoreOptions, resolveCoreOptions, type ConfigOption } from '../api/config';
 import { listInstances, type AdapterInstance } from '../api/instances';
 import { getLogLevels, setPackageLogLevel, type LogLevels, type SourceLogLevel } from '../api/logs';
-import { changePackage, listPackages, listGenerations, packageIconURL, rollbackPackage, uninstallPackage, getPluginRuntime, getPluginSleepPolicy, setPluginSleepPolicy, type Generation, type Package, type PluginRuntime, type SleepPolicy } from '../api/packages';
+import { changePackage, listPackages, listGenerations, listPluginJobs, packageIconURL, rollbackPackage, uninstallPackage, getPluginRuntime, getPluginSleepPolicy, setPluginSleepPolicy, type Generation, type Package, type PluginRuntime, type SleepPolicy } from '../api/packages';
 import { getAllowedInstances, setAllowedInstances, type AllowedInstances } from '../api/policies';
 import { ChangelogDialog } from '../components/ChangelogDialog';
 import { StoragePanel } from './StoragePanel';
@@ -30,20 +30,19 @@ import { ConversationsPanel } from './ConversationsPanel';
 import { DatabasePanel } from './DatabasePanel';
 import { useUI } from '../i18n/UI';
 import { Link, navigate, useQueryParam } from '../shell/router';
+import { usePackages } from '../queries/packages';
 import { SearchContext } from '../shell/search';
 import { PluginConfigPanel } from './PluginConfigPanel';
 import { PluginJobsPanel } from './PluginJobsPanel';
 import { useUISettings } from '../shell/settings';
-import { rawConfigPatch } from './rawConfig';
 import { PluginPageFrame } from '../components/PluginPageFrame';
 import { PluginSleepPanel } from './PluginSleepPanel';
-import { LoadingRows, Skeleton, Spinner } from '../ui/EmptyState';
+import { LoadingRows, Skeleton } from '../ui/EmptyState';
 import { RadioGroup } from '../ui/RadioGroup';
 import { UninstallDialog } from '../features/plugins/PluginDialogs';
 import { usePackageActions } from '../features/plugins/usePackageActions';
 import { Dialog as SharedDialog } from '../ui/Dialog';
 import { toast } from '../ui/toast';
-import { Disclosure } from '../ui/Disclosure';
 
 /** PluginDetailPage 展示保留代次、回退确认及组件高级设置。 */
 export function PluginDetailPage(props: {
@@ -59,6 +58,7 @@ export function PluginDetailPage(props: {
   const [showChangelog, setShowChangelog] = useState(false);
   const [autoContent, setAutoContent] = useState(true);
   const [pkg, setPkg] = useState<Package | null>(null);
+  const cachedPackages = usePackages();
   const [loading, setLoading] = useState(true);
   const [retained, setRetained] = useState<readonly Generation[]>([]);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -86,14 +86,10 @@ export function PluginDetailPage(props: {
   const [allowedOptions, setAllowedOptions] = useState<ConfigOption[]>([]);
   const [allowedMore, setAllowedMore] = useState(false);
 
-  // 原始 JSON 配置
-  const [rawSnapshot, setRawSnapshot] = useState<ConfigSnapshot | null>(null);
+  // 没有配置项、定时任务或数据库时不显示对应标签。
   const [configAvailable, setConfigAvailable] = useState(true);
   const [configRevision, setConfigRevision] = useState(0);
-  const [rawConflict, setRawConflict] = useState<ConfigSnapshot | null>(null);
-  const [rawJsonText, setRawJsonText] = useState('{}');
-  const [savingRawJson, setSavingRawJson] = useState(false);
-  const [rawJsonError, setRawJsonError] = useState<string | null>(null);
+  const [hasJobs, setHasJobs] = useState(false);
   const [dataView, setDataView] = useState<'database' | 'storage' | 'conversations'>('database');
 
   // 日志级别状态
@@ -172,14 +168,15 @@ export function PluginDetailPage(props: {
       getAllowedInstances(id).then(setAllowedInstancesState).catch(report),
       listInstances().then(setAllAdapterInstances).catch(report),
       getPluginConfig(id).then(cfg => {
-        setConfigAvailable(true);
-        setRawSnapshot(cfg);
-        const raw = cfg.pending ? cfg.pending.config : cfg.active;
-        setRawJsonText(JSON.stringify(raw, null, 2));
+        const available = cfg.schema !== null && typeof cfg.schema === 'object' && Object.keys(cfg.schema).length > 0;
+        setConfigAvailable(available);
+        if (!available) setActiveTab(previous => previous === 'config' ? 'data' : previous);
       }).catch(error => {
         if (error instanceof AdminAPIError && error.status === 400 && error.message === 'webui has no config') { setConfigAvailable(false); setActiveTab(previous => previous === 'config' ? 'versions' : previous); }
         else report(error);
       }),
+      // 读取失败时保留标签，由任务面板显示错误。
+      listPluginJobs(id).then(result => setHasJobs(result.jobs.length > 0)).catch(() => setHasJobs(true)),
     ]);
     setConfigRevision(value => value + 1);
     setLoading(false);
@@ -196,26 +193,6 @@ export function PluginDetailPage(props: {
       try { setAllowedInstancesState(await getAllowedInstances(id)); } catch (error) { setErrorBanner(previous => `${previous}\n${error instanceof Error ? error.message : String(error)}`); setAllowedInstancesState(null); }
     } finally {
       setSavingAllowed(false);
-    }
-  };
-
-  const handleSaveRawJson = async () => {
-    setSavingRawJson(true);
-    setRawJsonError(null);
-    try {
-      const parsed: unknown = JSON.parse(rawJsonText);
-      const snapshot = rawSnapshot!;
-      await patchPluginConfig(id, snapshot.active_generation, rawConfigPatch(snapshot.pending?.config ?? snapshot.active, parsed));
-      toast.success(ui.saved);
-      await loadData();
-    } catch (error) {
-      setRawJsonError(error instanceof Error ? error.message : String(error));
-      if (error instanceof AdminAPIError && error.status === 409 && error.code === 'FAILED_PRECONDITION') {
-        try { setRawConflict(await getPluginConfig(id)); }
-        catch (refreshError) { setRawJsonError(previous => `${previous}\n${refreshError instanceof Error ? refreshError.message : String(refreshError)}`); }
-      }
-    } finally {
-      setSavingRawJson(false);
     }
   };
 
@@ -382,13 +359,17 @@ export function PluginDetailPage(props: {
     );
   };
 
+  // 侧栏已缓存的包列表先顶上，详情读回前不拿组件 ID 充当名称。
+  const shown = pkg ?? cachedPackages.data?.find(item => item.ID === id && !item.Uninstalled) ?? null;
   const isWebUI = pkg?.Role === 'webui';
+  const hasDatabase = (generations ?? retained).some(generation => generation.has_db);
+  const shownDataView = !hasDatabase && dataView === 'database' ? 'storage' : dataView;
   const pages = pkg?.pages?.filter(page => page.purpose !== 'instance_config');
   const hasSleep = pkg?.Role === 'plugin' || pkg?.Role === 'agent';
 
   return (
     <div className="plugin-detail-page">
-      {pkg && <><ChangelogDialog component={id} version={pkg.Version} open={showChangelog} onClose={() => setShowChangelog(false)} /><ChangelogDialog component={id} version={pkg.Version} open={autoContent} automatic onClose={() => setAutoContent(false)} /></>}
+      {pkg && <><ChangelogDialog component={id} name={pkg.Name || id} version={pkg.Version} open={showChangelog} onClose={() => setShowChangelog(false)} /><ChangelogDialog component={id} name={pkg.Name || id} version={pkg.Version} open={autoContent} automatic onClose={() => setAutoContent(false)} /></>}
       {/* 头部导航与操作栏 */}
       <div className="plugin-detail-header">
         <div className="detail-breadcrumb-row">
@@ -418,11 +399,11 @@ export function PluginDetailPage(props: {
 
           <div className="detail-title-info">
             <div className="detail-name-row">
-              <h1 className="detail-title">{pkg?.Name || id}</h1>
+              {shown ? <h1 className="detail-title">{shown.Name || id}</h1> : <Skeleton width={180} height={28} />}
               {renderStatus()}
             </div>
-            <span className="detail-source-badge font-mono">{pkg?.Source ?? id}</span>
-            {pkg?.Description && <p className="detail-description">{pkg.Description}</p>}
+            {shown ? <span className="detail-source-badge font-mono">{shown.Source || id}</span> : <Skeleton width={260} height={14} />}
+            {shown?.Description && <p className="detail-description">{shown.Description}</p>}
           </div>
 
           <div className="detail-actions-right">
@@ -505,7 +486,8 @@ export function PluginDetailPage(props: {
         </div>
       ) : null}
 
-      {/* 功能标签栏 */}
+      {/* 功能标签栏：首轮数据读完再显示，避免标签先出现再消失。 */}
+      {loading ? <LoadingRows rows={3} /> : <>
       <div className="detail-tabs">
         {configAvailable && (
           <button
@@ -531,7 +513,7 @@ export function PluginDetailPage(props: {
             </button>
           ))}
 
-        {!isWebUI && (
+        {!isWebUI && hasJobs && (
           <button
             type="button"
             className={`detail-tab-button ${activeTab === 'jobs' ? 'is-active' : ''}`}
@@ -572,16 +554,16 @@ export function PluginDetailPage(props: {
             ) : null,
           )}
 
-        {!isWebUI && activeTab === 'jobs' && <PluginJobsPanel id={id} />}
+        {!isWebUI && hasJobs && activeTab === 'jobs' && <PluginJobsPanel id={id} />}
 
         {activeTab === 'data' && (
           <>
-            <div className="time-range-pills data-view-tabs">
-              <button className={`time-range-pill ${dataView === 'database' ? 'is-active' : ''}`} onClick={() => setDataView('database')}>{ui.database}</button>
-              <button className={`time-range-pill ${dataView === 'storage' ? 'is-active' : ''}`} onClick={() => setDataView('storage')}>{ui.storage}</button>
-              {pkg?.Role === 'agent' && <button className={`time-range-pill ${dataView === 'conversations' ? 'is-active' : ''}`} onClick={() => setDataView('conversations')}>{ui.conversations}</button>}
-            </div>
-            {dataView === 'database' ? <>{generationError && <pre role="alert" className="form-error">{generationError}</pre>}<DatabasePanel id={id} generations={generations ?? retained} /></> : dataView === 'storage' ? <StoragePanel id={id} /> : <ConversationsPanel id={id} />}
+            {(hasDatabase || pkg?.Role === 'agent') && <div className="time-range-pills data-view-tabs">
+              {hasDatabase && <button className={`time-range-pill ${shownDataView === 'database' ? 'is-active' : ''}`} onClick={() => setDataView('database')}>{ui.database}</button>}
+              <button className={`time-range-pill ${shownDataView === 'storage' ? 'is-active' : ''}`} onClick={() => setDataView('storage')}>{ui.storage}</button>
+              {pkg?.Role === 'agent' && <button className={`time-range-pill ${shownDataView === 'conversations' ? 'is-active' : ''}`} onClick={() => setDataView('conversations')}>{ui.conversations}</button>}
+            </div>}
+            {shownDataView === 'database' ? <>{generationError && <pre role="alert" className="form-error">{generationError}</pre>}<DatabasePanel id={id} generations={generations ?? retained} /></> : shownDataView === 'storage' ? <StoragePanel id={id} hasDatabase={hasDatabase} /> : <ConversationsPanel id={id} />}
           </>
         )}
 
@@ -750,39 +732,6 @@ export function PluginDetailPage(props: {
               </div>
             )}
 
-            {/* 完整 JSON 配置编辑 */}
-            {configAvailable && (
-              <div className="advanced-card">
-                <Disclosure summary={ui.rawJsonEdit} hint={ui.rawConfigDesc}>
-                <div className="advanced-card-body">
-                  {rawJsonError && (
-                    <div className="plugins-error-banner" role="alert">
-                      <span>{rawJsonError}</span>
-                    </div>
-                  )}
-                  {rawConflict && <div className="config-pending-banner"><span>{ui.configConflict}</span><button type="button" onClick={() => { setRawSnapshot(rawConflict); setRawJsonText(JSON.stringify(rawConflict.pending?.config ?? rawConflict.active, null, 2)); setRawConflict(null); }}>{ui.useLatestConfig}</button></div>}
-                  <textarea
-                    className="code-editor"
-                    value={rawJsonText}
-                    onChange={e => setRawJsonText(e.target.value)}
-                    rows={12}
-
-                  />
-                  <div className="config-json-actions">
-                    <button
-                      type="button"
-                      className="save-button"
-                      disabled={savingRawJson || !rawSnapshot || rawConflict !== null}
-                      onClick={handleSaveRawJson}
-                    >
-                      {savingRawJson ? <Spinner size={14} /> : ui.save}
-                    </button>
-                  </div>
-                </div>
-                </Disclosure>
-              </div>
-            )}
-
             {/* 卸载危险区 */}
             <div className="advanced-card is-danger-card">
               <div className="advanced-card-header">
@@ -807,6 +756,7 @@ export function PluginDetailPage(props: {
           </div>
         )}
       </div>
+      </>}
 
       {/* 回退确认对话框 */}
       <SharedDialog open={rollbackModalOpen} onOpenChange={setRollbackModalOpen} title={ui.rollbackTitle} size="lg">
