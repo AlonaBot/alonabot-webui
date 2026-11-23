@@ -6,7 +6,6 @@
   padding: var(--space-10) var(--space-6);
   color: var(--color-ink-muted);
   text-align: center;
-  animation: in var(--dur-slow) var(--ease-out);
 }
 .icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--space-1); border-radius: 14px; background: var(--color-surface-2); color: var(--color-ink-muted); }
 .root[data-tone="error"] .icon { background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface)); color: var(--color-danger); }
@@ -22,7 +21,6 @@
   animation: shimmer 1.4s ease-in-out infinite;
 }
 
-@keyframes in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
 .description a { display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent-strong); font-weight: 600; text-decoration: none; }

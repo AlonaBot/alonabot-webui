@@ -26,7 +26,6 @@ export function UsersPage(): JSX.Element {
   const [newUser, setNewUser] = useState('');
   const [newAction, setNewAction] = useState('admin');
   async function load() {
-    setLoading(true);
     try {
       setUsers(await loadUsers());
     } catch (err) { setError(String(err)); } finally { setLoading(false); }

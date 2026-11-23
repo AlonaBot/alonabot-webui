@@ -8,7 +8,6 @@
   padding: var(--space-5);
   border-radius: 18px;
   background: var(--color-surface);
-  animation: card-in var(--dur-slow) var(--ease-out) both;
 }
 .card[data-tone="off"] .title, .card[data-tone="off"] .avatar { opacity: 0.6; }
 
@@ -95,7 +94,6 @@
 .notice[data-tone="danger"] { background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface)); color: var(--color-danger); }
 .config { max-height: 420px; margin: 0; padding: var(--space-4); overflow: auto; border-radius: 12px; background: var(--color-surface-2); font-family: var(--font-mono); font-size: 13px; }
 
-@keyframes card-in { from { opacity: 0; transform: translateY(6px); } }
 
 @media (max-width: 767px) {
   .grid { grid-template-columns: 1fr; }

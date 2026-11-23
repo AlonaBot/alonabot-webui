@@ -837,7 +837,7 @@
     "stateProblem": "Failed",
     "storeFetchHint": "Try another route in the plugin source menu, or set a network proxy in System settings.",
     "storeRoute": "Route",
-    "storeStale": "Could not refresh; showing results from {time}",
+    "storeStale": "Could not refresh; showing the last loaded results",
     "webuiSelfDescription": "The official console you are using now",
     "webuiSelfLocked": "The console you are using cannot be disabled or uninstalled here",
     "accountAdded": "Added account {name}",
@@ -926,6 +926,9 @@
     "noConversationsHint": "Chats appear here after the bot receives a message in a group or private chat.",
     "entriesCount": "{count}",
     "conversationCleared": "Message history cleared",
-    "clearConversationDesc": "Clear {count} messages from \"{name}\"? The bot forgets this conversation's context. This cannot be undone."
+    "clearConversationDesc": "Clear {count} messages from \"{name}\"? The bot forgets this conversation's context. This cannot be undone.",
+    "accountConfigSaved": "Account settings saved",
+    "configLoadFailed": "Could not load settings",
+    "accountSettings": "Account settings"
   }
 }

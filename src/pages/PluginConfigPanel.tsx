@@ -52,7 +52,6 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
   const [confirmation, setConfirmation] = useState<'prune' | 'discard' | 'reload' | null>(null);
   const [profilePlugin, setProfilePlugin] = useState<ProfilePlugin | null>(null);
   const isDefault = profileID === 'default';
-  const [saved, setSaved] = useState(false);
   const [runtime, setRuntime] = useState<Package | null>(null);
   const [reauthOpen, setReauthOpen] = useState(false);
   const [reauthToken, setReauthToken] = useState('');
@@ -75,8 +74,8 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
   }, [id, profileID, isDefault]);
 
   const mutate = async (action: () => Promise<unknown>) => {
-    setBusy(true); setError(null); setSaved(false);
-    try { await action(); await load(); setSaved(true); }
+    setBusy(true); setError(null);
+    try { await action(); await load(); toast.success(ui.saveSuccess); }
     catch (error) {
       let message = error instanceof Error ? error.message : String(error);
       try { await load(); } catch (readError) { message += '\n' + (readError instanceof Error ? readError.message : String(readError)); }
@@ -98,11 +97,11 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
     if (errors.length) toast.error(errors.join('\n')); setBusy(false);
   };
   const submit = async (patch: Record<string, unknown>) => {
-    setBusy(true); setError(null); setSaved(false);
+    setBusy(true); setError(null);
     try {
       if (isDefault) await patchPluginConfig(id, snapshot!.active_generation, patch);
       else await patchProfilePlugin(profileID, id, { overrides: extractProfileOverrides(applyMergePatch(value, patch) as Record<string, unknown>, patch, editablePaths!) });
-      await load(); setSaved(true); onChanged?.();
+      await load(); toast.success(ui.saveSuccess); onChanged?.();
     }
     catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -130,14 +129,12 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
   const messages = useMemo(() => ({ config: snapshot?.i18n[pickLocale(Object.keys(snapshot.i18n), [locale])] ?? {} }), [snapshot, locale]);
   const value = useMemo(() => snapshot ? isDefault ? snapshot.pending?.config ?? snapshot.active : applyProfileOverrides(snapshot.active, profilePlugin?.overrides ?? {}, profilePlugin?.invalid.map(entry => entry.path) ?? []) : {}, [snapshot, isDefault, profilePlugin]);
   const editablePaths = useMemo(() => isDefault ? undefined : editableProfilePaths(snapshot?.schema, profilePlugin?.fields ?? []), [snapshot?.schema, profilePlugin, isDefault]);
-  const form: ConfigFormProps | null = snapshot && { schema: snapshot.schema, value, messages, options, editablePaths, exampleImageURL: image => pluginExampleURL(id, image), commandPrefix: prefix, onDiscard: () => setSaved(false), onReveal: isDefault ? reveal : undefined, onSubmit: patch => void submit(patch) };
+  const form: ConfigFormProps | null = snapshot && { schema: snapshot.schema, value, messages, options, editablePaths, exampleImageURL: image => pluginExampleURL(id, image), commandPrefix: prefix, onReveal: isDefault ? reveal : undefined, onSubmit: patch => void submit(patch) };
   return <div className="plugin-config-panel">
     {error && <p className="plugins-error-banner" role="alert">{error}</p>}
     {runtime && <p role="status">{runtime.State}{runtime.Warnings?.length ? `: ${runtime.Warnings.join('; ')}` : ''}</p>}
     {loading ? <LoadingRows /> : snapshot?.schema == null ? <p>{snapshot ? ui.noConfig : ''}</p> : <>
-      {saved && <p role="status">{ui.saveSuccess}</p>}
       {latest && <div className="config-pending-banner"><span>{ui.configConflict}</span><button type="button" onClick={() => { setSnapshot(latest); setLatest(null); }}>{ui.useLatestConfig}</button></div>}
-      {isDefault && <p className="field-hint">{ui.profileDefaultConfigHint.replace('{plugin}', id)}</p>}
       {!isDefault && profilePlugin && editablePaths && profilePlugin.fields.length > editablePaths.length && <p role="status">{ui.profileSecretReadonly.replace('{paths}', profilePlugin.fields.filter(path => !editablePaths.includes(path)).join(', '))}</p>}
       {!isDefault && profilePlugin && profilePlugin.invalid.length > 0 && <div className="config-diagnostics-banner"><ul>{profilePlugin.invalid.map(entry => <li key={entry.path}><code>{entry.path}</code>: {entry.reason}</li>)}</ul><button type="button" disabled={busy} onClick={() => void mutate(() => pruneProfilePlugin(profileID, id))}>{ui.pruneOverrides}</button></div>}
       {isDefault && snapshot.pending && <div className="config-pending-banner"><strong>{ui.pendingConfig}</strong><span>{ui.reloadToApply}</span>

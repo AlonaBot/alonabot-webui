@@ -16,7 +16,6 @@ export function PluginJobsPanel(props: { id: string }): JSX.Element {
   const [operatingId, setOperatingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
       const res = await listPluginJobs(id);

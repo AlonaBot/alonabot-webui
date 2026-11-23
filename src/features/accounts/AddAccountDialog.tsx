@@ -30,6 +30,13 @@ export function AdapterIcon({ adapterID, size = 22 }: { adapterID: string; size?
  * 添加机器人账号：选适配器 → 填名称与适配器表单 → 选配置文件。
  * 账号建好后再指定配置文件；后一步失败时账号保留并提示。
  */
+/** 官方 Adapter 的配置字段用面向用户的名称；其他 Adapter 沿用自己的 Schema 文案。 */
+export function adapterFieldMessages(ui: Record<string, string>, adapterID: string): Record<string, unknown> {
+  return { config: adapterID === 'telegram'
+    ? { token: { description: ui.botToken }, api_base_url: { description: ui.apiBaseURL }, proxy_mode: { description: ui.proxyMode }, proxy: { description: ui.proxyURL } }
+    : adapterID === 'onebot11' ? { ws_url: { description: ui.webSocketURL }, access_token: { description: ui.accessToken }, mode: { description: ui.connectionMode } } : {} };
+}
+
 export function AddAccountDialog({ packages, onClose }: { packages: readonly Package[]; onClose: () => void }): JSX.Element {
   const ui = useUI();
   const client = useQueryClient();
@@ -52,9 +59,7 @@ export function AddAccountDialog({ packages, onClose }: { packages: readonly Pac
   const profiles = useQuery({ queryKey: ['profiles'], queryFn: listProfiles });
   const label = (id: string) => id === 'telegram' ? ui.adapterTelegram : id === 'onebot11' ? ui.adapterOneBot : id;
   const instanceID = name.trim();
-  const messages = { config: adapterID === 'telegram'
-    ? { token: { description: ui.botToken }, api_base_url: { description: ui.apiBaseURL }, proxy_mode: { description: ui.proxyMode }, proxy: { description: ui.proxyURL } }
-    : adapterID === 'onebot11' ? { ws_url: { description: ui.webSocketURL }, access_token: { description: ui.accessToken }, mode: { description: ui.connectionMode } } : {} };
+  const messages = adapterFieldMessages(ui, adapterID);
 
   const create = async (patch: Record<string, unknown>, confirmed = false) => {
     if (!choice?.pkg || !instanceID) return;

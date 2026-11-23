@@ -50,7 +50,6 @@
   border-radius: 16px;
   background: var(--color-surface);
   transition: box-shadow var(--dur), transform var(--dur);
-  animation: card-in var(--dur-slow) var(--ease-out) both;
 }
 .card:hover { box-shadow: 0 10px 28px -18px color-mix(in srgb, var(--color-ink) 40%, transparent); }
 
@@ -134,13 +133,12 @@
 .facts dt { color: var(--color-ink-muted); }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 
-.checklist { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: var(--space-4); border-radius: 12px; background: var(--color-surface-2); list-style: none; font-size: var(--text-sm); animation: card-in var(--dur) var(--ease-out); }
+.checklist { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: var(--space-4); border-radius: 12px; background: var(--color-surface-2); list-style: none; font-size: var(--text-sm); }
 .checklist li { display: flex; align-items: center; gap: var(--space-2); }
 .checklist svg { flex: none; color: var(--color-success); }
 .checklist li[data-tone="warning"] { color: var(--color-warning-ink); }
 .checklist li[data-tone="warning"] svg { color: var(--color-warning); }
 
-@keyframes card-in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes grow { from { transform: scaleY(0); } }
 
 @media (max-width: 767px) {

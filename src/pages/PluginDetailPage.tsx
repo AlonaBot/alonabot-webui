@@ -43,6 +43,7 @@ import { UninstallDialog } from '../features/plugins/PluginDialogs';
 import { usePackageActions } from '../features/plugins/usePackageActions';
 import { Dialog as SharedDialog } from '../ui/Dialog';
 import { toast } from '../ui/toast';
+import { Disclosure } from '../ui/Disclosure';
 
 /** PluginDetailPage 展示保留代次、回退确认及组件高级设置。 */
 export function PluginDetailPage(props: {
@@ -80,7 +81,6 @@ export function PluginDetailPage(props: {
   const [allowedInstances, setAllowedInstancesState] = useState<AllowedInstances | null>(null);
   const [allAdapterInstances, setAllAdapterInstances] = useState<AdapterInstance[]>([]);
   const [savingAllowed, setSavingAllowed] = useState(false);
-  const [allowedSaved, setAllowedSaved] = useState(false);
 
   const [allowedQuery, setAllowedQuery] = useState('');
   const [allowedOptions, setAllowedOptions] = useState<ConfigOption[]>([]);
@@ -93,14 +93,12 @@ export function PluginDetailPage(props: {
   const [rawConflict, setRawConflict] = useState<ConfigSnapshot | null>(null);
   const [rawJsonText, setRawJsonText] = useState('{}');
   const [savingRawJson, setSavingRawJson] = useState(false);
-  const [rawJsonSaved, setRawJsonSaved] = useState(false);
   const [rawJsonError, setRawJsonError] = useState<string | null>(null);
   const [dataView, setDataView] = useState<'database' | 'storage' | 'conversations'>('database');
 
   // 日志级别状态
   const [logLevels, setLogLevels] = useState<LogLevels | null>(null);
   const [savingLogLevel, setSavingLogLevel] = useState(false);
-  const [logLevelSavedMessage, setLogLevelSavedMessage] = useState(false);
   const [sleepPolicy, setSleepPolicy] = useState<SleepPolicy | null>(null);
   const [runtime, setRuntime] = useState<PluginRuntime | null>(null);
   const [sleepPolicyError, setSleepPolicyError] = useState<string | null>(null);
@@ -157,7 +155,6 @@ export function PluginDetailPage(props: {
   };
 
   const loadData = async () => {
-    setLoading(true);
     setGenerationError(null);
     const report = (error: unknown) => setErrorBanner(previous => [previous, error instanceof Error ? error.message : String(error)].filter(Boolean).join('\n'));
     await Promise.all([
@@ -190,12 +187,10 @@ export function PluginDetailPage(props: {
 
   const handleSaveAllowedInstances = async (value: AllowedInstances) => {
     setSavingAllowed(true);
-    setAllowedSaved(false);
     try {
       await setAllowedInstances(id, value);
       setAllowedInstancesState(await getAllowedInstances(id));
-      setAllowedSaved(true);
-      setTimeout(() => setAllowedSaved(false), 3000);
+      toast.success(ui.saved);
     } catch (err: unknown) {
       toast.error(err);
       try { setAllowedInstancesState(await getAllowedInstances(id)); } catch (error) { setErrorBanner(previous => `${previous}\n${error instanceof Error ? error.message : String(error)}`); setAllowedInstancesState(null); }
@@ -207,12 +202,11 @@ export function PluginDetailPage(props: {
   const handleSaveRawJson = async () => {
     setSavingRawJson(true);
     setRawJsonError(null);
-    setRawJsonSaved(false);
     try {
       const parsed: unknown = JSON.parse(rawJsonText);
       const snapshot = rawSnapshot!;
       await patchPluginConfig(id, snapshot.active_generation, rawConfigPatch(snapshot.pending?.config ?? snapshot.active, parsed));
-      setRawJsonSaved(true);
+      toast.success(ui.saved);
       await loadData();
     } catch (error) {
       setRawJsonError(error instanceof Error ? error.message : String(error));
@@ -343,11 +337,10 @@ export function PluginDetailPage(props: {
   const handleLogLevelChange = async (newLevel: SourceLogLevel) => {
     if (!pkg) return;
     setSavingLogLevel(true);
-    setLogLevelSavedMessage(false);
     try {
       const updated = await setPackageLogLevel(pkg.ID, newLevel);
       setLogLevels(updated);
-      setLogLevelSavedMessage(true);
+      toast.success(ui.logLevelSaved);
     } catch (err: unknown) {
       toast.error(err);
       await loadData();
@@ -674,9 +667,6 @@ export function PluginDetailPage(props: {
             <div className={`advanced-card${hasSleep ? ' runtime-card' : ''}`}>
               <div className="advanced-card-header">
                 <h3 className="advanced-card-title">{hasSleep ? ui.runtimeStatus : ui.logLevel}</h3>
-                {logLevelSavedMessage ? (
-                  <span className="log-saved-pill">{ui.logLevelSaved}</span>
-                ) : null}
               </div>
               <div className="advanced-card-body">
                 <div className={hasSleep ? 'settings-row' : 'log-level-selector-row'}>
@@ -709,7 +699,6 @@ export function PluginDetailPage(props: {
               <div className="advanced-card">
                 <div className="advanced-card-header">
                   <h3 className="advanced-card-title">{ui.allowedInstances}</h3>
-                  {allowedSaved && <span className="log-saved-pill">{ui.saved}</span>}
                 </div>
                 <div className="advanced-card-body">
                   <p className="field-hint">{ui.allowedInstancesDesc}</p>
@@ -763,12 +752,8 @@ export function PluginDetailPage(props: {
             {/* 完整 JSON 配置编辑 */}
             {configAvailable && (
               <div className="advanced-card">
-                <div className="advanced-card-header">
-                  <h3 className="advanced-card-title">{ui.rawJsonEdit}</h3>
-                  {rawJsonSaved && <span className="log-saved-pill">{ui.saved}</span>}
-                </div>
+                <Disclosure summary={ui.rawJsonEdit} hint={ui.rawConfigDesc}>
                 <div className="advanced-card-body">
-                  <p className="field-hint">{ui.rawConfigDesc}</p>
                   {rawJsonError && (
                     <div className="plugins-error-banner" role="alert">
                       <span>{rawJsonError}</span>
@@ -793,6 +778,7 @@ export function PluginDetailPage(props: {
                     </button>
                   </div>
                 </div>
+                </Disclosure>
               </div>
             )}
 

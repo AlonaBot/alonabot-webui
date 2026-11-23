@@ -21,6 +21,15 @@ export async function getInstanceConfig(
   );
 }
 
+/** 整体替换账号配置；省略的 secret 字段由 Core 保留原值。 */
+export async function updateInstanceConfig(adapterID: string, instanceID: string, config: Record<string, unknown>): Promise<void> {
+  await request<void>(`/api/v1/adapters/${encodeURIComponent(adapterID)}/instances/${encodeURIComponent(instanceID)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ config }),
+  });
+}
+
 /** 创建 Adapter 实例。 */
 export async function createInstance(input: {
   package_id: string;

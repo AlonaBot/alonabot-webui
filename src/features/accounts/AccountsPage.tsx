@@ -1,8 +1,12 @@
 import { useContext, useEffect, useMemo, useState, type JSX } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Download, Eye, MoreHorizontal, Plus, Power, Trash2 } from 'lucide-react';
+import { AlertTriangle, Download, MoreHorizontal, Plus, Power, Settings2, Trash2 } from 'lucide-react';
 import { listChats, type Chat } from '../../api/conversations';
-import { changeInstance, getInstanceConfig, pruneInstanceConfig, type AdapterInstance } from '../../api/instances';
+import { changeInstance, getInstanceConfig, getInstanceSchema, pruneInstanceConfig, updateInstanceConfig, type AdapterInstance } from '../../api/instances';
+import { listInstanceOptions, resolveInstanceOptions } from '../../api/config';
+import { ConfigForm } from '../../components/ConfigForm';
+import { applyMergePatch } from '../../pages/pluginConfig';
+import { useUISettings } from '../../shell/settings';
 import { changePackage } from '../../api/packages';
 import { getProfileAssignments, listProfiles } from '../../api/profiles';
 import { useUI } from '../../i18n/UI';
@@ -20,7 +24,7 @@ import { Pagination } from '../../ui/Pagination';
 import { Switch } from '../../ui/Switch';
 import { toast } from '../../ui/toast';
 import { usePackageActions } from '../plugins/usePackageActions';
-import { AddAccountDialog, AdapterIcon, officialAdapters } from './AddAccountDialog';
+import { AddAccountDialog, AdapterIcon, adapterFieldMessages, officialAdapters } from './AddAccountDialog';
 import styles from './Accounts.module.css';
 
 const pageSize = 12;
@@ -123,7 +127,7 @@ export function AccountsPage(): JSX.Element {
             {instance.safe_error && <p className={styles.error}>{instance.safe_error}</p>}
             <footer className={styles.foot}>
               <Menu trigger={<Button size="sm" variant="ghost" iconOnly aria-label={ui.actions}><MoreHorizontal size={18} /></Button>}>
-                <MenuItem icon={<Eye size={16} />} onSelect={() => setInspecting(instance)}>{ui.readConfig}</MenuItem>
+                <MenuItem icon={<Settings2 size={16} />} onSelect={() => setInspecting(instance)}>{ui.accountSettings}</MenuItem>
                 <MenuSeparator />
                 <MenuItem icon={<Trash2 size={16} />} tone="danger" onSelect={() => setDeleting(instance)}>{ui.actionDelete}</MenuItem>
               </Menu>
@@ -174,29 +178,50 @@ function ChatsDialog({ instance, chats, assignments, profileName, onClose }: {
 }
 
 /** 脱敏后的实例配置，附带自动修正与未识别键；未识别键可以一键清理。 */
+/** 去掉未修改的 secret 占位，Core 对省略的 secret 保留原值。 */
+function withoutSecretMarkers(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutSecretMarkers);
+  if (value === null || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => !isSecretSet(entry)).map(([key, entry]) => [key, withoutSecretMarkers(entry)]));
+}
+
+/** 账号配置：与添加账号同一套表单，保存后 Core 以新配置重启该账号。 */
 function ConfigDialog({ instance, onClose }: { instance: AdapterInstance; onClose: () => void }): JSX.Element {
   const ui = useUI();
+  const { locale } = useUISettings();
+  const client = useQueryClient();
   const config = useQuery({ queryKey: ['instance-config', instance.instance_id], queryFn: () => getInstanceConfig(instance.adapter_id, instance.instance_id) });
-  const [pruning, setPruning] = useState(false);
-  const prune = async () => {
-    setPruning(true);
-    try { await pruneInstanceConfig(instance.adapter_id, instance.instance_id); await config.refetch(); toast.success(ui.pruneDone); }
+  const schema = useQuery({ queryKey: ['instance-schema', instance.adapter_id], queryFn: () => getInstanceSchema(instance.adapter_id) });
+  const [busy, setBusy] = useState(false);
+  const run = async (action: () => Promise<void>, done: string) => {
+    setBusy(true);
+    try { await action(); await config.refetch(); void client.invalidateQueries({ queryKey: ['instances'] }); toast.success(done); }
     catch (error) { toast.error(error); }
-    finally { setPruning(false); }
+    finally { setBusy(false); }
   };
   const data = config.data;
-  return <Dialog open onOpenChange={open => { if (!open) onClose(); }} title={`${ui.configTitle} · ${instance.instance_id}`} size="lg">
-    {!data ? <Skeleton height={160} /> : <div className={styles.form}>
+  const options = useMemo(() => ({
+    list: (path: string, q: string) => listInstanceOptions(instance.adapter_id, instance.instance_id, path, q, locale),
+    resolve: (path: string, values: string[]) => resolveInstanceOptions(instance.adapter_id, instance.instance_id, path, values, locale),
+  }), [instance.adapter_id, instance.instance_id, locale]);
+  const error = config.error ?? schema.error;
+  return <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }} title={`${ui.accountSettings} · ${instance.instance_id}`} size="lg" dismissible={!busy}>
+    {error ? <EmptyState tone="error" icon={<AlertTriangle size={22} />} title={ui.configLoadFailed} description={error.message} />
+      : !data || !schema.data ? <Skeleton height={160} /> : <div className={styles.form}>
       {data.corrections.length > 0 && <div className={styles.notice} data-tone="warning">
         <strong>{ui.corrections}</strong>
-        <ul>{data.corrections.map(item => <li key={item.path}><code>{item.path}</code> {ui[item.reason]}{item.original !== undefined ? ` (${JSON.stringify(item.original)})` : ''}</li>)}</ul>
+        <ul>{data.corrections.map(item => <li key={item.path}><code>{item.path}</code> {ui[item.reason]}</li>)}</ul>
       </div>}
       {data.unknown.length > 0 && <div className={styles.notice} data-tone="danger">
         <strong>{ui.unknownKeys}</strong>
         <ul>{data.unknown.map(key => <li key={key}><code>{key}</code></li>)}</ul>
-        <Button size="sm" variant="danger" loading={pruning} onClick={() => void prune()}>{ui.pruneConfig}</Button>
+        <Button size="sm" variant="danger" loading={busy} onClick={() => void run(() => pruneInstanceConfig(instance.adapter_id, instance.instance_id), ui.pruneDone)}>{ui.pruneConfig}</Button>
       </div>}
-      <pre className={styles.config}>{JSON.stringify(data.config, (_key, value: unknown) => isSecretSet(value) ? ui.secretSet : value, 2)}</pre>
+      <fieldset disabled={busy} className={styles.schema}>
+        <ConfigForm schema={schema.data} value={data.config} messages={adapterFieldMessages(ui, instance.adapter_id)} options={options}
+          onSubmit={patch => void run(() => updateInstanceConfig(instance.adapter_id, instance.instance_id,
+            withoutSecretMarkers(applyMergePatch(data.config, patch)) as Record<string, unknown>), ui.accountConfigSaved)} />
+      </fieldset>
     </div>}
   </Dialog>;
 }

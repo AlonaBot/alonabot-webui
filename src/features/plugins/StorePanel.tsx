@@ -135,7 +135,7 @@ export function StorePanel({ packages }: { packages: readonly Package[] }): JSX.
           onUpdate={pkg => setUpdating(pkg)} />)}
       </div>}
     {data && <Pagination page={page} total={data.total} size={pageSize} onChange={setPage} disabled={store.isFetching} />}
-    {data?.stale && <p className={styles.staleNote}>{ui.storeStale.replace('{time}', new Date(data.fetched_at).toLocaleString())}</p>}
+    {data?.stale && <p className={styles.staleNote}>{ui.storeStale}</p>}
 
     {installMode && <InstallDialog initialMode={installMode} onClose={() => setInstallMode(null)} onInstall={actions.install} />}
     {updating && <UpdateDialog pkg={updating} onClose={() => setUpdating(null)} onUpdate={archive => actions.update(updating, archive)} />}

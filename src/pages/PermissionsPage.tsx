@@ -40,7 +40,7 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
   const labels: Record<ToolPolicyValue, string> = { inherit: ui.policyInherit, allow: ui.policyAllow, confirm: ui.policyConfirm, deny: ui.policyDeny };
   const effects = { read_only: ui.catReadOnly, write: ui.catWrite, destructive: ui.catDestructive, unspecified: ui.catUnspecified };
   const load = async () => {
-    setLoading(true); setError(null);
+    setError(null);
     try {
       const [all, directory] = await Promise.all([listPackages(), getToolPolicies()]);
       const installed = all.filter(value => !value.Uninstalled && value.Role !== 'webui');

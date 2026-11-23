@@ -29,7 +29,6 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
   const [forwardThreshold, setForwardThreshold] = useState<number | null>(null);
 
   const loadData = async (clearError = true) => {
-    setLoading(true);
     try {
       const current = await getProfilePlatform(profileID);
       setCurrentPlatform(current);

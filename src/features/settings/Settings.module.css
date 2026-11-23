@@ -1,6 +1,6 @@
 .page { display: flex; flex-direction: column; gap: var(--space-4); }
 
-.card { padding: var(--space-4) var(--space-6) var(--space-3); border-radius: 18px; background: var(--color-surface); animation: in var(--dur-slow) var(--ease-out) both; }
+.card { padding: var(--space-4) var(--space-6) var(--space-3); border-radius: 18px; background: var(--color-surface); }
 .card h2 { margin: 0; padding: var(--space-2) 0 var(--space-3); border-bottom: 1px solid var(--color-line); font-size: var(--text-md); font-weight: 700; }
 
 .row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); min-height: 64px; padding: var(--space-3) 0; }
@@ -44,7 +44,6 @@
 
 .card :global(button[aria-expanded]) { min-height: 56px; border-top: 1px solid var(--color-line); border-radius: 0; font-weight: 500; font-size: 15px; }
 
-@keyframes in { from { opacity: 0; transform: translateY(6px); } }
 
 @media (max-width: 767px) {
   .card { padding: var(--space-3) var(--space-4); }

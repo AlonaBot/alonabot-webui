@@ -6,6 +6,7 @@ import type { PluginRuntime, SleepPolicy } from '../api/packages';
 import { useUI } from '../i18n/UI';
 import { Link } from '../shell/router';
 import { useUISettings } from '../shell/settings';
+import { toast } from '../ui/toast';
 
 type Messages = ReturnType<typeof useUI>;
 
@@ -55,7 +56,6 @@ export function PluginSleepPanel({ policy, runtime, policyError, runtimeError, w
   const { locale } = useUISettings();
   const fieldID = useId();
   const [draft, setDraft] = useState<string | null | undefined>(undefined);
-  const [saved, setSaved] = useState(false);
   const value = draft === undefined ? policy?.policy : draft;
   const mode = value === null ? 'auto' : value === 'never' ? 'never' : 'duration';
   const locked = policy !== null && (!policy.sleep_capable || policy.reason === 'manifest_requires_resident' || policy.reason === 'in_process');
@@ -67,8 +67,8 @@ export function PluginSleepPanel({ policy, runtime, policyError, runtimeError, w
     {policyError && <div className="sleep-error plugins-error-banner" role="alert"><strong>{ui.sleepPolicy}</strong><pre>{policyError}</pre></div>}
     {loading && <Skeleton height={120} />}
     {policy && <form onSubmit={async event => {
-      event.preventDefault(); setSaved(false);
-      if (await onSubmit(value!)) { setDraft(undefined); setSaved(true); }
+      event.preventDefault();
+      if (await onSubmit(value!)) { setDraft(undefined); toast.success(ui.saveSuccess); }
     }}>
       <fieldset className="config-edit-fields" disabled={busy || loading || policyError !== null}>
         <div className="settings-row sleep-policy-row">
@@ -77,17 +77,16 @@ export function PluginSleepPanel({ policy, runtime, policyError, runtimeError, w
           </div>
           <div className="sleep-policy-controls">
             <div className="sleep-policy-select">{locked && <LockKeyhole size={14} aria-hidden="true" />}<OptionSelect id={fieldID} aria-describedby={fieldID + '-reason'} value={mode} onChange={event => {
-              setSaved(false);
+             
               setDraft(event.target.value === 'auto' ? null : event.target.value === 'never' ? 'never' : policy.policy !== null && policy.policy !== 'never' ? policy.policy : policy.effective_policy !== 'never' ? policy.effective_policy : '');
             }}>
               <option value="auto">{ui.sleepFollowGlobal}</option><option value="never">{ui.sleepNever}</option><option value="duration" disabled={locked}>{ui.sleepDuration}</option>
             </OptionSelect></div>
-            {mode === 'duration' && <label className="sleep-duration-field">{ui.sleepDuration}<input required aria-describedby={fieldID + '-duration-hint'} disabled={locked} value={value ?? ''} onChange={event => { setDraft(event.target.value); setSaved(false); }} /><span id={fieldID + '-duration-hint'}>{ui.sleepDurationHint}</span></label>}
+            {mode === 'duration' && <label className="sleep-duration-field">{ui.sleepDuration}<input required aria-describedby={fieldID + '-duration-hint'} disabled={locked} value={value ?? ''} onChange={event => { setDraft(event.target.value); }} /><span id={fieldID + '-duration-hint'}>{ui.sleepDurationHint}</span></label>}
           </div>
         </div>
-        {draft !== undefined && <div className="sleep-form-actions"><button type="button" onClick={() => { setDraft(undefined); setSaved(false); }}>{ui.discard}</button><button type="submit" className="save-button">{ui.save}</button></div>}
+        {draft !== undefined && <div className="sleep-form-actions"><button type="button" onClick={() => { setDraft(undefined); }}>{ui.discard}</button><button type="submit" className="save-button">{ui.save}</button></div>}
       </fieldset>
-      {saved && <p role="status">{ui.saveSuccess}</p>}
       <dl className="sleep-policy-summary">
         {draft !== undefined && <div><dt>{ui.sleepSavedPolicy}</dt><dd>{policyText(policy.policy)}</dd></div>}
         <div><dt>{ui.sleepEffectivePolicy}</dt><dd>{policyText(policy.effective_policy)}</dd></div>
