@@ -5,7 +5,7 @@ import { isConfirmationError } from '../../api/client';
 import { assignInstanceProfile, listProfiles } from '../../api/profiles';
 import { createInstance, getInstanceSchema } from '../../api/instances';
 import type { Package } from '../../api/packages';
-import { ConfigForm } from '../../components/ConfigForm';
+import { ConfigForm, schemaDefaults } from '../../components/ConfigForm';
 import { applyMergePatch } from '../../pages/pluginConfig';
 import { useUI } from '../../i18n/UI';
 import { Button } from '../../ui/Button';
@@ -18,7 +18,6 @@ import { usePackageActions } from '../plugins/usePackageActions';
 import { AccountSettingsPage } from './AccountSettingsPage';
 import styles from './Accounts.module.css';
 
-const emptyConfig = {};
 
 /** 官方适配器：未安装时也列在选项里，选中后可一键安装再继续填写。 */
 export const officialAdapters = [
@@ -40,7 +39,10 @@ export function adapterFieldMessages(ui: Record<string, string>, adapterID: stri
     ? { token: { description: ui.botToken }, api_base_url: { description: ui.apiBaseURL }, proxy_mode: { description: ui.proxyMode, labels: [ui.proxyModeNone, ui.proxyModeCore, ui.proxyModeCustom] }, proxy: { description: ui.proxyURL },
       file_base_url: { description: ui.fileBaseURL, hint: ui.fileBaseURLHint }, auto_sync_commands: { description: ui.autoSyncCommands, hint: ui.autoSyncCommandsHint },
       clear_commands_on_disable: { description: ui.clearCommandsOnDisable, hint: ui.clearCommandsOnDisableHint } }
-    : adapterID === 'onebot11' ? { ws_url: { description: ui.webSocketURL }, access_token: { description: ui.accessToken }, mode: { description: ui.connectionMode } } : {} };
+    : adapterID === 'onebot11' ? { ws_url: { description: ui.webSocketURL }, access_token: { description: ui.accessToken, hint: ui.accessTokenHint },
+      mode: { description: ui.connectionMode, labels: [ui.connectionModeForward, ui.connectionModeReverse] }, self_id: { description: ui.selfID },
+      media_url_base: { description: ui.mediaURLBase, hint: ui.mediaURLBaseHint },
+      media_dir: { description: ui.mediaDir, hint: ui.mediaDirHint, items: { local: { description: ui.mediaDirLocal }, remote: { description: ui.mediaDirRemote, hint: ui.mediaDirRemoteHint } } } } : {} };
 }
 
 export function AddAccountDialog({ packages, onClose }: { packages: readonly Package[]; onClose: () => void }): JSX.Element {
@@ -66,6 +68,8 @@ export function AddAccountDialog({ packages, onClose }: { packages: readonly Pac
   const label = (id: string) => id === 'telegram' ? ui.adapterTelegram : id === 'onebot11' ? ui.adapterOneBot : id;
   const instanceID = name.trim();
   const messages = adapterFieldMessages(ui, adapterID);
+  // 新建表单带上 Schema 缺省值，依赖它的条件字段（如连接模式）一开始就能显示。
+  const initial = useMemo(() => schema.data === undefined ? {} : schemaDefaults(schema.data), [schema.data]);
   const settingsPage = choice?.pkg?.pages?.find(page => page.purpose === 'instance_config');
 
   const create = async (patch: Record<string, unknown>, confirmed = false) => {
@@ -116,7 +120,7 @@ export function AddAccountDialog({ packages, onClose }: { packages: readonly Pac
         {adapterID === 'telegram' && <p className={styles.tip}>{ui.botTokenHint}</p>}
         <fieldset disabled={pending} className={styles.schema}>
           {/* 实例选项端点要求实例已存在，创建前沿用表单的普通文本输入。 */}
-          <ConfigForm key={choice.pkg.ID} schema={schema.data} value={emptyConfig} messages={messages} collapseOptional
+          <ConfigForm key={choice.pkg.ID} schema={schema.data} value={initial} messages={messages} collapseOptional
             draftAction={settingsPage && ((draft, applyPatch) => <AccountSettingsPage id={choice.pkg!.ID} page={settingsPage}
               mode="create" instanceID={instanceID} schema={schema.data} draft={draft} applyPatch={applyPatch} />)}
             onSubmit={(patch, base) => void create(base ? applyMergePatch(base, patch) as Record<string, unknown> : patch)}

@@ -50,16 +50,20 @@ export function DatabasePanel({ id, generations }: { id: string; generations: re
   const [deleting, setDeleting] = useState<DataRow | null>(null);
   const table = tables?.find(item => item.name === tableName);
   const writable = generation === '' && table?.writable;
+  const selected = generations.find(item => generation === '' ? item.active : item.id === generation);
+  const missing = selected !== undefined && !selected.has_db;
   useEffect(() => {
     let active = true;
     setTables(null); setError('');
+    // 代次还没有数据库文件时直接显示空表，不去读不存在的文件。
+    if (missing) { setTables([]); return; }
     listPluginTables(id, generation).then(result => {
       if (!active) return;
       setTables(result.tables);
       setTableName(current => result.tables.some(item => item.name === current) ? current : result.tables[0]?.name ?? '');
     }).catch(err => { if (active) setError(String(err)); });
     return () => { active = false; };
-  }, [id, generation, refresh]);
+  }, [id, generation, refresh, missing]);
   useEffect(() => {
     if (!table) { setData(null); return; }
     let active = true;
