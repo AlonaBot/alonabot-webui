@@ -425,12 +425,15 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
   const rawExamples = formContext ? fieldExamples(messages, field) : [];
   const visibleExamples = rawExamples.filter(ex => checkCondition(ex.condition, formContext?.rootEdited ?? {}));
 
+  // 只有值不同于缺省值时才给出「恢复默认」；密钥用自己的清除按钮。
+  const customized = !field.secret && value !== undefined && value !== null
+    && !(Object.hasOwn(field, 'defaultValue') && JSON.stringify(value) === JSON.stringify(field.defaultValue));
   const title = <>{text.description}{field.required && <span className="required-mark"> · {ui.required}</span>}</>;
   const body = <>
     {field.type === 'object' && <legend>{title}</legend>}
     <div className="field-heading">
       {field.type !== 'object' && <label htmlFor={id}>{title}</label>}
-      <button type="button" disabled={!editable} onClick={() => { setEditingSecret(false); setRevealedSecret(null); setShowSecret(false); onChange(null); }}>{ui.restoreDefault}</button>
+      {customized && <button type="button" disabled={!editable} onClick={() => { setEditingSecret(false); setRevealedSecret(null); setShowSecret(false); onChange(null); }}>{ui.restoreDefault}</button>}
     </div>
     {text.hint && <p id={`${id}-hint`} className={field.obviousHint ? 'field-hint obvious-hint' : 'field-hint'}
 >{text.hint}</p>}

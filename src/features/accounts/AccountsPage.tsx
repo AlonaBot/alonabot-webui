@@ -178,11 +178,16 @@ function ChatsDialog({ instance, chats, assignments, profileName, onClose }: {
 }
 
 /** 脱敏后的实例配置，附带自动修正与未识别键；未识别键可以一键清理。 */
+/** Core 读取时把 secret 脱敏成 {"$secret_set": true|false}。 */
+function isSecretMask(value: unknown): boolean {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && typeof (value as Record<string, unknown>).$secret_set === 'boolean';
+}
+
 /** 去掉未修改的 secret 占位，Core 对省略的 secret 保留原值。 */
 function withoutSecretMarkers(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutSecretMarkers);
   if (value === null || typeof value !== 'object') return value;
-  return Object.fromEntries(Object.entries(value).filter(([, entry]) => !isSecretSet(entry)).map(([key, entry]) => [key, withoutSecretMarkers(entry)]));
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => !isSecretMask(entry)).map(([key, entry]) => [key, withoutSecretMarkers(entry)]));
 }
 
 /** 账号配置：与添加账号同一套表单，保存后 Core 以新配置重启该账号。 */

@@ -929,6 +929,15 @@
     "clearConversationDesc": "清除「{name}」的 {count} 条消息记录？机器人会忘掉这段对话的上下文，此操作不能撤销。",
     "accountConfigSaved": "账号设置已保存",
     "configLoadFailed": "设置读取失败",
-    "accountSettings": "账号设置"
+    "accountSettings": "账号设置",
+    "proxyModeNone": "不使用代理",
+    "proxyModeCore": "使用 Core 的网络代理",
+    "proxyModeCustom": "自定义代理",
+    "fileBaseURL": "文件下载地址",
+    "fileBaseURLHint": "留空时跟随 Bot API 地址。",
+    "autoSyncCommands": "自动同步命令菜单",
+    "autoSyncCommandsHint": "插件命令变化时更新 Telegram 输入框旁的命令列表。",
+    "clearCommandsOnDisable": "停用时清空命令菜单",
+    "clearCommandsOnDisableHint": "账号停用后，Telegram 里不再显示失效的命令。"
   }
 }

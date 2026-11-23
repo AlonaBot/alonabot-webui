@@ -33,7 +33,9 @@ export function AdapterIcon({ adapterID, size = 22 }: { adapterID: string; size?
 /** 官方 Adapter 的配置字段用面向用户的名称；其他 Adapter 沿用自己的 Schema 文案。 */
 export function adapterFieldMessages(ui: Record<string, string>, adapterID: string): Record<string, unknown> {
   return { config: adapterID === 'telegram'
-    ? { token: { description: ui.botToken }, api_base_url: { description: ui.apiBaseURL }, proxy_mode: { description: ui.proxyMode }, proxy: { description: ui.proxyURL } }
+    ? { token: { description: ui.botToken }, api_base_url: { description: ui.apiBaseURL }, proxy_mode: { description: ui.proxyMode, labels: [ui.proxyModeNone, ui.proxyModeCore, ui.proxyModeCustom] }, proxy: { description: ui.proxyURL },
+      file_base_url: { description: ui.fileBaseURL, hint: ui.fileBaseURLHint }, auto_sync_commands: { description: ui.autoSyncCommands, hint: ui.autoSyncCommandsHint },
+      clear_commands_on_disable: { description: ui.clearCommandsOnDisable, hint: ui.clearCommandsOnDisableHint } }
     : adapterID === 'onebot11' ? { ws_url: { description: ui.webSocketURL }, access_token: { description: ui.accessToken }, mode: { description: ui.connectionMode } } : {} };
 }
 

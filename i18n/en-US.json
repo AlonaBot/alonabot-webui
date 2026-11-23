@@ -929,6 +929,15 @@
     "clearConversationDesc": "Clear {count} messages from \"{name}\"? The bot forgets this conversation's context. This cannot be undone.",
     "accountConfigSaved": "Account settings saved",
     "configLoadFailed": "Could not load settings",
-    "accountSettings": "Account settings"
+    "accountSettings": "Account settings",
+    "proxyModeNone": "No proxy",
+    "proxyModeCore": "Use the Core network proxy",
+    "proxyModeCustom": "Custom proxy",
+    "fileBaseURL": "File download URL",
+    "fileBaseURLHint": "Leave empty to follow the Bot API URL.",
+    "autoSyncCommands": "Sync the command menu automatically",
+    "autoSyncCommandsHint": "Update the command list next to the Telegram input box when plugin commands change.",
+    "clearCommandsOnDisable": "Clear the command menu when disabled",
+    "clearCommandsOnDisableHint": "Hide stale commands in Telegram after the account is disabled."
   }
 }
