@@ -3,6 +3,7 @@ import { AlertCircle, Calendar, Pause, Play, RefreshCw, Search, X } from 'lucide
 import { listPluginJobs, changePluginJob, type PluginJob } from '../api/packages';
 import { useUI } from '../i18n/UI';
 import { LoadingRows } from '../ui/EmptyState';
+import { toast } from '../ui/toast';
 
 export function PluginJobsPanel(props: { id: string }): JSX.Element {
   const { id } = props;
@@ -39,7 +40,7 @@ export function PluginJobsPanel(props: { id: string }): JSX.Element {
       await changePluginJob(id, job.job_id, action);
       await loadData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      toast.error(err);
     } finally {
       setOperatingId(null);
     }

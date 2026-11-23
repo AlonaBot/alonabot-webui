@@ -42,6 +42,7 @@ import { RadioGroup } from '../ui/RadioGroup';
 import { UninstallDialog } from '../features/plugins/PluginDialogs';
 import { usePackageActions } from '../features/plugins/usePackageActions';
 import { Dialog as SharedDialog } from '../ui/Dialog';
+import { toast } from '../ui/toast';
 
 /** PluginDetailPage 展示保留代次、回退确认及组件高级设置。 */
 export function PluginDetailPage(props: {
@@ -196,7 +197,7 @@ export function PluginDetailPage(props: {
       setAllowedSaved(true);
       setTimeout(() => setAllowedSaved(false), 3000);
     } catch (err: unknown) {
-      setErrorBanner(err instanceof Error ? err.message : String(err));
+      toast.error(err);
       try { setAllowedInstancesState(await getAllowedInstances(id)); } catch (error) { setErrorBanner(previous => `${previous}\n${error instanceof Error ? error.message : String(error)}`); setAllowedInstancesState(null); }
     } finally {
       setSavingAllowed(false);
@@ -283,7 +284,7 @@ export function PluginDetailPage(props: {
         });
         setConfirmModalOpen(true);
       } else {
-        setErrorBanner(err instanceof Error ? err.message : String(err));
+        toast.error(err);
         await loadData();
       }
     }
@@ -295,7 +296,7 @@ export function PluginDetailPage(props: {
       await changePackage('restart', pkg.ID);
       await loadData();
     } catch (err: unknown) {
-      setErrorBanner(err instanceof Error ? err.message : String(err));
+      toast.error(err);
       await loadData();
     }
   };
@@ -306,7 +307,7 @@ export function PluginDetailPage(props: {
       await changePackage('reload', pkg.ID);
       await loadData();
     } catch (err: unknown) {
-      setErrorBanner(err instanceof Error ? err.message : String(err));
+      toast.error(err);
       await loadData();
     }
   };
@@ -333,7 +334,7 @@ export function PluginDetailPage(props: {
         });
         setConfirmModalOpen(true);
       } else {
-        setErrorBanner(err instanceof Error ? err.message : String(err));
+        toast.error(err);
         await loadData();
       }
     }
@@ -348,7 +349,7 @@ export function PluginDetailPage(props: {
       setLogLevels(updated);
       setLogLevelSavedMessage(true);
     } catch (err: unknown) {
-      setErrorBanner(err instanceof Error ? err.message : String(err));
+      toast.error(err);
       await loadData();
     } finally {
       setSavingLogLevel(false);
@@ -824,7 +825,6 @@ export function PluginDetailPage(props: {
       <SharedDialog open={rollbackModalOpen} onOpenChange={setRollbackModalOpen} title={ui.rollbackTitle} size="lg">
             
 
-            {errorBanner && <p className="plugins-error-banner" role="alert">{errorBanner}</p>}
             <p className="dialog-subtitle">
               {ui.rollbackDesc
                 .replace('{id}', id)
@@ -863,7 +863,6 @@ export function PluginDetailPage(props: {
       <SharedDialog open={confirmModalOpen} onOpenChange={open => { if (!confirming) { setConfirmModalOpen(open); if (!open) setPendingConfirmAction(null); } }} title={ui.confirmAffectedTitle} size="lg">
             
 
-            {errorBanner && <p className="plugins-error-banner" role="alert">{errorBanner}</p>}
             <p className="dialog-subtitle">{ui.confirmAffectedDesc}</p>
 
             <ul className="affected-items-list font-mono">
@@ -893,7 +892,7 @@ export function PluginDetailPage(props: {
                   setConfirmModalOpen(false);
                   setConfirming(true);
                   try { await action?.(); }
-                  catch (error) { setErrorBanner(error instanceof Error ? error.message : String(error)); await loadData(); }
+                  catch (error) { toast.error(error); await loadData(); }
                   finally { setConfirming(false); }
                 }}
               >

@@ -13,6 +13,7 @@ import { navigate } from '../shell/router';
 import { applyMergePatch, applyProfileOverrides, extractProfileOverrides, editableProfilePaths } from './pluginConfig';
 import { LoadingRows } from '../ui/EmptyState';
 import { Dialog as SharedDialog } from '../ui/Dialog';
+import { toast } from '../ui/toast';
 
 export function PluginConfigPanel({ id }: { id: string }): JSX.Element {
   const ui = useUI();
@@ -79,7 +80,7 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
     catch (error) {
       let message = error instanceof Error ? error.message : String(error);
       try { await load(); } catch (readError) { message += '\n' + (readError instanceof Error ? readError.message : String(readError)); }
-      setError(message);
+      toast.error(message);
     }
     finally { setBusy(false); onChanged?.(); }
   };
@@ -94,7 +95,7 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
     catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
     try { setRuntime((await listPackages()).find(value => value.ID === id) ?? null); }
     catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
-    setError(errors.length ? errors.join('\n') : null); setBusy(false);
+    if (errors.length) toast.error(errors.join('\n')); setBusy(false);
   };
   const submit = async (patch: Record<string, unknown>) => {
     setBusy(true); setError(null); setSaved(false);
@@ -105,12 +106,12 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
     }
     catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setError(message);
+      toast.error(message);
       if (isDefault && error instanceof AdminAPIError && error.status === 409 && error.code === 'FAILED_PRECONDITION') {
         try { setLatest(await getPluginConfig(id)); }
-        catch (refreshError) { setError(`${message}\n${refreshError instanceof Error ? refreshError.message : String(refreshError)}`); }
+        catch (refreshError) { toast.error(`${message}\n${refreshError instanceof Error ? refreshError.message : String(refreshError)}`); }
       } else {
-        try { await load(); onChanged?.(); } catch (readError) { setError(message + '\n' + (readError instanceof Error ? readError.message : String(readError))); }
+        try { await load(); onChanged?.(); } catch (readError) { toast.error(message + '\n' + (readError instanceof Error ? readError.message : String(readError))); }
       }
     } finally { setBusy(false); }
   };

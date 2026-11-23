@@ -11,6 +11,7 @@ import { CommandNamesDialog, type NamesDraft } from './CommandNamesDialog';
 import { PermissionsTabs } from './PermissionsTabs';
 import { LoadingRows } from '../ui/EmptyState';
 import { Dialog as SharedDialog } from '../ui/Dialog';
+import { toast } from '../ui/toast';
 
 const policyValues: ToolPolicyValue[] = ['inherit', 'allow', 'confirm', 'deny'];
 const toolKey = (tool: ToolPolicy) => JSON.stringify([tool.plugin_id, tool.service]);
@@ -55,7 +56,7 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
   useEffect(() => { setQuery(''); setSelected(new Set()); }, [tab]);
   const mutate = async (action: () => Promise<void>, pluginID?: string) => {
     if (writing.current) return false;
-    writing.current = true; setBusy(true); setError(null); setDialogError(null);
+    writing.current = true; setBusy(true); setDialogError(null);
     const errors: string[] = [];
     try { await action(); } catch (error) { errors.push(error instanceof Error ? error.message : String(error)); }
     try {
@@ -66,7 +67,7 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
       if (pluginID) setPolicies(previous => Object.fromEntries(Object.entries(previous).filter(([id]) => id !== pluginID))); else setTools(null);
     }
     const message = errors.length ? errors.join('\n') : null;
-    setError(message); setDialogError(message); setBusy(false); writing.current = false;
+    if (message) toast.error(message); setDialogError(message); setBusy(false); writing.current = false;
     return errors.length === 0;
   };
   const controls = (pluginID: string, scope: CommandScope, label: string, command?: CommandPolicy, enabledOnly = false) => <CommandPolicyControls
