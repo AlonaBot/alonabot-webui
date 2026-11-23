@@ -16,7 +16,8 @@
   cursor: pointer;
   transition: background-color var(--dur-fast), border-color var(--dur-fast);
 }
-.box:hover:not(:disabled) { border-color: var(--color-accent); background: var(--color-surface); }
+.box[data-state="unchecked"]:hover:not(:disabled) { border-color: var(--color-accent); background: var(--color-surface); }
+.box:is([data-state="checked"], [data-state="indeterminate"]):hover:not(:disabled) { border-color: var(--color-accent); background: var(--color-accent); }
 .box[data-state="checked"], .box[data-state="indeterminate"] { border-color: var(--color-accent); background: var(--color-accent); }
 .box:disabled { cursor: not-allowed; }
 

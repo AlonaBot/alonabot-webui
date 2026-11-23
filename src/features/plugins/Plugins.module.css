@@ -19,7 +19,7 @@
 .search[data-wide] { width: 260px; }
 .search[data-filled] { flex: 1; width: auto; height: var(--control-h-lg); border-radius: 10px; }
 .search:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
-.search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: none; color: var(--color-ink); font-size: var(--text-sm); }
+.search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; box-shadow: none; background: none; color: var(--color-ink); font-size: var(--text-sm); }
 .sort { width: auto; min-width: 128px; }
 
 .sourcePill {
