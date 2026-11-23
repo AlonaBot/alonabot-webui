@@ -30,6 +30,7 @@ import { ConversationsPanel } from './ConversationsPanel';
 import { DatabasePanel } from './DatabasePanel';
 import { useUI } from '../i18n/UI';
 import { Link, navigate, useQueryParam } from '../shell/router';
+import { usePackages } from '../queries/packages';
 import { SearchContext } from '../shell/search';
 import { PluginConfigPanel } from './PluginConfigPanel';
 import { PluginJobsPanel } from './PluginJobsPanel';
@@ -57,6 +58,7 @@ export function PluginDetailPage(props: {
   const [showChangelog, setShowChangelog] = useState(false);
   const [autoContent, setAutoContent] = useState(true);
   const [pkg, setPkg] = useState<Package | null>(null);
+  const cachedPackages = usePackages();
   const [loading, setLoading] = useState(true);
   const [retained, setRetained] = useState<readonly Generation[]>([]);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -357,6 +359,8 @@ export function PluginDetailPage(props: {
     );
   };
 
+  // 侧栏已缓存的包列表先顶上，详情读回前不拿组件 ID 充当名称。
+  const shown = pkg ?? cachedPackages.data?.find(item => item.ID === id && !item.Uninstalled) ?? null;
   const isWebUI = pkg?.Role === 'webui';
   const hasDatabase = (generations ?? retained).some(generation => generation.has_db);
   const shownDataView = !hasDatabase && dataView === 'database' ? 'storage' : dataView;
@@ -365,7 +369,7 @@ export function PluginDetailPage(props: {
 
   return (
     <div className="plugin-detail-page">
-      {pkg && <><ChangelogDialog component={id} version={pkg.Version} open={showChangelog} onClose={() => setShowChangelog(false)} /><ChangelogDialog component={id} version={pkg.Version} open={autoContent} automatic onClose={() => setAutoContent(false)} /></>}
+      {pkg && <><ChangelogDialog component={id} name={pkg.Name || id} version={pkg.Version} open={showChangelog} onClose={() => setShowChangelog(false)} /><ChangelogDialog component={id} name={pkg.Name || id} version={pkg.Version} open={autoContent} automatic onClose={() => setAutoContent(false)} /></>}
       {/* 头部导航与操作栏 */}
       <div className="plugin-detail-header">
         <div className="detail-breadcrumb-row">
@@ -395,11 +399,11 @@ export function PluginDetailPage(props: {
 
           <div className="detail-title-info">
             <div className="detail-name-row">
-              <h1 className="detail-title">{pkg?.Name || id}</h1>
+              {shown ? <h1 className="detail-title">{shown.Name || id}</h1> : <Skeleton width={180} height={28} />}
               {renderStatus()}
             </div>
-            <span className="detail-source-badge font-mono">{pkg?.Source ?? id}</span>
-            {pkg?.Description && <p className="detail-description">{pkg.Description}</p>}
+            {shown ? <span className="detail-source-badge font-mono">{shown.Source || id}</span> : <Skeleton width={260} height={14} />}
+            {shown?.Description && <p className="detail-description">{shown.Description}</p>}
           </div>
 
           <div className="detail-actions-right">
@@ -482,7 +486,8 @@ export function PluginDetailPage(props: {
         </div>
       ) : null}
 
-      {/* 功能标签栏 */}
+      {/* 功能标签栏：首轮数据读完再显示，避免标签先出现再消失。 */}
+      {loading ? <LoadingRows rows={3} /> : <>
       <div className="detail-tabs">
         {configAvailable && (
           <button
@@ -751,6 +756,7 @@ export function PluginDetailPage(props: {
           </div>
         )}
       </div>
+      </>}
 
       {/* 回退确认对话框 */}
       <SharedDialog open={rollbackModalOpen} onOpenChange={setRollbackModalOpen} title={ui.rollbackTitle} size="lg">

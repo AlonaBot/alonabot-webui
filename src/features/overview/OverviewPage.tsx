@@ -22,7 +22,8 @@ const palette = ['var(--color-accent)', 'var(--color-chart-2)', 'color-mix(in sr
 export function OverviewPage(): JSX.Element {
   const ui = useUI();
   const [range, setRange] = useState<StatisticsRange>('24h');
-  const packages = installed(usePackages().data);
+  const packagesQuery = usePackages();
+  const packages = installed(packagesQuery.data);
   const statistics = useStatistics(range);
   const buckets = statistics.data?.buckets ?? [];
   const logs = useQuery({ queryKey: ['overview-logs', range, buckets.length && buckets[0].hour], queryFn: () => rangeLogs(buckets), enabled: buckets.length > 0 });
@@ -81,7 +82,7 @@ export function OverviewPage(): JSX.Element {
           {commands.length === 0 ? <EmptyState title={ui.noCommands} />
             : <ul className={styles.bars}>{commands.slice(0, 6).map(([id, value]) => {
               const pkg = packages.find(item => item.ID === id);
-              return <li key={id}><span>{pkg ? packageName(pkg) : id}</span><div><i style={{ width: `${(value / maxCommand) * 100}%` }} /></div><strong>{value.toLocaleString()}</strong></li>;
+              return <li key={id}><span>{pkg ? packageName(pkg) : packagesQuery.isPending ? <Skeleton width={72} height={12} /> : id}</span><div><i style={{ width: `${(value / maxCommand) * 100}%` }} /></div><strong>{value.toLocaleString()}</strong></li>;
             })}</ul>}
         </section>
 

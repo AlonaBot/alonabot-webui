@@ -40,7 +40,7 @@ export function usePackageActions(): {
   const client = useQueryClient();
   const [confirmation, setConfirmation] = useState<Pending | null>(null);
   const [warnings, setWarnings] = useState<string[] | null>(null);
-  const [changelog, setChangelog] = useState<{ id: string; version: string } | null>(null);
+  const [changelog, setChangelog] = useState<{ id: string; name: string; version: string } | null>(null);
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
 
   const mark = (id: string, on: boolean) => setBusy(previous => {
@@ -140,7 +140,7 @@ export function usePackageActions(): {
       }
       const after = (await listPackages()).find(item => item.ID === pkg.ID);
       toast.success(ui.packageUpdated.replace('{name}', packageName(pkg)).replace('{version}', after?.Version ?? ''));
-      if (after) setChangelog({ id: after.ID, version: after.Version });
+      if (after) setChangelog({ id: after.ID, name: packageName(after), version: after.Version });
       if (result.warnings?.length) setWarnings(result.warnings);
     });
   }
@@ -162,7 +162,7 @@ export function usePackageActions(): {
       footer={<Button variant="primary" onClick={() => setWarnings(null)}>{ui.done}</Button>}>
       <ul className={styles.affected}>{warnings.map(item => <li key={item}>{item}</li>)}</ul>
     </Dialog>}
-    {changelog && <ChangelogDialog component={changelog.id} version={changelog.version} open automatic onClose={() => setChangelog(null)} />}
+    {changelog && <ChangelogDialog component={changelog.id} name={changelog.name} version={changelog.version} open automatic onClose={() => setChangelog(null)} />}
   </>;
 
   return { toggle, restart, reload, install: (input, onLog) => install(input, onLog), update, uninstall, busy, dialogs };
