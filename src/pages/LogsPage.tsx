@@ -514,7 +514,7 @@ export function LogsPage(): JSX.Element {
 
           {/* 记录列表 */}
           {filteredLogs.length === 0 ? (
-            loading ? <div className="logs-loading"><LoadingRows rows={8} height={28} /></div> : <div className="logs-empty-view">
+            loading ? <div className="logs-loading"><LoadingRows rows={8} height={18} /></div> : <div className="logs-empty-view">
               <span>{logs.length === 0 ? ui.logsEmpty : ui.logsNoMatching}</span>
               {logs.length > 0 && <Button size="sm" variant="soft" onClick={() => setFilter(createDefaultFilterState(filter.date))}>{ui.logsReset}</Button>}
             </div>

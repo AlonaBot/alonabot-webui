@@ -938,6 +938,13 @@
     "autoSyncCommands": "自动同步命令菜单",
     "autoSyncCommandsHint": "插件命令变化时更新 Telegram 输入框旁的命令列表。",
     "clearCommandsOnDisable": "停用时清空命令菜单",
-    "clearCommandsOnDisableHint": "账号停用后，Telegram 里不再显示失效的命令。"
+    "clearCommandsOnDisableHint": "账号停用后，Telegram 里不再显示失效的命令。",
+    "secretKeepPlaceholder": "已设置，留空保持不变",
+    "pluginPageMissing": "这个页面已不存在，插件可能已更新或卸载。",
+    "selectedItems": "已选 {count} 项",
+    "selection": "选择",
+    "enableAll": "全部启用",
+    "disableAll": "全部停用",
+    "invertEnabled": "反转"
   }
 }

@@ -13,7 +13,7 @@ import styles from './AppShell.module.css';
 
 /** 插件页面在详情页里以标签打开；侧栏与搜索共用这个地址。 */
 export function pluginPagePath(pluginID: string, page: string): string {
-  return `/components/${encodeURIComponent(pluginID)}?tab=${encodeURIComponent(`page:${page}`)}`;
+  return `/pages/${encodeURIComponent(pluginID)}?path=${encodeURIComponent(page)}`;
 }
 
 /**
@@ -30,7 +30,7 @@ export function AppShell({ version, onLogout, coreUpdate, coreUpdateFailed, chil
   const ui = useUI();
   const labels = ui as Record<string, string>;
   const path = usePath();
-  const tab = useQueryParam('tab');
+  const pagePath = useQueryParam('path');
   const packageQuery = usePackages();
   const packages = useMemo(() => installed(packageQuery.data), [packageQuery.data]);
   const agentMissing = packageQuery.isSuccess && !packages.some(item => item.Role === 'agent');
@@ -40,9 +40,9 @@ export function AppShell({ version, onLogout, coreUpdate, coreUpdateFailed, chil
     label: page.title,
     icon: AppWindow,
     to: pluginPagePath(item.ID, page.path),
-    active: path === `/components/${encodeURIComponent(item.ID)}` && tab === `page:${page.path}`,
+    active: path === `/pages/${encodeURIComponent(item.ID)}` && pagePath === page.path,
     disabledReason: item.Enabled ? undefined : ui.pluginPageDisabled,
-  }))), [packages, path, tab, ui]);
+  }))), [packages, path, pagePath, ui]);
   const onPluginPage = pageEntries.some(entry => entry.active);
 
   const routeEntry = useCallback((route: typeof routes[number]): NavEntry => ({

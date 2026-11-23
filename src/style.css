@@ -1,7 +1,8 @@
 /* 配置预览的层级、表单控件与窄屏布局。 */
 :where(button, select) { cursor: pointer; }
-:where(button) { border: 1px solid var(--color-line); border-radius: 7px; padding: .4rem .7rem; background: var(--color-surface); color: inherit; }
-:where(button):hover { border-color: var(--color-accent); background: var(--color-surface-2); }
+:where(button) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 14px; border: 1px solid var(--color-line); border-radius: var(--radius); line-height: 1.4; background: var(--color-surface); color: inherit; font-size: var(--text-sm); font-weight: 500; transition: border-color var(--dur-fast), background var(--dur-fast); }
+:where(button):hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-line)); background: var(--color-surface-2); }
+:where(button):disabled { opacity: .55; cursor: not-allowed; }
 
 .brand { font-weight: 750; font-size: 22px; color: inherit; text-decoration: none; letter-spacing: -.7px; }
 .brand span { font-size: 11px; letter-spacing: 1.5px; margin-left: 8px; color: var(--color-ink-muted); }
@@ -15,14 +16,16 @@
 .config-field, .config-group { margin: 0 0 24px; }
 .field-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
 .field-heading > label, legend { font-weight: 650; }
-.field-heading > button { border: 0; color: var(--color-ink-muted); font-size: 13px; padding: 3px 0; flex-shrink: 0; }
+.field-heading > button { border: 0; background: none; color: var(--color-ink-muted); font-size: 13px; padding: 3px 0; flex-shrink: 0; }
 .required-mark { color: var(--color-warning-ink); font-size: 12px; font-weight: 500; }
 .field-hint, .editor-language { color: var(--color-ink-muted); font-size: 14px; margin: 0 0 10px; }
 .obvious-hint { color: var(--color-warning-ink); background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface)); border-left: 3px solid var(--color-warning); padding: 12px; }
-:where(input:not([type=checkbox]):not([type=range]):not([type=radio]), textarea, select) { width: 100%; min-width: 0; border: 1px solid var(--color-line); border-radius: 6px; padding: 9px 11px; background: var(--color-surface); color: inherit; }
-:where(textarea) { min-height: 96px; resize: vertical; }
+:where(input:not([type=checkbox]):not([type=range]):not([type=radio]):not([type=file]), textarea, select) { width: 100%; min-width: 0; height: var(--control-h-lg); padding: 0 12px; border: 1.5px solid transparent; border-radius: var(--radius); background: var(--color-surface-2); color: var(--color-ink); font-size: var(--text-sm); outline: none; transition: border-color var(--dur-fast), background var(--dur-fast), box-shadow var(--dur-fast); }
+:where(input:not([type=checkbox]):not([type=range]):not([type=radio]), textarea, select):focus { border-color: var(--color-accent); background: var(--color-surface); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+:where(input, textarea)::placeholder { color: var(--color-ink-muted); opacity: .8; }
+:where(textarea) { height: auto; min-height: 96px; padding: 10px 12px; line-height: 1.6; resize: vertical; }
 :where(input[type=range]) { width: 100%; accent-color: var(--color-accent); }
-:where(input[type=checkbox]) { width: 34px; height: 20px; accent-color: var(--color-accent); cursor: pointer; }
+:where(input[type=checkbox]) { width: 16px; height: 16px; accent-color: var(--color-accent); cursor: pointer; }
 .config-group { border: 1px solid var(--color-line); padding: 18px; border-radius: 8px; }
 .config-group .config-field:last-child { margin-bottom: 0; }
 .secret-control, .number-control { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -909,12 +912,6 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .form-error-inline { color: var(--color-danger); }
 .revealed-secret { display: flex; gap: 12px; align-items: center; overflow-wrap: anywhere; }
 .options-from-control { position: relative; min-width: 0; }
-.options-input-row { display: flex; gap: 8px; align-items: center; }
-.options-input-row > input { flex: 1; }
-.options-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--color-surface); border: 1px solid var(--color-line); border-radius: var(--radius-sm); box-shadow: var(--shadow-popover); padding: 8px; max-height: 320px; overflow: auto; z-index: 2; }
-.option-item { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 4px; width: 100%; border: 0; }
-.option-item[aria-pressed=true] { color: var(--color-accent); background: var(--color-accent-soft); }
-.option-item small, .option-current { color: var(--color-ink-muted); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .options-chips-list { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .option-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--color-line); border-radius: var(--radius-sm); padding: 4px 8px; background: var(--color-surface-2); max-width: 100%; overflow-wrap: anywhere; }
 .option-chip button { display: inline-flex; padding: 2px; border: 0; background: transparent; }
@@ -924,7 +921,7 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .example-reply { margin-top: 8px; overflow-wrap: anywhere; white-space: pre-wrap; }
 .example-image { display: block; max-width: 100%; height: auto; margin-top: 8px; border-radius: var(--radius-sm); }
 .example-image-alt { color: var(--color-danger); font-size: var(--text-sm); }
-.plugin-page-frame { display: block; width: 100%; min-height: 560px; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); }
+.plugin-page-frame { display: block; width: 100%; height: calc(100dvh - 120px); min-height: 480px; border: 0; background: transparent; color-scheme: normal; }
 .allowed-instances-list { display: grid; gap: 8px; margin-top: 12px; }
 .allowed-instances-list label { display: flex; align-items: center; gap: 8px; }
 .allowed-instances-list .text-muted { font-size: var(--text-xs); }
@@ -1096,8 +1093,6 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .profile-add-tool-btn { width: 100%; border: 0; background: transparent; color: var(--color-accent); font-weight: 500; padding: 14px 0; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: var(--text-sm); border-radius: var(--radius); }
 .profile-add-tool-btn:hover { background: var(--color-accent-soft); }
 
-.profile-tool-candidates-list { display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto; }
-.profile-tool-candidate-row { display: flex; align-items: center; justify-content: space-between; border: 0; background: transparent; padding: 10px 12px; border-radius: var(--radius); cursor: pointer; text-align: left; }
 .profile-tool-candidate-row:hover { background: var(--color-surface-2); }
 .profile-plugin-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; }
 .profile-plugin-row.is-globally-disabled { opacity: 0.6; }
@@ -1155,7 +1150,6 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
 .plugin-profile-selector > button { width: min(320px, 100%); }
 .detail-description { margin: 4px 0 0; max-width: 72ch; color: var(--color-ink-muted); font-size: var(--text-sm); }
 .profile-plugins-section > input, .profile-tools-panel > fieldset > input { margin-bottom: 12px; }
-.profile-tool-candidates-list { max-height: 50vh; overflow-y: auto; }
 .profile-color-teal { background: var(--color-accent); }
 .profile-color-navy { background: var(--color-ink); }
 .profile-color-amber { background: var(--color-warning); }
@@ -1211,3 +1205,38 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
   .detail-title { font-size: 22px; line-height: 1.3; }
   .detail-source-badge { overflow-wrap: anywhere; }
 }
+
+.secret-input { position: relative; flex: 1; min-width: 0; }
+.secret-input > input { padding-right: 44px; font-family: var(--font-mono); }
+.secret-input > .secret-toggle { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); padding: 6px; border: 0; background: none; color: var(--color-ink-muted); }
+.secret-input > .secret-toggle:hover:not(:disabled) { background: var(--color-surface-2); color: var(--color-ink); }
+
+/* 选项搜索：输入框内放图标，结果用与下拉菜单一致的条目样式。 */
+.options-input-row { position: relative; display: flex; align-items: center; }
+.options-input-row > svg { position: absolute; left: 12px; color: var(--color-ink-muted); pointer-events: none; }
+.options-input-row > input { flex: 1; padding-left: 36px; }
+.options-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: var(--z-popover); display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow: auto; padding: 6px; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-popover); }
+.option-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: none; text-align: left; font-weight: 400; }
+.option-item:hover:not(:disabled) { background: var(--color-surface-2); }
+.option-item[aria-pressed=true] { background: var(--color-accent-soft); color: var(--color-accent-strong); }
+.option-item small { color: var(--color-ink-muted); font-size: var(--text-xs); }
+.options-empty { margin: 0; padding: 10px; color: var(--color-ink-muted); font-size: var(--text-sm); }
+.profile-persona-popover .option-current { display: none; }
+.option-current { color: var(--color-ink-muted); font-size: var(--text-sm); overflow-wrap: anywhere; }
+/* 日志终端是深色底，骨架用半透明浅色，避免一排白块。 */
+.logs-loading [aria-hidden] { background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.09) 50%, rgba(255,255,255,.04) 75%); background-size: 200% 100%; }
+
+/* 配置文件里工具与插件列表的搜索与批量操作。 */
+.profile-batch-bar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.profile-batch-bar > input { flex: 1; max-width: 360px; }
+.profile-batch-tools { display: inline-flex; flex: none; gap: 2px; margin-left: auto; }
+.profile-batch-tools button { padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--color-ink-muted); font-size: var(--text-sm); }
+.profile-batch-tools button:hover:not(:disabled) { background: var(--color-surface-2); color: var(--color-ink); }
+.profile-batch-bar > [role=group]:last-child { margin-left: auto; }
+.profile-batch-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius); background: var(--color-accent-soft); font-size: var(--text-sm); }
+.profile-batch-actions > span { margin-right: auto; color: var(--color-accent-strong); font-weight: 600; }
+.profile-batch-actions > button { padding: 5px 12px; background: var(--color-surface); }
+.profile-batch-count { margin-right: auto; color: var(--color-ink-muted); font-size: var(--text-sm); }
+.profile-tool-row { gap: var(--space-3); }
+.profile-tool-candidate-row { display: flex; align-items: center; gap: var(--space-3); padding: 10px 12px; border-radius: 10px; cursor: pointer; }
+.profile-tool-candidates-list { display: flex; flex-direction: column; gap: 2px; max-height: min(420px, 50vh); overflow-y: auto; }

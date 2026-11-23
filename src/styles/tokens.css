@@ -48,9 +48,9 @@
   --dur-slow: 260ms;
 
   --z-sticky: 10;
-  --z-popover: 50;
+  --z-popover: 80; /* 高于对话框：对话框里的下拉、菜单与提示要浮在它上面 */
   --z-dialog: 60;
-  --z-toast: 70;
+  --z-toast: 90;
 }
 
 :root[data-theme="light"] {

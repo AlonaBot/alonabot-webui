@@ -29,6 +29,7 @@ import { Toaster } from './ui/Toaster';
 import { TooltipProvider } from './ui/Tooltip';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { Spinner } from './ui/EmptyState';
+import { PluginPageView } from './features/plugins/PluginPageView';
 
 const languageStorageKey = 'alonabot.webui.locale';
 const catalogs = { 'en-US': english, 'zh-CN': chinese };
@@ -126,7 +127,7 @@ function AdminApp() {
     const labels = ui as Record<string, string>;
     if (currentPath === '/login') {
       document.title = `${ui.loginTitle} · AlonaBot`;
-    } else if (currentPath.startsWith('/components/')) {
+    } else if (currentPath.startsWith('/components/') || currentPath.startsWith('/pages/')) {
       document.title = `${ui.plugins} · AlonaBot`;
     } else {
       const activeRoute = routes.find(r => r.path === currentPath);
@@ -197,6 +198,7 @@ function AdminApp() {
     const matchedRoute = routes.find(r => r.path === currentPath);
     const isComponentDetail = currentPath.startsWith('/components/');
     const componentId = isComponentDetail ? decodeURIComponent(currentPath.slice('/components/'.length)) : '';
+    const pagePlugin = currentPath.startsWith('/pages/') ? decodeURIComponent(currentPath.slice('/pages/'.length)) : '';
 
     return (
       <UISettingsContext.Provider value={uiSettingsValue}>
@@ -223,7 +225,9 @@ function AdminApp() {
           ) : null}
 
           <ErrorBoundary key={currentPath}>
-            {isComponentDetail && componentId ? (
+            {pagePlugin ? (
+              <PluginPageView id={pagePlugin} />
+            ) : isComponentDetail && componentId ? (
               <PluginDetailPage key={componentId} id={componentId} />
             ) : matchedRoute ? (
               matchedRoute.render()

@@ -938,6 +938,13 @@
     "autoSyncCommands": "Sync the command menu automatically",
     "autoSyncCommandsHint": "Update the command list next to the Telegram input box when plugin commands change.",
     "clearCommandsOnDisable": "Clear the command menu when disabled",
-    "clearCommandsOnDisableHint": "Hide stale commands in Telegram after the account is disabled."
+    "clearCommandsOnDisableHint": "Hide stale commands in Telegram after the account is disabled.",
+    "secretKeepPlaceholder": "Set; leave empty to keep it",
+    "pluginPageMissing": "This page no longer exists. The plugin may have been updated or uninstalled.",
+    "selectedItems": "{count} selected",
+    "selection": "Selection",
+    "enableAll": "Enable all",
+    "disableAll": "Disable all",
+    "invertEnabled": "Invert"
   }
 }

@@ -275,18 +275,18 @@ export function OptionsFromControl({ field, value, onChange, attributes, options
         {label(entry)}<button type="button" aria-label={`${ui.removeRow} ${entry}`} onClick={() => choose(entry)}><X size={14} /></button>
       </span>)}</div> : <div className="option-current">{selected.map(entry => <span key={entry}>{label(entry)}</span>)}</div>}
       <div className="options-input-row">
-        <input {...attributes} required={field.required && selected.length === 0} value={query} placeholder={ui.searchOptions}
+        <Search size={16} aria-hidden />
+        <input {...attributes} required={field.required && selected.length === 0} value={query} placeholder={ui.searchOptions} aria-expanded={open}
           onFocus={() => setOpen(true)} onChange={event => { setQuery(event.currentTarget.value); setOpen(true); }} />
-        <button type="button" aria-label={ui.searchOptions} aria-expanded={open} onClick={() => setOpen(!open)}><Search size={16} /></button>
       </div>
       {open && <div className="options-dropdown">
         {loading && <div className="options-loading"><Spinner size={16} /></div>}
         {page.options.map(option => <button type="button" key={option.value} className="option-item" aria-pressed={selected.includes(option.value)} onClick={() => choose(option.value)}>
           <span>{option.label}</span>{option.description && <small>{option.description}</small>}
         </button>)}
-        {!loading && page.options.length === 0 && <p>{ui.noMatches}</p>}
-        {page.more && <p>{ui.searchMoreOptions}</p>}
-        {query && !page.options.some(option => option.value === query) && <button type="button" onClick={() => choose(query)}>{ui.customValue}: <code>{query}</code></button>}
+        {!loading && page.options.length === 0 && <p className="options-empty">{ui.noMatches}</p>}
+        {page.more && <p className="options-empty">{ui.searchMoreOptions}</p>}
+        {query && !page.options.some(option => option.value === query) && <button type="button" className="option-item" onClick={() => choose(query)}><span>{ui.customValue}: <code>{query}</code></span></button>}
       </div>}
     </>}
   </div>;
@@ -304,9 +304,7 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
   const ui = useUI();
   const id = useId();
   const formContext = useContext(FormContext);
-  const [editingSecret, setEditingSecret] = useState(value === undefined);
   const [showSecret, setShowSecret] = useState(false);
-  const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [revealing, setRevealing] = useState(false);
   const [revealError, setRevealError] = useState<string | null>(null);
 
@@ -318,13 +316,13 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
   const attributes = { id, 'aria-describedby': text.hint ? `${id}-hint` : undefined, 'aria-invalid': missingValue || undefined };
   let control;
 
-  const handleReveal = async () => {
+  const handleRevealInto = async () => {
     if (!formContext?.onReveal) return;
     setRevealing(true);
     setRevealError(null);
     try {
-      const plaintext = await formContext.onReveal(path);
-      setRevealedSecret(plaintext);
+      onChange(await formContext.onReveal(path));
+      setShowSecret(true);
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError')) setRevealError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -332,34 +330,36 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
     }
   };
 
+
   if (value === null) {
     control = <div className="default-pending" role="status">
       <p>{ui.defaultPending}</p>
       <button type="button" onClick={() => onChange(editableValue(original))}>{ui.undoReset}</button>
     </div>;
   } else if (field.secret) {
-    const set = isSecretSet(value) || (typeof value === 'string' && value.length > 0);
+    // 一个密码框加显示开关：留空保持已保存的值，输入即替换。
+    const stored = isSecretSet(original) || (typeof original === 'string' && original.length > 0);
+    const text = typeof value === 'string' ? value : '';
+    const toggle = async () => {
+      if (!showSecret && text === '' && stored && formContext?.onReveal) {
+        await handleRevealInto();
+        return;
+      }
+      setShowSecret(!showSecret);
+    };
     control = <div className="secret-control">
-      <span role="status">{set ? ui.secretSet : ui.secretUnset}</span>
-      {!editingSecret && <button type="button" onClick={() => { setShowSecret(false); setRevealedSecret(null); setEditingSecret(true); }}>{ui.modify}</button>}
-      {set && formContext?.onReveal && !revealedSecret && (
-        <button type="button" onClick={handleReveal} disabled={revealing}>
-          {revealing ? <Spinner size={14} /> : ui.revealSecret}
-        </button>
-      )}
-      {revealedSecret !== null && (
-        <div className="revealed-secret">
-          <code>{revealedSecret}</code>
-          <button type="button" onClick={() => setRevealedSecret(null)}>{ui.hideSecret}</button>
-        </div>
-      )}
+      <div className="secret-input">
+        <input {...attributes} type={showSecret ? 'text' : 'password'} autoComplete="new-password"
+          required={field.required && !stored} value={text} placeholder={stored ? ui.secretKeepPlaceholder : undefined}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            const next = event.currentTarget.value;
+            // 清空输入时恢复为已保存的值，而不是提交空字符串。
+            onChange(next === '' && stored ? original : next);
+          }} />
+        <button type="button" className="secret-toggle" aria-label={showSecret ? ui.hideSecret : ui.showSecret} aria-pressed={showSecret}
+          disabled={revealing} onClick={() => void toggle()}>{showSecret ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+      </div>
       {revealError && <p role="alert" className="form-error-inline">{revealError}</p>}
-      {editingSecret && <><input {...attributes} type={showSecret ? 'text' : 'password'} autoComplete="new-password"
-        required={field.required} value={typeof value === 'string' ? value : ''}
-        onChange={(event: ChangeEvent<HTMLInputElement>) => { setRevealedSecret(null); onChange(event.currentTarget.value); }} />
-        <button type="button" aria-label={showSecret ? ui.hideSecret : ui.showSecret} aria-pressed={showSecret}
-          onClick={() => setShowSecret(!showSecret)}>{showSecret ? <EyeOff size={18} /> : <Eye size={18} />}</button></>}
-      <button type="button" onClick={() => { setEditingSecret(false); setShowSecret(false); setRevealedSecret(null); onChange(null); }}>{ui.clear}</button>
     </div>;
   } else {
     switch (field.type) {
@@ -433,7 +433,7 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
     {field.type === 'object' && <legend>{title}</legend>}
     <div className="field-heading">
       {field.type !== 'object' && <label htmlFor={id}>{title}</label>}
-      {customized && <button type="button" disabled={!editable} onClick={() => { setEditingSecret(false); setRevealedSecret(null); setShowSecret(false); onChange(null); }}>{ui.restoreDefault}</button>}
+      {customized && <button type="button" disabled={!editable} onClick={() => { setShowSecret(false); onChange(null); }}>{ui.restoreDefault}</button>}
     </div>
     {text.hint && <p id={`${id}-hint`} className={field.obviousHint ? 'field-hint obvious-hint' : 'field-hint'}
 >{text.hint}</p>}
