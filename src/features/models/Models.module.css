@@ -81,3 +81,4 @@ fieldset.form { min-width: 0; margin: 0; padding: 0; border: 0; }
   .pickerBar { flex-wrap: wrap; }
   .search { flex-basis: 100%; margin: 0 0 var(--space-1); }
 }
+.providerHead .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
