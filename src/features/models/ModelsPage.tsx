@@ -86,8 +86,8 @@ export function ModelsPage(): JSX.Element {
     try {
       const next = await saveModelConfig(agent.ID, snapshot, patch, saved => {
         closeDialogs();
-        client.setQueryData<ConfigSnapshot>(['plugin-config', agent.ID], previous => previous && (previous.active_generation.startsWith('dev:')
-          ? { ...previous, active: saved.config, pending: null } : { ...previous, pending: saved }));
+        // 保存后马上重载生效，先按已生效显示，避免「待生效」提示条和徽标闪现一次。
+        client.setQueryData<ConfigSnapshot>(['plugin-config', agent.ID], previous => previous && { ...previous, active: saved.config, pending: null });
       });
       client.setQueryData(['plugin-config', agent.ID], next);
       setTests({});
