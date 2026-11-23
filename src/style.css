@@ -35,8 +35,11 @@
 :where(output) { font-variant-numeric: tabular-nums; color: var(--color-accent); }
 .default-pending { background: var(--color-surface-2); padding: 12px; border-radius: 6px; font-size: 14px; }
 .default-pending p { margin: 0 0 8px; }
-.collection-row { border: 1px solid var(--color-line); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
-.collection-row > button { margin-top: 10px; color: var(--color-danger); font-size: 13px; }
+.collection-row { position: relative; padding: 14px 16px; margin-bottom: 10px; border-radius: 12px; background: var(--color-surface-2); }
+.collection-row :where(input:not([type=checkbox]):not([type=range]):not([type=radio]), textarea, select) { background: var(--color-surface); }
+.collection-row > button { margin-top: 8px; padding: 4px 8px; border: 0; background: none; color: var(--color-danger); font-size: 13px; }
+.collection-row > button:hover:not(:disabled) { background: color-mix(in srgb, var(--color-danger) 8%, transparent); }
+.list-control > button:last-of-type, .template-list > button:last-of-type { border-style: dashed; color: var(--color-accent-strong); background: none; }
 .dict-row label { display: block; font-size: 13px; color: var(--color-ink-muted); margin-bottom: 8px; }
 .dict-row input, .dict-row textarea, .dict-row select { display: block; margin-top: 4px; }
 :where(summary) { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
@@ -712,7 +715,7 @@
 /* 统计、商店与数据页面沿用外壳令牌及画板的留白。 */
 .data-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 14px 0 20px; }
 .data-toolbar input { flex: 1; min-width: 180px; max-width: 320px; }
-.data-toolbar > button[data-variant] { flex: none; width: auto; min-width: 140px; max-width: 240px; }
+.data-toolbar > button[data-variant] { flex: none; width: auto; min-width: 180px; max-width: 280px; }
 .data-toolbar button, .dialog-button { display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
 .muted { color: var(--color-ink-muted); }
 .block { display: block; }
@@ -742,7 +745,9 @@
 .markdown-content h2 { font-size: var(--text-lg); }
 .changelog-entry { margin-top: 24px; }
 .data-view-tabs { margin-bottom: 16px; }
-.database-panel { padding-top: 12px; }
+.database-panel { padding: 20px 24px; border-radius: 18px; background: var(--color-surface); }
+.database-panel .data-table-wrap { padding: 0; border-radius: 0; }
+.database-panel .data-toolbar { margin: 0 0 16px; }
 .database-filters { margin: 12px 0; }
 .database-filter { color: var(--color-accent); background: var(--color-accent-soft); }
 .database-grid th small { display: block; font-size: var(--text-xs); font-weight: 400; white-space: nowrap; }
@@ -1240,3 +1245,9 @@ fieldset.config-field { border: 0; padding: 0; min-width: 0; }
 .profile-tool-row { gap: var(--space-3); }
 .profile-tool-candidate-row { display: flex; align-items: center; gap: var(--space-3); padding: 10px 12px; border-radius: 10px; cursor: pointer; }
 .profile-tool-candidates-list { display: flex; flex-direction: column; gap: 2px; max-height: min(420px, 50vh); overflow-y: auto; }
+
+/* 插件配置表单放在卡片里，标签列固定宽度，输入不直接落在页面背景上。 */
+.plugin-config-panel form { padding: 4px 28px; border-radius: 18px; background: var(--color-surface); }
+.plugin-config-panel .config-field { grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); }
+.plugin-config-panel .config-field:last-of-type { border-bottom: 0; }
+@media (max-width: 767px) { .plugin-config-panel form { padding: 4px 16px; } }

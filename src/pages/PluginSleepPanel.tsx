@@ -5,7 +5,6 @@ import { LockKeyhole } from 'lucide-react';
 import type { PluginRuntime, SleepPolicy } from '../api/packages';
 import { useUI } from '../i18n/UI';
 import { Link } from '../shell/router';
-import { useUISettings } from '../shell/settings';
 import { toast } from '../ui/toast';
 
 type Messages = ReturnType<typeof useUI>;
@@ -53,14 +52,12 @@ export function PluginSleepPanel({ policy, runtime, policyError, runtimeError, w
   onSubmit: (policy: string | null) => Promise<boolean>;
 }): JSX.Element {
   const ui = useUI();
-  const { locale } = useUISettings();
   const fieldID = useId();
   const [draft, setDraft] = useState<string | null | undefined>(undefined);
   const value = draft === undefined ? policy?.policy : draft;
   const mode = value === null ? 'auto' : value === 'never' ? 'never' : 'duration';
   const locked = policy !== null && (!policy.sleep_capable || policy.reason === 'manifest_requires_resident' || policy.reason === 'in_process');
   const policyText = (value: string | null) => value === null ? ui.sleepFollowGlobal : value === 'never' ? ui.sleepNever : value;
-  const timestamp = (at: string) => <time dateTime={at}>{new Date(at).toLocaleString(locale)}</time>;
 
   return <div className="plugin-sleep-panel">
     {writeError && <pre className="sleep-error plugins-error-banner" role="alert">{writeError}</pre>}
@@ -97,10 +94,6 @@ export function PluginSleepPanel({ policy, runtime, policyError, runtimeError, w
     {runtimeError && <div className="sleep-error plugins-error-banner" role="alert"><strong>{ui.runtimeStatus}</strong><pre>{runtimeError}</pre></div>}
     {runtime && <dl className="sleep-runtime-records">
       <div><dt>{ui.runtimeStatus}</dt><dd>{ui[`runtime${runtime.state}`]}</dd></div>
-      {runtime.reason && <div><dt>{ui.runtimeReason}</dt><dd className="sleep-runtime-reason">{reasonText(runtime.reason, ui)}</dd></div>}
-      <div><dt>{ui.runtimeChangedAt}</dt><dd>{timestamp(runtime.changed_at)}</dd></div>
-      {runtime.last_wake && <div><dt>{ui.runtimeLastWake}</dt><dd>{timestamp(runtime.last_wake.at)}<span>{reasonText(runtime.last_wake.reason, ui)}</span></dd></div>}
-      {runtime.last_suspend && <div><dt>{ui.runtimeLastSuspend}</dt><dd>{timestamp(runtime.last_suspend.at)}<span>{reasonText(runtime.last_suspend.reason, ui)}</span></dd></div>}
     </dl>}
   </div>;
 }
