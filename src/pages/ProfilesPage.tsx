@@ -25,6 +25,7 @@ import { SearchContext } from '../shell/search';
 import { ProfileAssignmentsDialog } from './ProfileAssignmentsDialog';
 import { ProfileAISection } from './ProfileAISection';
 import { ProfilePlatformSection } from './ProfilePlatformSection';
+import { SessionAccessCard } from '../features/profiles/SessionAccessCard';
 import { ProfilePluginsSection } from './ProfilePluginsSection';
 
 /** ProfilesPage 负责配置文件的多标签展示、切换、增删改查及使用范围设定。 */
@@ -351,7 +352,7 @@ export function ProfilesPage(): JSX.Element {
           />
         )}
         {activeTab === 'platform' && (
-          <ProfilePlatformSection profileID={currentProfile.id} />
+          <><ProfilePlatformSection profileID={currentProfile.id} /><SessionAccessCard profileID={currentProfile.id} /></>
         )}
         {pluginsProfileID === currentProfile.id && activeTab === 'plugins' && (
           <ProfilePluginsSection

@@ -953,6 +953,17 @@
     "githubDownloadPrefixHint": "Prepended verbatim to the original asset URL. Leave empty to download directly.",
     "githubDownloadExample": "Example: https://proxy.example/ + https://github.com/owner/repo/releases/download/v1.0.0/package.tar.gz",
     "githubAPIBaseTrust": "Usually empty. Only set a trusted GitHub API proxy: package digests are read from it too.",
-    "officialAPI": "Official API"
+    "officialAPI": "Official API",
+    "sessionAccess": "Session access",
+    "sessionAccessAll": "Allow all",
+    "sessionAccessAllow": "Allowlist",
+    "sessionAccessDeny": "Blocklist",
+    "sessionAccessAllHint": "Every session using this profile can use the bot.",
+    "sessionAccessAllowHint": "Only the sessions below can use the bot; others get no replies.",
+    "sessionAccessDenyHint": "The sessions below cannot use the bot.",
+    "sessionAccessEmptyAllow": "The allowlist is empty, so no session gets replies.",
+    "sessionAccessEmptyDeny": "The blocklist is empty, so every session can use the bot.",
+    "addSessions": "Add sessions",
+    "globalDeniedChats": "These sessions are blocked globally, for every profile"
   }
 }
