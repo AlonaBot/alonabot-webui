@@ -7,13 +7,12 @@ import { listInstanceOptions, resolveInstanceOptions } from '../../api/config';
 import { ConfigForm } from '../../components/ConfigForm';
 import { applyMergePatch } from '../../pages/pluginConfig';
 import { useUISettings } from '../../shell/settings';
-import { changePackage } from '../../api/packages';
+import { changePackage, type Package } from '../../api/packages';
 import { getProfileAssignments, listProfiles } from '../../api/profiles';
 import { useUI } from '../../i18n/UI';
 import { accountChats, chatProfile } from '../../pages/accountState';
 import { installed, usePackages } from '../../queries/packages';
 import { useInstances } from '../../queries/plugins';
-import { isSecretSet } from '../../schema/patch';
 import { PageHeader } from '../../shell/PageHeader';
 import { SearchContext } from '../../shell/search';
 import { Button } from '../../ui/Button';
@@ -24,7 +23,9 @@ import { Pagination } from '../../ui/Pagination';
 import { Switch } from '../../ui/Switch';
 import { toast } from '../../ui/toast';
 import { usePackageActions } from '../plugins/usePackageActions';
+import { AccountSettingsPage } from './AccountSettingsPage';
 import { AddAccountDialog, AdapterIcon, adapterFieldMessages, officialAdapters } from './AddAccountDialog';
+import { withoutSecretMarkers } from './instanceConfig';
 import styles from './Accounts.module.css';
 
 const pageSize = 12;
@@ -145,7 +146,7 @@ export function AccountsPage(): JSX.Element {
     {adding && <AddAccountDialog packages={packages} onClose={() => setAdding(false)} />}
     {deleting && <ConfirmDialog open tone="danger" onOpenChange={open => { if (!open) setDeleting(null); }} title={ui.deleteAccountTitle.replace('{name}', deleting.instance_id)}
       description={ui.deleteAccountDesc} confirmLabel={ui.actionDelete} onConfirm={() => { const target = deleting; setDeleting(null); void change('delete', target); }} />}
-    {inspecting && <ConfigDialog instance={inspecting} onClose={() => setInspecting(null)} />}
+    {inspecting && <ConfigDialog instance={inspecting} pkg={packages.find(item => item.ID === inspecting.package_id)} onClose={() => setInspecting(null)} />}
     {chatList && <ChatsDialog instance={chatList} chats={chats.data ? accountChats(chats.data, chatList.instance_id) : []} assignments={assignments.data} profileName={profileName} onClose={() => setChatList(null)} />}
     {actions.dialogs}
   </>;
@@ -177,21 +178,8 @@ function ChatsDialog({ instance, chats, assignments, profileName, onClose }: {
   </Dialog>;
 }
 
-/** 脱敏后的实例配置，附带自动修正与未识别键；未识别键可以一键清理。 */
-/** Core 读取时把 secret 脱敏成 {"$secret_set": true|false}。 */
-function isSecretMask(value: unknown): boolean {
-  return value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1 && typeof (value as Record<string, unknown>).$secret_set === 'boolean';
-}
-
-/** 去掉未修改的 secret 占位，Core 对省略的 secret 保留原值。 */
-function withoutSecretMarkers(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(withoutSecretMarkers);
-  if (value === null || typeof value !== 'object') return value;
-  return Object.fromEntries(Object.entries(value).filter(([, entry]) => !isSecretMask(entry)).map(([key, entry]) => [key, withoutSecretMarkers(entry)]));
-}
-
 /** 账号配置：与添加账号同一套表单，保存后 Core 以新配置重启该账号。 */
-function ConfigDialog({ instance, onClose }: { instance: AdapterInstance; onClose: () => void }): JSX.Element {
+function ConfigDialog({ instance, pkg, onClose }: { instance: AdapterInstance; pkg?: Package; onClose: () => void }): JSX.Element {
   const ui = useUI();
   const { locale } = useUISettings();
   const client = useQueryClient();
@@ -205,6 +193,7 @@ function ConfigDialog({ instance, onClose }: { instance: AdapterInstance; onClos
     finally { setBusy(false); }
   };
   const data = config.data;
+  const settingsPage = pkg?.pages?.find(page => page.purpose === 'instance_config');
   const options = useMemo(() => ({
     list: (path: string, q: string) => listInstanceOptions(instance.adapter_id, instance.instance_id, path, q, locale),
     resolve: (path: string, values: string[]) => resolveInstanceOptions(instance.adapter_id, instance.instance_id, path, values, locale),
@@ -224,8 +213,10 @@ function ConfigDialog({ instance, onClose }: { instance: AdapterInstance; onClos
       </div>}
       <fieldset disabled={busy} className={styles.schema}>
         <ConfigForm schema={schema.data} value={data.config} messages={adapterFieldMessages(ui, instance.adapter_id)} options={options}
-          onSubmit={patch => void run(() => updateInstanceConfig(instance.adapter_id, instance.instance_id,
-            withoutSecretMarkers(applyMergePatch(data.config, patch)) as Record<string, unknown>), ui.accountConfigSaved)} />
+          draftAction={settingsPage && ((draft, applyPatch) => <AccountSettingsPage id={instance.package_id} page={settingsPage}
+            mode="edit" instanceID={instance.instance_id} schema={schema.data} draft={draft} applyPatch={applyPatch} />)}
+          onSubmit={(patch, base) => void run(() => updateInstanceConfig(instance.adapter_id, instance.instance_id,
+            withoutSecretMarkers(applyMergePatch(base ?? data.config, patch)) as Record<string, unknown>), ui.accountConfigSaved)} />
       </fieldset>
     </div>}
   </Dialog>;

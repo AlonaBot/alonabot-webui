@@ -3,6 +3,8 @@ import { currentCSRFToken, getClientLocale, jsonBody, notifyPackagesChanged, not
 import type { Changelog } from './core';
 import { waitTask } from './tasks';
 
+export type PackagePage = { path: string; title: string; purpose?: string };
+
 export type Package = {
   ID: string;
   Role: string;
@@ -18,7 +20,7 @@ export type Package = {
   State: string;
   RuntimeState?: RuntimeState;
   Warnings?: string[];
-  pages?: { path: string; title: string }[];
+  pages?: PackagePage[];
   Name?: string;
   Description?: string;
   Author?: string;

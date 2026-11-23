@@ -4,7 +4,8 @@ import type { ChangeEvent, FormEvent, JSX, ReactNode } from 'react';
 import { Eye, EyeOff, Search, X } from 'lucide-react';
 import { fieldsFromSchema } from '../schema/model';
 import type { Field, Template } from '../schema/model';
-import { buildPatch, isSecretSet, MissingSecretsError } from '../schema/patch';
+import { buildPatch, equalConfigValue, isSecretSet, MissingSecretsError } from '../schema/patch';
+import { applyMergePatch, applyPatchToDraftBase } from '../pages/pluginConfig';
 import { fieldExamples, fieldText, templateText } from '../i18n/catalog';
 import { useUI } from '../i18n/UI';
 import { Disclosure } from '../ui/Disclosure';
@@ -13,12 +14,15 @@ import { Switch } from '../ui/Switch';
 import { AdminAPIError } from '../api/client';
 import { type ConfigOption, type OptionsPage } from '../api/config';
 import { Spinner } from '../ui/EmptyState';
+import styles from './ConfigForm.module.css';
 
 export type ConfigFormProps = {
   schema: unknown;
   value: unknown;
   messages: Record<string, unknown>;
-  onSubmit: (patch: Record<string, unknown>) => void;
+  /** 页面补丁已并入 draftBase；其余调用方沿用 value 作为补丁基线。 */
+  onSubmit: (patch: Record<string, unknown>, draftBase?: Record<string, unknown>) => void;
+  draftAction?: (draft: Record<string, unknown>, applyPatch: (patch: Record<string, unknown>) => void) => ReactNode;
   options?: {
     list: (path: string, q: string) => Promise<OptionsPage>;
     resolve: (path: string, values: string[]) => Promise<OptionsPage>;
@@ -35,6 +39,7 @@ export type ConfigFormProps = {
 
 interface FormContextValue {
   editablePaths?: readonly string[];
+  fieldRevisions: Readonly<Record<string, number>>;
   options?: {
     list: (path: string, q: string) => Promise<OptionsPage>;
     resolve: (path: string, values: string[]) => Promise<OptionsPage>;
@@ -151,6 +156,16 @@ function editableValue(value: unknown): unknown {
     return copy;
   }
   return value;
+}
+
+// 合并对象时保留未变的行身份；数组整体替换时，新行用页面结果作为原值。
+function mergeEditedValue(before: unknown, after: unknown): unknown {
+  if (equalConfigValue(before, after)) return before;
+  if (after !== null && typeof after === 'object' && !Array.isArray(after)) {
+    const previous = before !== null && typeof before === 'object' && !Array.isArray(before) ? before as Record<string, unknown> : {};
+    return Object.fromEntries(Object.entries(after).map(([key, value]) => [key, mergeEditedValue(Object.hasOwn(previous, key) ? previous[key] : undefined, value)]));
+  }
+  return editableValue(after);
 }
 
 function submissionFields(value: Record<string, unknown>, fields: Field[], replacing: boolean, original = originalValues.get(value)): Record<string, unknown> {
@@ -428,7 +443,9 @@ function FieldControl({ field, value, original, path, messages, missing, onChang
   // 只有值不同于缺省值时才给出「恢复默认」；密钥用自己的清除按钮。
   const customized = !field.secret && value !== undefined && value !== null
     && !(Object.hasOwn(field, 'defaultValue') && JSON.stringify(value) === JSON.stringify(field.defaultValue));
-  const title = <>{text.description}{field.required && <span className="required-mark"> · {ui.required}</span>}</>;
+  const fromPage = path.length === 1 && formContext && Object.hasOwn(formContext.fieldRevisions, field.key);
+  const title = <>{text.description}{field.required && <span className="required-mark"> · {ui.required}</span>}
+    {fromPage && <span className={styles.updated}>{ui.accountConfigFieldChanged}</span>}</>;
   const body = <>
     {field.type === 'object' && <legend>{title}</legend>}
     <div className="field-heading">
@@ -489,9 +506,10 @@ function Fields({ fields, value = {}, original, path, messages, missing, onChang
   missing: string[];
   onChange: (value: unknown) => void;
 }) {
+  const formContext = useContext(FormContext);
   return <>{fields.filter(field => !field.invisible && (!field.condition || Object.entries(field.condition)
     .every(([key, expected]) => Object.hasOwn(value, key) && JSON.stringify(value[key]) === JSON.stringify(expected))))
-    .map(field => <FieldControl key={field.key} field={field} value={Object.hasOwn(value, field.key) ? value[field.key] : undefined}
+    .map(field => <FieldControl key={path.length === 0 && formContext && Object.hasOwn(formContext.fieldRevisions, field.key) ? `${field.key}:${formContext.fieldRevisions[field.key]}` : field.key} field={field} value={Object.hasOwn(value, field.key) ? value[field.key] : undefined}
       original={original && Object.hasOwn(original, field.key) ? original[field.key] : undefined}
       path={[...path, field.key]} messages={messages} missing={missing}
       onChange={next => {
@@ -525,13 +543,17 @@ function FormEditor(props: ConfigFormProps) {
   const ui = useUI();
   const fields = useMemo(() => fieldsFromSchema(props.schema), [props.schema]);
   const [edited, setEdited] = useState(() => editableValue(props.value) as Record<string, unknown>);
+  const [external, setExternal] = useState<{ base: Record<string, unknown>; revisions: Record<string, number> }>();
+  const base = external?.base ?? props.value;
   const [error, setError] = useState<Error | null>(null);
   const [resetVersion, setResetVersion] = useState(0);
   const missing = error instanceof MissingSecretsError ? error.paths : [];
   const isDirty = useMemo(() => JSON.stringify(edited) !== JSON.stringify(props.value), [edited, props.value]);
+  const optionalUpdated = fields.some(field => !field.required && !field.invisible && external && Object.hasOwn(external.revisions, field.key));
 
   const formContextValue = useMemo<FormContextValue>(() => ({
     editablePaths: props.editablePaths,
+    fieldRevisions: external?.revisions ?? {},
     options: props.options,
     exampleImageURL: props.exampleImageURL,
     commandPrefix: props.commandPrefix,
@@ -539,14 +561,28 @@ function FormEditor(props: ConfigFormProps) {
     rootEdited: edited,
     fields,
     messages: props.messages,
-  }), [props.editablePaths, props.options, props.exampleImageURL, props.commandPrefix, props.onReveal, edited, fields, props.messages]);
+  }), [props.editablePaths, props.options, props.exampleImageURL, props.commandPrefix, props.onReveal, edited, fields, props.messages, external]);
+
+  function applyDraftPatch(patch: Record<string, unknown>) {
+    const next = mergeEditedValue(edited, applyMergePatch(edited, patch)) as Record<string, unknown>;
+    const revisions = { ...external?.revisions };
+    for (const key of Object.keys(patch)) {
+      if (!equalConfigValue(edited[key], next[key])) Object.defineProperty(revisions, key, {
+        value: (Object.hasOwn(revisions, key) ? revisions[key] : 0) + 1, enumerable: true, configurable: true,
+      });
+    }
+    // 页面有权限改隐藏字段和删除字段；以合入页面结果后的配置为表单补丁基线。
+    setExternal({ base: applyPatchToDraftBase(base as Record<string, unknown>, edited, patch), revisions });
+    setEdited(next);
+    setError(null);
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!event.currentTarget.reportValidity()) return;
     let patch: Record<string, unknown>;
     try {
-      patch = buildPatch(props.value, submissionFields(edited, fields, false), fields);
+      patch = buildPatch(base, submissionFields(edited, fields, false), fields);
       if (props.editablePaths) patch = editablePatch(patch, props.editablePaths);
     } catch (caught) {
       if (!(caught instanceof Error)) throw caught;
@@ -554,11 +590,12 @@ function FormEditor(props: ConfigFormProps) {
       return;
     }
     setError(null);
-    props.onSubmit(patch);
+    props.onSubmit(patch, external?.base);
   }
 
   return (
     <FormContext.Provider value={formContextValue}>
+      {props.draftAction?.(edited, applyDraftPatch)}
       <form onSubmit={submit} onInvalidCapture={event => {
         let details = (event.target as HTMLElement).closest('details');
         while (details) {
@@ -567,13 +604,13 @@ function FormEditor(props: ConfigFormProps) {
         }
       }}>
         {props.collapseOptional ? <>
-          <Fields key={resetVersion} fields={fields.filter(field => field.required)} value={edited} original={props.value as Record<string, unknown>}
+          <Fields key={resetVersion} fields={fields.filter(field => field.required)} value={edited} original={base as Record<string, unknown>}
             path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
-          {fields.some(field => !field.required && !field.invisible) && <Disclosure summary={ui.advancedSettings}>
-            <Fields key={resetVersion} fields={fields.filter(field => !field.required)} value={edited} original={props.value as Record<string, unknown>}
+          {fields.some(field => !field.required && !field.invisible) && <Disclosure key={optionalUpdated ? 'updated' : 'normal'} summary={ui.advancedSettings} defaultOpen={optionalUpdated}>
+            <Fields key={resetVersion} fields={fields.filter(field => !field.required)} value={edited} original={base as Record<string, unknown>}
               path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />
           </Disclosure>}
-        </> : <Fields key={resetVersion} fields={fields} value={edited} original={props.value as Record<string, unknown>}
+        </> : <Fields key={resetVersion} fields={fields} value={edited} original={base as Record<string, unknown>}
           path={[]} messages={props.messages} missing={missing} onChange={next => { setEdited(next as Record<string, unknown>); setError(null); }} />}
         {error && <div role="alert" className="form-error">
           <p>{error instanceof MissingSecretsError ? ui.missingSecrets : ui.patchError}</p>
@@ -587,6 +624,7 @@ function FormEditor(props: ConfigFormProps) {
               disabled={!isDirty}
               onClick={() => {
                 setEdited(editableValue(props.value) as Record<string, unknown>);
+                setExternal(undefined);
                 setError(null);
                 setResetVersion(version => version + 1);
                 props.onDiscard!();

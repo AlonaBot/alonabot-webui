@@ -1,4 +1,4 @@
-import type { JSX, ReactNode } from 'react';
+import type { JSX, ReactNode, RefObject } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { useUI } from '../i18n/UI';
@@ -9,7 +9,7 @@ import styles from './Dialog.module.css';
  * 模态对话框。dismissible=false 时 Esc、点遮罩与关闭按钮都不可用，只能通过 footer 里的操作关闭，
  * 用于「令牌只显示这一次」这类不能误关的内容。
  */
-export function Dialog({ open, onOpenChange, title, description, children, footer, size = 'md', dismissible = true }: {
+export function Dialog({ open, onOpenChange, title, description, children, footer, size = 'md', dismissible = true, returnFocusRef }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: ReactNode;
@@ -18,13 +18,17 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   dismissible?: boolean;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }): JSX.Element {
   const ui = useUI();
   const block = (event: Event) => { if (!dismissible) event.preventDefault(); };
   return <RadixDialog.Root open={open} onOpenChange={next => { if (next || dismissible) onOpenChange(next); }}>
     <RadixDialog.Portal>
       <RadixDialog.Overlay className={styles.overlay} />
-      <RadixDialog.Content className={styles.content} data-size={size} onEscapeKeyDown={block} onPointerDownOutside={block} onInteractOutside={block}>
+      <RadixDialog.Content className={styles.content} data-size={size} onEscapeKeyDown={block} onPointerDownOutside={block} onInteractOutside={block}
+        onCloseAutoFocus={returnFocusRef ? event => {
+          if (returnFocusRef.current) { event.preventDefault(); returnFocusRef.current.focus(); }
+        } : undefined}>
         <header className={styles.header}>
           <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
           {dismissible && <RadixDialog.Close asChild><Button variant="ghost" iconOnly size="sm" aria-label={ui.close}><X size={18} /></Button></RadixDialog.Close>}

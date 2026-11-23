@@ -4,6 +4,19 @@ import { requestPluginPage } from '../api/packages';
 import { pickLocale } from '../i18n/catalog';
 
 const channel = 'alonabot.plugin';
+
+export type InstanceConfigContext = {
+  mode: 'create' | 'edit';
+  instance_id: string;
+  config: Record<string, unknown>;
+  schema: Record<string, unknown>; // 实例配置 Schema：顶层字段名到字段声明。
+};
+
+export type InstanceConfigBridge = {
+  context(): InstanceConfigContext;
+  complete(patch: Record<string, unknown>): void;
+};
+
 const tokenNames = {
   bg: '--color-bg', surface: '--color-surface', 'surface-2': '--color-surface-2',
   line: '--color-line', text: '--color-ink', 'text-muted': '--color-ink-muted',
@@ -65,12 +78,30 @@ function themeState() {
   return { theme, tokens };
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object') return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+// postMessage 也接受非 JSON 数据；Merge Patch 只接受 JSON，凭证标记由宿主保管。
+function validConfigPatch(value: unknown, ancestors = new Set<object>()): boolean {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean' || Number.isFinite(value)) return true;
+  if (!Array.isArray(value) && !isPlainObject(value)) return false;
+  if (ancestors.has(value) || Object.hasOwn(value, '$secret_set') || Object.hasOwn(value, '$secret_ref')) return false;
+  ancestors.add(value);
+  const valid = Object.values(value).every(entry => validConfigPatch(entry, ancestors));
+  ancestors.delete(value);
+  return valid;
+}
+
 /** bindPluginPage 将消息和响应限定到当前 iframe 窗口，释放后丢弃在途结果。 */
-export function bindPluginPage(frame: HTMLIFrameElement, input: { id: string; locale: string; openSearch: () => void }): { setLocale: (locale: string) => void; dispose: () => void } {
+export function bindPluginPage(frame: HTMLIFrameElement, input: { id: string; locale: string; openSearch: () => void; config?: InstanceConfigBridge }): { setLocale: (locale: string) => void; dispose: () => void } {
   const target = frame.contentWindow;
   let locale = input.locale;
   let ready = false;
   let disposed = false;
+  let configCompleted = false;
   let catalog: ReturnType<typeof getPluginConfig> | undefined;
   const post = (message: unknown) => {
     if (!disposed && frame.contentWindow === target) target?.postMessage(message, '*');
@@ -88,6 +119,20 @@ export function bindPluginPage(frame: HTMLIFrameElement, input: { id: string; lo
         case 'hello': ready = true; result = { locale, ...themeState() }; break;
         case 'locale': result = { locale }; break;
         case 'theme': result = { theme: themeState().theme }; break;
+        case 'config.context':
+          if (!input.config) throw new AdminAPIError(400, 'account configuration context is required', 'FAILED_PRECONDITION');
+          result = input.config.context(); break;
+        case 'config.complete': {
+          if (!input.config) throw new AdminAPIError(400, 'account configuration context is required', 'FAILED_PRECONDITION');
+          if (configCompleted) throw new AdminAPIError(400, 'account configuration has already been submitted', 'FAILED_PRECONDITION');
+          const { patch } = message;
+          if (!isPlainObject(patch) || !validConfigPatch(patch)) throw new AdminAPIError(400, 'expected a JSON object patch without secret markers', 'INVALID_ARGUMENT');
+          const { schema } = input.config.context();
+          if (Object.keys(patch).some(key => !Object.hasOwn(schema, key))) throw new AdminAPIError(400, 'patch contains an unknown configuration field', 'INVALID_ARGUMENT');
+          input.config.complete(patch);
+          configCompleted = true;
+          result = {}; break;
+        }
         case 'shortcut':
           if (message.key !== 'mod+k') throw new AdminAPIError(400, 'unsupported shortcut', 'INVALID_ARGUMENT');
           input.openSearch(); result = {}; break;

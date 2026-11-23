@@ -383,6 +383,7 @@ export function PluginDetailPage(props: {
   };
 
   const isWebUI = pkg?.Role === 'webui';
+  const pages = pkg?.pages?.filter(page => page.purpose !== 'instance_config');
   const hasSleep = pkg?.Role === 'plugin' || pkg?.Role === 'agent';
 
   return (
@@ -518,7 +519,7 @@ export function PluginDetailPage(props: {
         )}
 
         {!isWebUI &&
-          pkg?.pages?.map(p => (
+          pages?.map(p => (
             <button
               key={p.path}
               type="button"
@@ -565,7 +566,7 @@ export function PluginDetailPage(props: {
         {configAvailable && activeTab === 'config' && <PluginConfigPanel key={configRevision} id={id} />}
 
         {!isWebUI &&
-          pkg?.pages?.map(p =>
+          pages?.map(p =>
             activeTab === `page:${p.path}` ? (
               <PluginPageFrame key={p.path} id={id} path={p.path} title={p.title} />
             ) : null,
