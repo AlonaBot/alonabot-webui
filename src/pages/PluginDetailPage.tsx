@@ -1,6 +1,5 @@
 import { useContext, useEffect, useRef, useState, type JSX } from 'react';
 import { OptionSelect, CheckboxInput } from '../ui/NativeAdapters';
-import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   Calendar,
@@ -42,6 +41,7 @@ import { LoadingRows, Skeleton, Spinner } from '../ui/EmptyState';
 import { RadioGroup } from '../ui/RadioGroup';
 import { UninstallDialog } from '../features/plugins/PluginDialogs';
 import { usePackageActions } from '../features/plugins/usePackageActions';
+import { Dialog as SharedDialog } from '../ui/Dialog';
 
 /** PluginDetailPage 展示保留代次、回退确认及组件高级设置。 */
 export function PluginDetailPage(props: {
@@ -821,18 +821,8 @@ export function PluginDetailPage(props: {
       </div>
 
       {/* 回退确认对话框 */}
-      <Dialog.Root open={rollbackModalOpen} onOpenChange={setRollbackModalOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content plugins-dialog-content" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.rollbackTitle}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close-button" aria-label={ui.close}>
-                  <X size={16} />
-                </button>
-              </Dialog.Close>
-            </div>
+      <SharedDialog open={rollbackModalOpen} onOpenChange={setRollbackModalOpen} title={ui.rollbackTitle} size="lg">
+            
 
             {errorBanner && <p className="plugins-error-banner" role="alert">{errorBanner}</p>}
             <p className="dialog-subtitle">
@@ -860,10 +850,7 @@ export function PluginDetailPage(props: {
               >
                 {ui.confirm}
               </button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+            </div></SharedDialog>
 
       {uninstallModalOpen && pkg && <UninstallDialog pkg={pkg} onClose={() => setUninstallModalOpen(false)} onUninstall={async purge => {
         const done = await actions.uninstall(pkg, purge);
@@ -873,18 +860,8 @@ export function PluginDetailPage(props: {
       {actions.dialogs}
 
       {/* 409 确认对话框 */}
-      <Dialog.Root open={confirmModalOpen} onOpenChange={open => { if (!confirming) { setConfirmModalOpen(open); if (!open) setPendingConfirmAction(null); } }}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog-content plugins-dialog-content" aria-describedby={undefined}>
-            <div className="dialog-header">
-              <Dialog.Title className="dialog-title">{ui.confirmAffectedTitle}</Dialog.Title>
-              <Dialog.Close asChild>
-                <button type="button" className="dialog-close-button" aria-label={ui.close}>
-                  <X size={16} />
-                </button>
-              </Dialog.Close>
-            </div>
+      <SharedDialog open={confirmModalOpen} onOpenChange={open => { if (!confirming) { setConfirmModalOpen(open); if (!open) setPendingConfirmAction(null); } }} title={ui.confirmAffectedTitle} size="lg">
+            
 
             {errorBanner && <p className="plugins-error-banner" role="alert">{errorBanner}</p>}
             <p className="dialog-subtitle">{ui.confirmAffectedDesc}</p>
@@ -922,10 +899,7 @@ export function PluginDetailPage(props: {
               >
                 {ui.confirmContinue}
               </button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+            </div></SharedDialog>
     </div>
   );
 }

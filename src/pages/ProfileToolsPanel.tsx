@@ -1,7 +1,6 @@
 import { useEffect, useState, type JSX } from 'react';
 import { toast } from '../ui/toast';
 import { Skeleton } from '../ui/EmptyState';
-import * as Dialog from '@radix-ui/react-dialog';
 import { Plus, Trash2, X } from 'lucide-react';
 import { onPackagesChanged } from '../api/client';
 import { listPackages, type Package } from '../api/packages';
@@ -9,6 +8,7 @@ import { getToolPolicies, type ToolPolicy } from '../api/policies';
 import { getProfilePlugins, getProfileTools, putProfileTools, type ProfilePlugin, type ProfileToolPolicy } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 import { profileToolCandidates, profileToolIdentity, profileToolKey } from './profileTools';
+import { Dialog as SharedDialog } from '../ui/Dialog';
 
 export function ProfileToolsPanel({ profileID }: { profileID: string }): JSX.Element {
   const ui = useUI();
@@ -55,10 +55,9 @@ export function ProfileToolsPanel({ profileID }: { profileID: string }): JSX.Ele
         {detail(item)}<div className="profile-tool-actions"><div className="profile-tool-segmented" role="group" aria-label={profileToolKey(item)}>{(['allow', 'confirm', 'deny'] as const).map(policy => <button type="button" key={policy} className={`profile-segmented-btn ${item.policy === policy ? 'is-active' : ''}`} aria-pressed={item.policy === policy} onClick={() => void save(item, policy)}>{label(policy)}</button>)}</div><button type="button" className="profile-tool-remove-btn" aria-label={`${ui.toolActionInherit} ${profileToolKey(item)}`} onClick={() => void save(item, 'inherit')}><Trash2 size={16} /></button></div>
       </div>)}<button type="button" className="profile-add-tool-btn" onClick={() => { setQuery(''); setOpen(true); }}><Plus size={16} />{ui.overrideOtherTools}</button></div>
     </fieldset>}
-    <Dialog.Root open={open} onOpenChange={setOpen}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content profile-add-tool-dialog" aria-describedby={undefined}>
-      <div className="dialog-header"><Dialog.Title className="dialog-title">{ui.addToolOverride}</Dialog.Title><Dialog.Close asChild><button type="button" aria-label={ui.close}><X size={18} /></button></Dialog.Close></div>
+    <SharedDialog open={open} onOpenChange={setOpen} title={ui.addToolOverride}>
+      
       <input aria-label={ui.searchTools} placeholder={ui.searchTools} value={query} onChange={event => setQuery(event.target.value)} />
-      <div className="profile-tool-candidates-list">{profileToolCandidates(globals, items).filter(item => matches(item, query)).map(item => <button key={profileToolKey(item)} type="button" disabled={busy} className="profile-tool-candidate-row" onClick={() => void save(item, 'deny')}>{detail(item)}<Plus size={16} /></button>)}{profileToolCandidates(globals, items).filter(item => matches(item, query)).length === 0 && <p>{ui.noToolsToOverride}</p>}</div>
-    </Dialog.Content></Dialog.Portal></Dialog.Root>
+      <div className="profile-tool-candidates-list">{profileToolCandidates(globals, items).filter(item => matches(item, query)).map(item => <button key={profileToolKey(item)} type="button" disabled={busy} className="profile-tool-candidate-row" onClick={() => void save(item, 'deny')}>{detail(item)}<Plus size={16} /></button>)}{profileToolCandidates(globals, items).filter(item => matches(item, query)).length === 0 && <p>{ui.noToolsToOverride}</p>}</div></SharedDialog>
   </div>;
 }

@@ -3,13 +3,13 @@ import { Select } from '../ui/Select';
 import { toast } from '../ui/toast';
 import { Skeleton } from '../ui/EmptyState';
 import { Switch } from '../ui/Switch';
-import * as Dialog from '@radix-ui/react-dialog';
 import { Plus, X } from 'lucide-react';
 import { listChats, type Chat } from '../api/conversations';
 import { listInstances, type AdapterInstance } from '../api/instances';
 import { assignInstanceProfile, assignSessionProfile, getProfileAssignments, listProfiles, type Profile, type ProfileAssignments } from '../api/profiles';
 import { useUI } from '../i18n/UI';
 import { chatProfile } from './accountState';
+import { Dialog as SharedDialog } from '../ui/Dialog';
 
 export function ProfileAssignmentsDialog({ profile, open, onOpenChange, onChanged }: {
   profile: Profile; open: boolean; onOpenChange: (open: boolean) => void; onChanged: () => void;
@@ -42,9 +42,8 @@ export function ProfileAssignmentsDialog({ profile, open, onOpenChange, onChange
   const matches = (text: string) => text.toLowerCase().includes(query.toLowerCase());
   const dedicated = assignments?.sessions.filter(item => item.profile === profile.id && matches(item.instance + item.session)) ?? [];
   const inherited = assignments ? chats.filter(chat => chatProfile(assignments, chat.instance_id, chat.session) === profile.id && !assignments.sessions.some(item => item.instance === chat.instance_id && item.session === chat.session) && matches(chat.instance_id + chat.session + chat.title)) : [];
-  return <Dialog.Root open={open} onOpenChange={onOpenChange}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" />
-    <Dialog.Content className="dialog-content profile-scope-dialog" aria-describedby={undefined}>
-      <div className="dialog-header"><Dialog.Title className="dialog-title">{ui.scopeDialogTitle.replace('{name}', profile.name)}</Dialog.Title><Dialog.Close asChild><button type="button" aria-label={ui.close}><X size={18} /></button></Dialog.Close></div>
+  return <SharedDialog open={open} onOpenChange={onOpenChange} title={<>{ui.scopeDialogTitle.replace('{name}', profile.name)}</>}>
+      
       {!assignments ? <Skeleton height={120} /> : <fieldset className="config-edit-fields profile-scope-body" disabled={busy}>
         <input aria-label={ui.searchScope} placeholder={ui.searchScope} value={query} onChange={event => setQuery(event.target.value)} />
         <section className="profile-scope-section"><h3 className="profile-scope-section-title">{ui.accountDefault}</h3><div className="profile-card">
@@ -66,7 +65,5 @@ export function ProfileAssignmentsDialog({ profile, open, onOpenChange, onChange
         </section>
         <section className="profile-scope-section"><h3 className="profile-scope-section-title">{ui.inheritedSessions}</h3><div className="profile-card">{inherited.map(chat => <div className="profile-card-row" key={JSON.stringify([chat.instance_id, chat.session])}><div className="profile-session-info"><span>{chat.title || chat.session}</span><small>{chat.instance_id} · {chat.session}</small></div></div>)}{inherited.length === 0 && <p className="profile-scope-empty">{ui.noEntries}</p>}</div></section>
       </fieldset>}
-      <div className="dialog-actions"><button type="button" onClick={() => onOpenChange(false)}>{ui.done}</button></div>
-    </Dialog.Content>
-  </Dialog.Portal></Dialog.Root>;
+      <div className="dialog-actions"><button type="button" onClick={() => onOpenChange(false)}>{ui.done}</button></div></SharedDialog>;
 }

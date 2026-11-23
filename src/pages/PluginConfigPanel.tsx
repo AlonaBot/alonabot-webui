@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, useRef, type JSX } from 'react';
 import { OptionSelect } from '../ui/NativeAdapters';
-import * as Dialog from '@radix-ui/react-dialog';
 import { AdminAPIError } from '../api/client';
 import { getPluginConfig, patchPluginConfig, discardPluginConfig, prunePluginConfig, revealPluginSecret, encodeSecretPath, listConfigOptions, resolveConfigOptions, type ConfigSnapshot } from '../api/config';
 import { getDefaultPlatform } from '../api/core';
@@ -13,6 +12,7 @@ import { useUISettings } from '../shell/settings';
 import { navigate } from '../shell/router';
 import { applyMergePatch, applyProfileOverrides, extractProfileOverrides, editableProfilePaths } from './pluginConfig';
 import { LoadingRows } from '../ui/EmptyState';
+import { Dialog as SharedDialog } from '../ui/Dialog';
 
 export function PluginConfigPanel({ id }: { id: string }): JSX.Element {
   const ui = useUI();
@@ -149,15 +149,14 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
         {form && (renderForm ? renderForm(form, snapshot) : <ConfigForm {...form} />)}
       </fieldset>
     </>}
-    <Dialog.Root open={confirmation !== null} onOpenChange={open => { if (!open) setConfirmation(null); }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content">
-      <Dialog.Title>{confirmation === 'reload' ? ui.actionReload : confirmation === 'prune' ? ui.pruneConfig : ui.discardPending}</Dialog.Title>
-      <Dialog.Description>{confirmation === 'reload' ? ui.profileReloadConfirm : confirmation === 'prune' ? ui.prunePluginConfirm : ui.discardPendingConfirm}</Dialog.Description>
+    <SharedDialog open={confirmation !== null} onOpenChange={open => { if (!open) setConfirmation(null); }} title={confirmation === 'reload' ? ui.actionReload : confirmation === 'prune' ? ui.pruneConfig : ui.discardPending} description={confirmation === 'reload' ? ui.profileReloadConfirm : confirmation === 'prune' ? ui.prunePluginConfirm : ui.discardPendingConfirm}>
+      
+      
       {confirmation === 'reload' && <ul><li>{id}</li></ul>}
       {confirmation === 'prune' && <ul>{snapshot?.unknown.map(path => <li key={path}><code>{path}</code></li>)}</ul>}
-      <div className="dialog-actions"><button type="button" onClick={() => setConfirmation(null)}>{ui.cancel}</button><button type="button" onClick={() => { const action = confirmation; setConfirmation(null); if (action === 'reload') void reload(); else void mutate(() => action === 'prune' ? prunePluginConfig(id) : discardPluginConfig(id)); }}>{ui.confirm}</button></div>
-    </Dialog.Content></Dialog.Portal></Dialog.Root>
-    <Dialog.Root open={reauthOpen} onOpenChange={open => { if (!open) closeReauth(); }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content">
-      <Dialog.Title>{ui.reauthTitle}</Dialog.Title><Dialog.Description>{ui.reauthPrompt}</Dialog.Description>
+      <div className="dialog-actions"><button type="button" onClick={() => setConfirmation(null)}>{ui.cancel}</button><button type="button" onClick={() => { const action = confirmation; setConfirmation(null); if (action === 'reload') void reload(); else void mutate(() => action === 'prune' ? prunePluginConfig(id) : discardPluginConfig(id)); }}>{ui.confirm}</button></div></SharedDialog>
+    <SharedDialog open={reauthOpen} onOpenChange={open => { if (!open) closeReauth(); }} title={ui.reauthTitle} description={ui.reauthPrompt}>
+      
       <form onSubmit={async event => {
         event.preventDefault(); const request = pendingReveal.current; if (!request) return;
         setRevealing(true); setReauthError(null);
@@ -170,7 +169,6 @@ export function ProfileConfigEditor({ id, profileID, renderForm, onChanged }: {
         {reauthError && <p role="alert">{reauthError}</p>}
         <input type="password" aria-label={ui.tokenPlaceholder} autoComplete="off" value={reauthToken} onChange={event => setReauthToken(event.target.value)} />
         <div className="dialog-actions"><button type="button" onClick={closeReauth}>{ui.cancel}</button><button type="submit" disabled={revealing || !reauthToken}>{ui.confirm}</button></div>
-      </form>
-    </Dialog.Content></Dialog.Portal></Dialog.Root>
+      </form></SharedDialog>
   </div>;
 }

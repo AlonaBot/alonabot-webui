@@ -1,9 +1,9 @@
 import { useState, useId, type JSX } from 'react';
 import { OptionSelect, CheckboxInput } from '../ui/NativeAdapters';
-import * as Dialog from '@radix-ui/react-dialog';
 import { AlertTriangle, X } from 'lucide-react';
 import { useUI } from '../i18n/UI';
 import { downloadDiagnostics, type DiagnosticsOptions } from '../api/logs';
+import { Dialog as SharedDialog } from '../ui/Dialog';
 
 interface DiagnosticsDialogProps {
   open: boolean;
@@ -59,23 +59,8 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="dialog-content logs-diagnostics-dialog">
-          <div className="dialog-header">
-            <div>
-              <Dialog.Title className="dialog-title">{ui.exportDiagnosticsTitle}</Dialog.Title>
-              <Dialog.Description className="dialog-subtitle">
-                {ui.exportDiagnosticsDesc}
-              </Dialog.Description>
-            </div>
-            <Dialog.Close asChild>
-              <button type="button" className="dialog-close-button" aria-label={ui.close}>
-                <X size={16} />
-              </button>
-            </Dialog.Close>
-          </div>
+    <SharedDialog open={open} onOpenChange={onOpenChange} title={ui.exportDiagnosticsTitle} size="lg">
+          
 
           <div className="diagnostics-dialog-body">
             {/* 时间范围选择 */}
@@ -170,9 +155,6 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
             >
               {loading ? ui.diagnosticsDownloading : ui.diagnosticsDownload}
             </button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+          </div></SharedDialog>
   );
 }

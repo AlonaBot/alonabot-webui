@@ -1,9 +1,9 @@
 import { useRef } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
 import { ArrowUp, ArrowDown, GripVertical, Plus, X } from 'lucide-react';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { CommandPolicy } from '../api/policies';
 import { useUI } from '../i18n/UI';
+import { Dialog as SharedDialog } from '../ui/Dialog';
 
 export type NamesDraft = { plugin: string; command: CommandPolicy; names: string[] };
 
@@ -13,10 +13,9 @@ export function CommandNamesDialog({ draft, setDraft, busy, error, onSave, onRes
 }) {
   const ui = useUI();
   const dragging = useRef<number | null>(null);
-  return <Dialog.Root open={draft !== null} onOpenChange={open => { if (!open && !busy) setDraft(null); }}><Dialog.Portal>
-    <Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content command-names-dialog">
-      <div className="dialog-header"><Dialog.Title className="dialog-title">{ui.editNames}</Dialog.Title><Dialog.Close asChild><button type="button" className="dialog-close-button" aria-label={ui.close} disabled={busy}><X size={18} /></button></Dialog.Close></div>
-      <Dialog.Description className="dialog-description">{ui.declaredPrompt}{draft?.command.declared_names.map(path => path.join(' ')).join(' · ')}{ui.commandNameOrderHint}</Dialog.Description>
+  return <SharedDialog open={draft !== null} onOpenChange={open => { if (!open && !busy) setDraft(null); }} title={ui.editNames} description={<>{ui.declaredPrompt}{draft?.command.declared_names.map(path => path.join(' ')).join(' · ')}{ui.commandNameOrderHint}</>}>
+      
+      
       <form onSubmit={event => { event.preventDefault(); onSave(); }}>
         {draft?.names.map((name, index) => <div key={index} className="command-name-row" onDragOver={event => event.preventDefault()} onDrop={event => {
           event.preventDefault();
@@ -33,7 +32,5 @@ export function CommandNamesDialog({ draft, setDraft, busy, error, onSave, onRes
         {error && <p className="form-error-inline" role="alert">{error}</p>}
         <button type="button" className="command-add-name" disabled={busy} onClick={() => draft && setDraft({ ...draft, names: [...draft.names, ''] })}><Plus size={15} />{ui.addCommandName}</button>
         <div className="dialog-actions"><button type="button" className="dialog-button command-reset-names" disabled={busy} onClick={onReset}>{ui.resetNames}</button><button type="button" className="dialog-button" disabled={busy} onClick={() => setDraft(null)}>{ui.cancel}</button><button type="submit" className="dialog-button is-primary" disabled={busy}>{ui.save}</button></div>
-      </form>
-    </Dialog.Content>
-  </Dialog.Portal></Dialog.Root>;
+      </form></SharedDialog>;
 }

@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef, type JSX } from 'react';
 import { OptionSelect, CheckboxInput } from '../ui/NativeAdapters';
-import * as Dialog from '@radix-ui/react-dialog';
 import { RefreshCw, Edit2, ChevronDown, ChevronRight, Filter, RotateCcw } from 'lucide-react';
 import { listPackages, packageIconURL, type Package } from '../api/packages';
 import { getPluginPolicies, setPluginPolicy, setCommandNames, resetCommandNames, getToolPolicies, setToolPolicy, setToolPolicies, type PluginPolicies, type CommandPolicy, type CommandScope, type ToolPolicy, type ToolPolicyValue } from '../api/policies';
@@ -11,6 +10,7 @@ import { CommandPolicyControls } from './CommandPolicyControls';
 import { CommandNamesDialog, type NamesDraft } from './CommandNamesDialog';
 import { PermissionsTabs } from './PermissionsTabs';
 import { LoadingRows } from '../ui/EmptyState';
+import { Dialog as SharedDialog } from '../ui/Dialog';
 
 const policyValues: ToolPolicyValue[] = ['inherit', 'allow', 'confirm', 'deny'];
 const toolKey = (tool: ToolPolicy) => JSON.stringify([tool.plugin_id, tool.service]);
@@ -163,6 +163,6 @@ export function PermissionsPage({ tab = 'commands' }: { tab?: 'commands' | 'tool
       if (!matrix.length || matrix.some(path => path.some(token => !token || token.startsWith('/')))) { setDialogError(ui.invalidCommandName); return; }
       void mutate(() => setCommandNames(names.plugin, names.command.route_id, matrix), names.plugin).then(success => { if (success) setNames(null); });
     }} onReset={() => { if (names) void mutate(() => resetCommandNames(names.plugin, names.command.route_id), names.plugin).then(success => { if (success) setNames(null); }); }} />
-    <Dialog.Root open={custom !== null} onOpenChange={open => { if (!open && !busy) setCustom(null); }}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content"><Dialog.Title>{ui.customPermissions}</Dialog.Title><Dialog.Description>{ui.permissionsInputHint}</Dialog.Description>{dialogError && <p role="alert">{dialogError}</p>}<form onSubmit={async event => { event.preventDefault(); if (!custom || !policies[custom.plugin]) return; const permissions = custom.permissions.split(',').map(value => value.trim()).filter(Boolean); if (await mutate(() => setPluginPolicy(custom.plugin, commandOverride(policies[custom.plugin].overrides, custom.scope, { permissions })), custom.plugin)) setCustom(null); }}><input aria-label={ui.permissions} value={custom?.permissions ?? ''} onChange={event => custom && setCustom({ ...custom, permissions: event.target.value })} /><div className="dialog-actions"><button type="button" disabled={busy} onClick={() => setCustom(null)}>{ui.cancel}</button><button type="submit" disabled={busy || !custom || !policies[custom.plugin]}>{ui.save}</button></div></form></Dialog.Content></Dialog.Portal></Dialog.Root>
+    <SharedDialog open={custom !== null} onOpenChange={open => { if (!open && !busy) setCustom(null); }} title={ui.customPermissions} description={ui.permissionsInputHint}>{dialogError && <p role="alert">{dialogError}</p>}<form onSubmit={async event => { event.preventDefault(); if (!custom || !policies[custom.plugin]) return; const permissions = custom.permissions.split(',').map(value => value.trim()).filter(Boolean); if (await mutate(() => setPluginPolicy(custom.plugin, commandOverride(policies[custom.plugin].overrides, custom.scope, { permissions })), custom.plugin)) setCustom(null); }}><input aria-label={ui.permissions} value={custom?.permissions ?? ''} onChange={event => custom && setCustom({ ...custom, permissions: event.target.value })} /><div className="dialog-actions"><button type="button" disabled={busy} onClick={() => setCustom(null)}>{ui.cancel}</button><button type="submit" disabled={busy || !custom || !policies[custom.plugin]}>{ui.save}</button></div></form></SharedDialog>
   </div>;
 }
