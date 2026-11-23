@@ -2,7 +2,7 @@
 
 [简体中文](usage.zh-CN.md)
 
-Install the official WebUI on Core v0.2.0 or later, open the Core address (default `http://127.0.0.1:7650`), and sign in with its management token. See [Core deployment](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.md) for authentication, listen addresses, proxies, and deployment settings.
+Install the official WebUI on Core v0.3.0 or later, open the Core address (default `http://127.0.0.1:7650`), and sign in with its management token. See [Core deployment](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.md) for authentication, listen addresses, proxies, and deployment settings.
 
 The sidebar opens overview, plugins, accounts, models, profiles, conversations, logs, permissions, and system settings. Install components from the plugin store, configure adapter instances under accounts, manage providers and models under models, and use profiles to select conversation settings and tool policies.
 

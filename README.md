@@ -6,7 +6,7 @@ Manage plugins, platform accounts, models, profiles, conversations, logs, and pe
 
 ## Quick start
 
-Use Core v0.2.0 or later. On the machine running Core:
+Use Core v0.3.0 or later. On the machine running Core:
 
 ```fish
 alonabot install --source AlonaBot/alonabot-webui --yes

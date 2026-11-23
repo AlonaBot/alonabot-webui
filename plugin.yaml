@@ -1,7 +1,7 @@
 # 官方管理界面的进程与静态资源声明。
 id: alonabot-webui-admin
 name: AlonaBot Admin
-version: 0.2.0
+version: 0.3.0
 source: github.com/AlonaBot/alonabot-webui
 role: webui
 assets: dist

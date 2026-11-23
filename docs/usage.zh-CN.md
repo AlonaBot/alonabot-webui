@@ -2,7 +2,7 @@
 
 [English](usage.md)
 
-在 Core v0.2.0 或更高版本安装官方 WebUI，打开 Core 地址（默认 `http://127.0.0.1:7650`），使用管理 token 登录。认证、监听地址、代理与部署设置见 [Core 部署指南](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.zh-CN.md)。
+在 Core v0.3.0 或更高版本安装官方 WebUI，打开 Core 地址（默认 `http://127.0.0.1:7650`），使用管理 token 登录。认证、监听地址、代理与部署设置见 [Core 部署指南](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.zh-CN.md)。
 
 侧栏提供总览、插件、账号、模型、配置文件、会话、日志、权限和系统设置。插件商店用于安装组件；账号页配置适配器实例；模型页维护 Provider 与模型；配置文件控制会话使用的配置及工具策略。
 

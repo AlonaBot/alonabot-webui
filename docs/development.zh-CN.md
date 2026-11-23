@@ -42,7 +42,7 @@ alonabot pack . --target darwin/arm64 --out bin
 将 target 换为需要的平台。完整联调时，先在独立终端运行 `alonabot run --data-dir ./data`，按[管理认证](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.zh-CN.md#core-设置与-http-入口)为 CLI 提供 token，再安装并启用上一步的本机 WebUI 包：
 
 ```fish
-alonabot install ./bin/alonabot-webui-admin-0.2.0-darwin-arm64.tar.gz --data-dir ./data --yes
+alonabot install ./bin/alonabot-webui-admin-0.3.0-darwin-arm64.tar.gz --data-dir ./data --yes
 alonabot enable alonabot-webui-admin --data-dir ./data
 ```
 
