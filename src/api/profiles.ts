@@ -108,3 +108,14 @@ export function getProfileTools(id: string): Promise<{ items: ProfileToolPolicy[
 export async function putProfileTools(id: string, items: ProfileToolPolicy[]): Promise<void> {
   await request(`/api/v1/profiles/${encodeURIComponent(id)}/tools`, jsonBody({ items }, 'PUT'));
 }
+
+/** 配置文件的会话访问：all 全部允许（缺省），allow 只允许列出的会话，deny 拒绝列出的会话。 */
+export type SessionAccess = { mode: 'all' | 'allow' | 'deny'; sessions: { instance: string; session: string }[] };
+
+export function getSessionAccess(id: string): Promise<SessionAccess> {
+  return request<SessionAccess>(`/api/v1/profiles/${encodeURIComponent(id)}/session-access`);
+}
+
+export async function putSessionAccess(id: string, value: SessionAccess): Promise<void> {
+  await request<void>(`/api/v1/profiles/${encodeURIComponent(id)}/session-access`, jsonBody(value, 'PUT'));
+}

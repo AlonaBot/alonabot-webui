@@ -953,6 +953,17 @@
     "githubDownloadPrefixHint": "原样拼接在原始资产 URL 前，留空直连下载。",
     "githubDownloadExample": "拼接示例：https://proxy.example/ + https://github.com/owner/repo/releases/download/v1.0.0/package.tar.gz",
     "githubAPIBaseTrust": "通常留空。只有使用可信的 GitHub API 反代时才填写：安装包的校验摘要也从这里读取。",
-    "officialAPI": "官方 API"
+    "officialAPI": "官方 API",
+    "sessionAccess": "会话访问",
+    "sessionAccessAll": "全部允许",
+    "sessionAccessAllow": "白名单",
+    "sessionAccessDeny": "黑名单",
+    "sessionAccessAllHint": "使用这个配置文件的所有会话都能使用机器人。",
+    "sessionAccessAllowHint": "只有下面列出的会话能使用机器人，其余会话收不到回复。",
+    "sessionAccessDenyHint": "下面列出的会话不能使用机器人。",
+    "sessionAccessEmptyAllow": "白名单为空，所有会话都不会得到回复。",
+    "sessionAccessEmptyDeny": "黑名单为空，所有会话都能使用机器人。",
+    "addSessions": "添加会话",
+    "globalDeniedChats": "以下会话被全局禁止，对所有配置文件生效"
   }
 }

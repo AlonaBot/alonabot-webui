@@ -1,10 +1,9 @@
 import { useEffect, useState, type FormEvent, type JSX, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { HardDrive, KeyRound, Laptop, LogOut, Moon, Plus, Sun, Trash2, X } from 'lucide-react';
+import { HardDrive, KeyRound, Laptop, LogOut, Moon, Sun, Trash2 } from 'lucide-react';
 import { rotateAdminToken } from '../../api/auth';
 import { clearBuildEnvironment, getBuildEnvironment, getCoreConfigDiagnostics, getCoreSleep, getDefaultLocale, getDownloadSettings, getGitHubSettings, setGitHubSettings, type GitHubSettings, pruneCoreConfig, setCoreSleep, setDefaultLocale, setDownloadSettings, type CoreSleep, type DownloadSettings } from '../../api/core';
 import { getLogLevels, setGlobalLogLevel, type GlobalLogLevel } from '../../api/logs';
-import { getCoreDenies, setCoreDenies } from '../../api/policies';
 import { useUI } from '../../i18n/UI';
 import { PageHeader } from '../../shell/PageHeader';
 import { Link } from '../../shell/router';
@@ -69,7 +68,6 @@ export function SettingsPage(): JSX.Element {
   const { locale, setLocale, theme, setTheme, logout, tokenRotated } = useUISettings();
   const logs = useQuery({ queryKey: ['log-levels'], queryFn: getLogLevels });
   const coreLocale = useQuery({ queryKey: ['core-locale'], queryFn: getDefaultLocale });
-  const denies = useQuery({ queryKey: ['core-denies'], queryFn: getCoreDenies });
   const diagnostics = useQuery({ queryKey: ['core-diagnostics'], queryFn: getCoreConfigDiagnostics });
   const sleep = useQuery({ queryKey: ['core-sleep'], queryFn: getCoreSleep });
   const downloads = useQuery({ queryKey: ['core-downloads'], queryFn: getDownloadSettings });
@@ -79,7 +77,6 @@ export function SettingsPage(): JSX.Element {
   const [localeDraft, setLocaleDraft] = useState<string | null>(null);
   const [sleepDraft, setSleepDraft] = useState<Pick<CoreSleep, 'mode' | 'idle_timeout'> | null>(null);
   const [rotating, setRotating] = useState(false);
-  const [addingChat, setAddingChat] = useState(false);
   const [pruning, setPruning] = useState(false);
   const [clearing, setClearing] = useState(false);
 
@@ -111,14 +108,6 @@ export function SettingsPage(): JSX.Element {
       <h2>{ui.security}</h2>
       <Row title={ui.rotateToken} description={ui.rotateTokenDesc}><Button size="sm" icon={<KeyRound size={14} />} onClick={() => setRotating(true)}>{ui.rotateTokenButton}</Button></Row>
       <Row title={ui.accessControl} description={ui.accessControlDesc}><Link to="/permissions/users" className={styles.link}>{ui.manageUsers}</Link></Row>
-      <Disclosure summary={ui.deniedChats} hint={denies.data ? String(denies.data.chats.length) : undefined}>
-        <div className={styles.chips}>
-          {denies.data?.chats.map(chat => <span key={chat} className={styles.chip}><code>{chat}</code>
-            <button type="button" aria-label={ui.removeRow} onClick={() => void write(async () => { const current = await getCoreDenies(); await setCoreDenies({ users: current.users, chats: current.chats.filter(value => value !== chat) }); }, [['core-denies']])}><X size={14} /></button>
-          </span>)}
-          <Button size="sm" icon={<Plus size={14} />} onClick={() => setAddingChat(true)}>{ui.addChat}</Button>
-        </div>
-      </Disclosure>
     </section>
 
     <section className={styles.card}>
@@ -197,7 +186,6 @@ export function SettingsPage(): JSX.Element {
     </section>
 
     {rotating && <RotateDialog onClose={() => setRotating(false)} onRotated={tokenRotated} />}
-    {addingChat && <AddChatDialog onClose={() => setAddingChat(false)} onAdd={chat => write(async () => { const current = await getCoreDenies(); await setCoreDenies({ users: current.users, chats: [...new Set([...current.chats, chat])] }); }, [['core-denies']])} />}
     {pruning && <ConfirmDialog open tone="danger" title={ui.pruneConfig} description={ui.pruneConfigConfirm} onOpenChange={setPruning}
       onConfirm={() => { setPruning(false); void write(pruneCoreConfig, [['core-diagnostics']]).catch(() => undefined); }}>
       <ul className={styles.list}>{diagnostics.data?.unknown.map(path => <li key={path}><code>{path}</code></li>)}</ul>
@@ -221,23 +209,6 @@ function RotateDialog({ onClose, onRotated }: { onClose: () => void; onRotated: 
     footer={<><Button onClick={onClose} disabled={pending}>{ui.cancel}</Button><Button type="submit" form="rotate-token" variant="primary" loading={pending} disabled={!token}>{ui.rotateTokenButton}</Button></>}>
     <form id="rotate-token" onSubmit={event => void submit(event)}>
       <input className={styles.input} style={{ width: '100%' }} type="password" autoComplete="current-password" aria-label={ui.currentToken} placeholder={ui.currentToken} value={token} onChange={event => setToken(event.target.value)} autoFocus />
-    </form>
-  </Dialog>;
-}
-
-function AddChatDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (chat: string) => Promise<void> }): JSX.Element {
-  const ui = useUI();
-  const [value, setValue] = useState('');
-  const [pending, setPending] = useState(false);
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setPending(true);
-    try { await onAdd(value.trim()); onClose(); } catch { setPending(false); }
-  };
-  return <Dialog open onOpenChange={open => { if (!open && !pending) onClose(); }} title={ui.addChat} size="sm"
-    footer={<><Button onClick={onClose} disabled={pending}>{ui.cancel}</Button><Button type="submit" form="add-denied-chat" variant="primary" loading={pending} disabled={!value.trim()}>{ui.confirm}</Button></>}>
-    <form id="add-denied-chat" onSubmit={event => void submit(event)}>
-      <input className={styles.input} style={{ width: '100%' }} aria-label={ui.addChat} placeholder="telegram:main:group:-100123" value={value} onChange={event => setValue(event.target.value)} autoFocus />
     </form>
   </Dialog>;
 }
