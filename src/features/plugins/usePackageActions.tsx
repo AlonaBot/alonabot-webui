@@ -13,6 +13,8 @@ import styles from './Plugins.module.css';
 export type InstallInput = { Source: string; Replace?: boolean; Build?: boolean; Ref?: string } | { archive: File; replace?: boolean };
 
 type Confirmation = { title: string; affected: string[]; run: () => Promise<unknown> };
+/** 排队中的确认：确认后 run 的结果或取消时的 false 交还给最初的调用方。 */
+type Pending = Confirmation & { settle: (done: boolean) => void };
 
 /** 组件显示名：Core 提供 Name 时用 Name，否则用 ID。 */
 export function packageName(pkg: Pick<Package, 'ID' | 'Name'>): string {
@@ -36,7 +38,7 @@ export function usePackageActions(): {
 } {
   const ui = useUI();
   const client = useQueryClient();
-  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [confirmation, setConfirmation] = useState<Pending | null>(null);
   const [warnings, setWarnings] = useState<string[] | null>(null);
   const [changelog, setChangelog] = useState<{ id: string; version: string } | null>(null);
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
@@ -49,7 +51,7 @@ export function usePackageActions(): {
 
   /**
    * 执行 attempt(confirm)。需要确认时（409 确认对象，或 onError 给出的替换询问）排队等待用户，
-   * 并返回 false；其他错误提示后返回 false。onFailure 在没有完成时调用，用于回滚乐观更新。
+   * 确认后返回确认执行的结果，取消时返回 false；其他错误提示后返回 false。onFailure 在没有完成时调用，用于回滚乐观更新。
    */
   async function withConfirm(id: string, attempt: (confirm: boolean) => Promise<void>, options: { confirm?: boolean; onFailure?: () => void; onError?: (error: unknown) => Confirmation | null } = {}): Promise<boolean> {
     mark(id, true);
@@ -60,10 +62,15 @@ export function usePackageActions(): {
       const next = isConfirmationError(error)
         ? { title: ui.confirmAffectedTitle, affected: error.affected, run: () => withConfirm(id, attempt, { ...options, confirm: true }) }
         : options.onError?.(error) ?? null;
-      if (next) setConfirmation(next);
-      else toast.error(error);
-      options.onFailure?.();
-      return false;
+      if (!next) {
+        toast.error(error);
+        options.onFailure?.();
+        return false;
+      }
+      return new Promise<boolean>(resolve => setConfirmation({ ...next, settle: done => {
+        if (!done) options.onFailure?.();
+        resolve(done);
+      } }));
     } finally {
       mark(id, false);
       // 账号列表带有所属适配器的状态，组件变化后一起刷新。
@@ -146,9 +153,9 @@ export function usePackageActions(): {
   }
 
   const dialogs = <>
-    {confirmation && <ConfirmDialog open onOpenChange={open => { if (!open) setConfirmation(null); }} title={confirmation.title}
+    {confirmation && <ConfirmDialog open onOpenChange={open => { if (!open) { confirmation.settle(false); setConfirmation(null); } }} title={confirmation.title}
       description={ui.confirmAffectedDesc} confirmLabel={ui.confirmContinue}
-      onConfirm={() => { const run = confirmation.run; setConfirmation(null); void run(); }}>
+      onConfirm={() => { const { run, settle } = confirmation; setConfirmation(null); void run().then(result => settle(result !== false), () => settle(false)); }}>
       <ul className={styles.affected}>{confirmation.affected.map(item => <li key={item}>{item}</li>)}</ul>
     </ConfirmDialog>}
     {warnings && <Dialog open onOpenChange={open => { if (!open) setWarnings(null); }} title={ui.warningsTitle} size="sm"
