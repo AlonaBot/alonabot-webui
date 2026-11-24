@@ -257,6 +257,7 @@
     "logsReconnect": "Reconnect",
     "logsEmpty": "No log records found",
     "logsNoMatching": "No matching logs found",
+    "logsDetails": "Details",
     "logsSourceLocationCopied": "Source location copied",
     "logsOtherSources": "Other sources",
     "logsCoreSource": "Core",

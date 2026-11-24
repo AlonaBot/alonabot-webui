@@ -27,7 +27,6 @@ import {
   formatLogTimeDesktop,
   formatLogTimeMobile,
   formatLogLevel,
-  formatLogMessage,
   parseSourceLocation,
   getRecordSourceTag,
   getLogSourceSelection,
@@ -526,7 +525,7 @@ export function LogsPage(): JSX.Element {
                 const location = parseSourceLocation(record.attrs);
                 const desktopTime = formatLogTimeDesktop(record.time);
                 const mobileTime = formatLogTimeMobile(record.time);
-                const message = formatLogMessage(record, filter.date !== 'today');
+                const message = record.message;
 
                 return (
                   <div key={`${record.time}-${index}`} className={`log-row ${colorClass}`}>
@@ -600,6 +599,10 @@ export function LogsPage(): JSX.Element {
                       </div>
                       <div className="log-mobile-message">{message}</div>
                     </div>
+                    <details className="log-details">
+                      <summary>{ui.logsDetails}</summary>
+                      <pre>{JSON.stringify(record, null, 2)}</pre>
+                    </details>
                   </div>
                 );
               })}

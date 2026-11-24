@@ -257,6 +257,7 @@
     "logsReconnect": "重新连接",
     "logsEmpty": "暂无日志记录",
     "logsNoMatching": "没有匹配筛选条件的日志",
+    "logsDetails": "详情",
     "logsSourceLocationCopied": "已复制源码位置",
     "logsOtherSources": "其他来源",
     "logsCoreSource": "Core",
