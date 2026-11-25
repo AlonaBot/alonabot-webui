@@ -125,20 +125,6 @@ export function getRecordSourceTag(record: LogRecord): string {
   return record.source;
 }
 
-/** formatLogMessage 将实时结构化字段连同正文显示，历史正文保留文件原文。 */
-export function formatLogMessage(record: LogRecord, historical: boolean): string {
-  if (historical) return record.message;
-  const identityFields = new Set([
-    'component', 'plugin_id', 'adapter_id', 'instance_id', 'session_id', 'generation_id',
-  ]);
-  const fields = Object.entries(record.attrs)
-    .filter(([key]) => key !== 'source' && key !== 'trace_id'
-      && (record.source === 'core' || !identityFields.has(key)))
-    .map(([key, value]) => `${key}=${typeof value === 'string' && !/[\s"\\]/.test(value) ? value : JSON.stringify(value)}`);
-  if (record.trace_id) fields.push(`trace=${record.trace_id}`);
-  return [record.message, ...fields].join(' ');
-}
-
 /** 生成用于去重的记录指纹。 */
 function getRecordFingerprint(record: LogRecord): string {
   return `${record.time}|${record.level}|${record.source}|${record.trace_id}|${record.message}|${JSON.stringify(record.attrs || {})}`;
@@ -223,7 +209,7 @@ export function filterLogs(
 
     // 3. 搜索内容或 trace_id 过滤
     if (query) {
-      const messageMatch = formatLogMessage(log, filter.date !== 'today').toLowerCase().includes(query);
+      const messageMatch = `${log.message} ${JSON.stringify(log.attrs)}`.toLowerCase().includes(query);
       const trace = (log.trace_id || '').toLowerCase();
       // 支持 trace 包含，或历史 8 位前缀匹配
       const traceMatch = trace.includes(query) || (filter.date !== 'today' && trace.length > 0 && query.startsWith(trace));
@@ -243,15 +229,14 @@ export function getLogSourceSelection(
 ): { group: 'core' | 'plugins' | 'accounts' | 'other'; key: string } {
   if (record.source === 'core') return { group: 'core', key: 'core' };
   const instance = typeof record.attrs.instance_id === 'string' ? record.attrs.instance_id : '';
-  const account = instances.find(item => historical
-    ? record.source === `${item.adapter_id}/${item.instance_id}`
-    : record.source === item.package_id && instance === item.instance_id);
+  const account = instances.find(item =>
+    record.source === item.package_id && instance === item.instance_id
+    || historical && record.source === `${item.adapter_id}/${item.instance_id}`);
   if (account) return { group: 'accounts', key: account.instance_id };
   if (instance && record.attrs.component === 'adapter') return { group: 'other', key: getRecordSourceTag(record) };
-  const candidates = packages.filter(pkg => historical
-    ? (record.attrs.component === 'adapter' ? pkg.Role === 'adapter' && pkg.AdapterID === record.source
-      : pkg.ID.replace(/^alonabot-plugin-/, '') === record.source)
-    : pkg.ID === record.source);
+  const candidates = packages.filter(pkg => record.source === pkg.ID || historical
+    && (record.attrs.component === 'adapter' ? pkg.Role === 'adapter' && pkg.AdapterID === record.source
+      : pkg.ID.replace(/^alonabot-plugin-/, '') === record.source));
   if (candidates.length === 1) return { group: 'plugins', key: candidates[0].ID };
   return { group: 'other', key: record.source };
 }

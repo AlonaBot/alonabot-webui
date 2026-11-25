@@ -858,6 +858,11 @@ select.diagnostics-select { width: auto; padding: 4px; background: transparent; 
 .log-row.level-warning { color: var(--color-yellow); }
 .log-row.level-info { color: var(--color-console-text); }
 .log-row.level-debug { color: var(--color-console-dim); }
+.log-details { margin: 2px 0 4px; color: var(--color-console-dim); }
+.log-details summary { cursor: pointer; width: fit-content; font-size: var(--text-sm); }
+.log-details summary:hover { color: var(--color-console-text); }
+.log-details summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.log-details pre { color: var(--color-console-text); font-size: var(--text-sm); white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; padding: 12px; border-left: 2px solid var(--color-console-line); }
 .log-row-desktop { display: grid; grid-template-columns: 25ch 17ch 10ch 23ch minmax(18ch, 1fr); gap: 10px; align-items: baseline; }
 .log-col-time { white-space: nowrap; }
 .log-col-source, .log-col-location { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
