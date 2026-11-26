@@ -5,7 +5,7 @@ description: 实现、诊断、重构或设计 WebUI 官方组件的代码时使
 
 # 开发 WebUI 官方组件
 
-本技能把需求落实到本仓的实现。规则以本仓文档为准：[AGENTS.md](../../../AGENTS.md)、[编码规范](../../../docs/coding-standards.zh-CN.md)、[开发指南](../../../docs/development.zh-CN.md)与[贡献指南](../../../CONTRIBUTING.zh-CN.md)。SDK 用法见 Core [插件指南](https://github.com/AlonaBot/AlonaBot/blob/main/docs/plugin-guide.zh-CN.md)，协议字段见 Core [Protobuf 定义](https://github.com/AlonaBot/AlonaBot/blob/main/contracts/proto/alonabot/v1)。
+本技能把需求落实到本仓的实现。规则以本仓文档为准：[AGENTS.md](../../../AGENTS.md)、[编码规范](../../../docs/coding-standards.zh-CN.md)、[开发指南](../../../docs/development.zh-CN.md)与[贡献指南](../../../CONTRIBUTING.zh-CN.md)。SDK 用法见 [组件开发文档](https://alonabot.github.io/docs/tutorial/project)，协议字段见 Core [Protobuf 定义](https://github.com/AlonaBot/AlonaBot/blob/main/contracts/proto/alonabot/v1)。
 
 ## 确定责任和完成条件
 
