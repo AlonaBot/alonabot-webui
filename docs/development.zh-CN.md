@@ -58,7 +58,7 @@ alonabot enable alonabot-webui-admin --data-dir ./data
 
 插件详情提供详情页的数据库表格、KV/文件存储、导出与清空，以及 Agent 会话摘要与清除；Agent 页面提供会话正文。外壳保留配置、任务与插件页面入口，共用 `/permissions/users` 用户页。
 
-父桥按 [插件页面指南](https://github.com/AlonaBot/AlonaBot/blob/main/docs/plugin-guide.zh-CN.md#插件页面) 在每次 `translate` 请求时用当前语言和请求参数返回 `text`；`hello` 交付语言、主题与令牌，`locale` 事件交付语言。浏览器验证用沙箱 iframe 验证 showcase 首次翻译、切换语言后重新取词、主题与快捷键转发。
+父桥按 [插件页面指南](https://alonabot.github.io/docs/advanced/http#插件页面) 在每次 `translate` 请求时用当前语言和请求参数返回 `text`；`hello` 交付语言、主题与令牌，`locale` 事件交付语言。浏览器验证用沙箱 iframe 验证 showcase 首次翻译、切换语言后重新取词、主题与快捷键转发。
 
 配置文件的工具覆盖候选按现行 [`ToolPolicy` 定义](../src/api/policies.ts)的 `identities` 展开为独立工具与操作；同名两类分别编辑，仅有旧全局覆盖的空身份行没有新增候选。已保存的配置文件覆盖按原身份继续读写。配置与配置文件页面共用 `src/api/policies.ts` 的 `ToolPolicy.identities: ('tool' | 'operation')[]`。
 

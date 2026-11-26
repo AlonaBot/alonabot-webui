@@ -66,7 +66,7 @@ Plugin details expose database tables, KV/file storage, export/clear, and Agent 
 
 ## Plugin bridge and configuration state
 
-Following the [plugin-page guide](https://github.com/AlonaBot/AlonaBot/blob/main/docs/plugin-guide.md#plugin-pages), the parent bridge answers each `translate` request with `text` using current language and request arguments. `hello` supplies language, theme, and token; `locale` supplies language updates. Browser verification uses a sandbox iframe to check initial showcase translation, fresh translations after language changes, themes, and shortcut forwarding.
+Following the [plugin-page guide](https://alonabot.github.io/en/docs/advanced/http#plugin-pages), the parent bridge answers each `translate` request with `text` using current language and request arguments. `hello` supplies language, theme, and token; `locale` supplies language updates. Browser verification uses a sandbox iframe to check initial showcase translation, fresh translations after language changes, themes, and shortcut forwarding.
 
 Profile tool-override candidates expand `identities` from the current [`ToolPolicy` definition](../src/api/policies.ts) into separate tools and operations. Identically named entries of both types are edited separately. Empty-identity rows representing only legacy global overrides add no candidates; saved profile overrides continue reading/writing under their original identities. Configuration and profile pages share `src/api/policies.ts`'s `ToolPolicy.identities: ('tool' | 'operation')[]`.
 

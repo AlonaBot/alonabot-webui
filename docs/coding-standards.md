@@ -87,7 +87,7 @@ Core state (internal/core/state) uses GORM rather than business SQL strings or s
 - Ranges/order/max use clause.Gte/clause.OrderByColumn and package constants for columns. Max reads one descending row instead of max()/coalesce(). Perform feasible sorting/aggregation in Go; add no GORM CLI/query generators.
 - DDL lives in package *.sql files loaded by go:embed; initial migration is internal/core/state/schema.sql. Temporary abnormal-file test tables are exempt.
 - PRAGMA reads/read-only pre-open checks are connection management and may use Go SQL strings.
-- This applies to Core. Plugins' sdk/sqlitedb database/sql access is a product feature; official plugins choose through [plugin guide](https://github.com/AlonaBot/AlonaBot/blob/main/docs/plugin-guide.md).
+- This applies to Core. Plugins' sdk/sqlitedb database/sql access is a product feature; official plugins choose through [plugin guide](https://alonabot.github.io/en/docs/develop/rules).
 
 ## Program output uses English
 

@@ -87,7 +87,7 @@ Core 状态库（`internal/core/state`）经 GORM 读写，业务的增删改查
 - 范围条件、排序与取最大值用 `clause` 结构（`clause.Gte`、`clause.OrderByColumn` 等），列名写成包内常量；取最大值按该列降序取一行，不写 `max()`、`coalesce()`。能在 Go 中完成的排序与聚合不写进查询。不引入 GORM CLI 等查询代码生成工具。
 - DDL 不写在 Go 代码里。建表、索引等语句放在包内的 `*.sql` 文件中，用 `//go:embed` 读入后执行；初始迁移即 `internal/core/state/schema.sql`。测试为构造异常文件临时建的表不在此列。
 - PRAGMA 回读与打开前的只读预检属于连接管理，可以在 Go 代码里写 SQL。
-- 只约束 Core。插件经 `sdk/sqlitedb` 使用 `database/sql` 是面向插件作者的产品功能，官方插件按[插件开发规范](https://github.com/AlonaBot/AlonaBot/blob/main/docs/plugin-guide.zh-CN.md)选择入口。
+- 只约束 Core。插件经 `sdk/sqlitedb` 使用 `database/sql` 是面向插件作者的产品功能，官方插件按[插件开发规范](https://alonabot.github.io/docs/develop/rules)选择入口。
 
 ## 程序输出用英文
 
