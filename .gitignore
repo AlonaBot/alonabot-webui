@@ -6,3 +6,17 @@
 *.local.test.ts
 *.local.test.tsx
 .DS_Store
+# 本机代理工具与草稿目录（个人维护资料只由 CI 拦截，不在此忽略）
+/.claude/
+/.codex/
+/.serena/
+/.playwright-cli/
+/.pi/
+/.gemini/
+/docs/superpowers/
+/docs/plans/
+/delegation-skills-workspace/
+/experiments/
+/tmp/
+.env
+*.env

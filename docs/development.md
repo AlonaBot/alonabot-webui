@@ -41,14 +41,14 @@ alonabot build .
 alonabot pack . --target darwin/arm64 --out bin
 ```
 
-Choose the target you need. For full integration, start `alonabot run --data-dir ./data` in a separate terminal, provide the CLI token following [management authentication](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.md#core-settings-and-http-entry-point), then install and enable the local package:
+Choose the target you need. For full integration, start `alonabot run --data-dir ./data` in a separate terminal, provide the CLI token following [management authentication](https://github.com/AlonaBot/AlonaBot/blob/main/docs/management-api.md#core-settings-and-http-entry-point), then install and enable the local package:
 
 ```fish
 alonabot install ./bin/alonabot-webui-admin-0.3.2-darwin-arm64.tar.gz --data-dir ./data --yes
 alonabot enable alonabot-webui-admin --data-dir ./data
 ```
 
-Adjust the package version and target. Open Core at `http://127.0.0.1:7650` to check pages, backend, and the plugin bridge. To preview only static pages, build the frontend and use `alonabot run . --data-dir ./data`. A development WebUI directory mounts static assets; verify the Go backend through an installed package. Browsers call the Admin API with same-origin Cookie/CSRF authentication; the backend communicates with Core through the SDK. See the current [Core management API](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.md#changelog-and-webui-backend).
+Adjust the package version and target. Open Core at `http://127.0.0.1:7650` to check pages, backend, and the plugin bridge. To preview only static pages, build the frontend and use `alonabot run . --data-dir ./data`. A development WebUI directory mounts static assets; verify the Go backend through an installed package. Browsers call the Admin API with same-origin Cookie/CSRF authentication; the backend communicates with Core through the SDK. See the current [Core management API](https://github.com/AlonaBot/AlonaBot/blob/main/docs/management-api.md#changelog-and-webui-backend).
 
 ## Add pages to the shell
 
