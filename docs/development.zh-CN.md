@@ -39,14 +39,14 @@ alonabot build .
 alonabot pack . --target darwin/arm64 --out bin
 ```
 
-将 target 换为需要的平台。完整联调时，先在独立终端运行 `alonabot run --data-dir ./data`，按[管理认证](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.zh-CN.md#core-设置与-http-入口)为 CLI 提供 token，再安装并启用上一步的本机 WebUI 包：
+将 target 换为需要的平台。完整联调时，先在独立终端运行 `alonabot run --data-dir ./data`，按[管理认证](https://github.com/AlonaBot/AlonaBot/blob/main/docs/management-api.zh-CN.md#core-设置与-http-入口)为 CLI 提供 token，再安装并启用上一步的本机 WebUI 包：
 
 ```fish
 alonabot install ./bin/alonabot-webui-admin-0.3.2-darwin-arm64.tar.gz --data-dir ./data --yes
 alonabot enable alonabot-webui-admin --data-dir ./data
 ```
 
-包名随组件版本与 target 调整。打开 Core 的 `http://127.0.0.1:7650` 入口检查页面、后台与插件桥。只预览静态页面时可在构建前端后运行 `alonabot run . --data-dir ./data`；开发 WebUI 目录仅挂载静态资源，带 Go 后台的行为通过安装包验证。浏览器通过同源 Cookie/CSRF 调用 Admin API，WebUI 后台通过 SDK 与 Core 通信；后端接口见 [Core 管理 API](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.zh-CN.md#更新日志与-webui-后台)。
+包名随组件版本与 target 调整。打开 Core 的 `http://127.0.0.1:7650` 入口检查页面、后台与插件桥。只预览静态页面时可在构建前端后运行 `alonabot run . --data-dir ./data`；开发 WebUI 目录仅挂载静态资源，带 Go 后台的行为通过安装包验证。浏览器通过同源 Cookie/CSRF 调用 Admin API，WebUI 后台通过 SDK 与 Core 通信；后端接口见 [Core 管理 API](https://github.com/AlonaBot/AlonaBot/blob/main/docs/management-api.zh-CN.md#更新日志与-webui-后台)。
 
 ### 页面接入外壳
 

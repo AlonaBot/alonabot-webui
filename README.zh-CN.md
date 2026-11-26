@@ -19,7 +19,7 @@ alonabot install --source AlonaBot/alonabot-webui --yes
 - [使用与配置](docs/usage.zh-CN.md)
 - [开发与检查](docs/development.zh-CN.md)
 - [打包与发布](docs/releasing.zh-CN.md)
-- [Core 文档](https://github.com/AlonaBot/AlonaBot/blob/main/docs/deployment.zh-CN.md)
+- [AlonaBot 文档](https://alonabot.github.io/)
 
 ## 贡献
 

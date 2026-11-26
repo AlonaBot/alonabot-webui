@@ -34,8 +34,17 @@ jobs:
           rejected=0
           while IFS= read -r -d '' path; do
             case "$path" in
-              .agents/*|.claude/*|.codex/*|.serena/*|.playwright-cli/*|docs/goals/*|docs/execution-order.md|docs/benchmarks.md|spec/*|goal-[0-9]*/*|delegation-skills-workspace/*|experiments/*)
+              # 公共维护技能。
+              .agents/skills/*/SKILL.md|.agents/skills/*/agents/openai.yaml)
+                ;;
+              # 个人维护资料。
+              .agents/*|spec/*|docs/adr/*|docs/goals/*|docs/execution-order.md|docs/benchmarks.md|maintenance/*|goal-[0-9]*/*)
                 printf 'main 包含个人维护资料：%q\n' "$path"
+                rejected=1
+                ;;
+              # 本机工具、草稿、运行数据、本地测试与凭据。
+              .claude/*|.codex/*|.serena/*|.playwright-cli/*|.pi/*|.gemini/*|docs/superpowers/*|docs/plans/*|delegation-skills-workspace/*|experiments/*|tmp/*|.repo/*|.worktrees/*|*_local_test.go|*.local.test.ts|*.local.test.tsx|.env|*.env)
+                printf 'main 包含只应留在本机的文件：%q\n' "$path"
                 rejected=1
                 ;;
             esac
