@@ -1,8 +1,11 @@
-import { useEffect, useState, useCallback, useMemo, type JSX } from 'react';
+import { useCallback, useEffect, useMemo, useState, type JSX } from 'react';
 import { AlertCircle, Calendar, Pause, Play, RefreshCw, Search, X } from 'lucide-react';
-import { listPluginJobs, changePluginJob, type PluginJob } from '../api/packages';
+import { changePluginJob, listPluginJobs, type PluginJob } from '../api/packages';
 import { useUI } from '../i18n/UI';
-import { LoadingRows } from '../ui/EmptyState';
+import { cn } from '../lib/cn';
+import { Button } from '../ui/Button';
+import { EmptyState, LoadingRows } from '../ui/EmptyState';
+import { SpotlightCard } from '../ui/SpotlightCard';
 import { toast } from '../ui/toast';
 
 export function PluginJobsPanel(props: { id: string }): JSX.Element {
@@ -28,10 +31,10 @@ export function PluginJobsPanel(props: { id: string }): JSX.Element {
   }, [id]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
-  const handleToggleJob = async (job: PluginJob) => {
+  const handleToggleJob = async (job: PluginJob): Promise<void> => {
     const action = job.paused ? 'resume' : 'pause';
     setOperatingId(job.job_id);
     setError(null);
@@ -48,110 +51,131 @@ export function PluginJobsPanel(props: { id: string }): JSX.Element {
   const filteredJobs = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return jobs;
-    return jobs.filter(
-      j => j.job_id.toLowerCase().includes(q) || j.trigger.toLowerCase().includes(q),
-    );
+    return jobs.filter(j => j.job_id.toLowerCase().includes(q) || j.trigger.toLowerCase().includes(q));
   }, [jobs, query]);
 
   if (loading) {
-    return <LoadingRows />;
+    return (
+      <SpotlightCard className="p-5">
+        <LoadingRows />
+      </SpotlightCard>
+    );
   }
 
   return (
-    <div className="plugin-jobs-panel">
+    <div className="space-y-4">
       {error && (
         <div className="plugins-error-banner" role="alert">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-          <button type="button" aria-label={ui.close} className="error-banner-close" onClick={() => setError(null)}>
+          <span className="inline-flex items-center gap-2">
+            <AlertCircle size={15} aria-hidden="true" />
+            {error}
+          </span>
+          <button
+            type="button"
+            aria-label={ui.close}
+            className="error-banner-close"
+            onClick={() => setError(null)}
+          >
             <X size={14} />
           </button>
         </div>
       )}
 
-      <div className="jobs-panel-header">
-        <div className="jobs-search-box">
-          <Search size={15} className="jobs-search-icon" />
-          <input
-            type="search"
-            placeholder={ui.searchJobs}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            className="jobs-search-input font-mono"
-          />
+      <SpotlightCard className="p-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <div className="relative min-w-[200px] flex-1 sm:max-w-[320px]">
+            <Search
+              size={14}
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--color-ink-muted)]"
+            />
+            <input
+              type="search"
+              placeholder={ui.searchJobs}
+              aria-label={ui.searchJobs}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              className="h-8 w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-2)] pr-3 pl-8.5 font-mono text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] focus:bg-[var(--color-surface)]"
+            />
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            iconOnly
+            onClick={() => void loadData()}
+            disabled={operatingId !== null}
+            title={ui.refresh}
+            aria-label={ui.refresh}
+          >
+            <RefreshCw size={14} />
+          </Button>
         </div>
-        <button
-          type="button"
-          className="detail-icon-button"
-          onClick={loadData}
-          disabled={operatingId !== null}
-          title={ui.refresh}
-          aria-label={ui.refresh}
-        >
-          <RefreshCw size={15} />
-        </button>
-      </div>
+      </SpotlightCard>
 
       {filteredJobs.length === 0 ? (
-        <div className="panel-empty-card">
-          <Calendar size={32} className="empty-icon" />
-          <p>{jobs.length === 0 ? ui.noJobs : ui.noMatches}</p>
-        </div>
+        <SpotlightCard className="p-6">
+          <EmptyState icon={<Calendar size={22} />} title={jobs.length === 0 ? ui.noJobs : ui.noMatches} />
+        </SpotlightCard>
       ) : (
-        <div className="jobs-table-container">
-          <table className="jobs-table font-mono">
-            <thead>
-              <tr>
-                <th>{ui.jobName}</th>
-                <th>{ui.jobTrigger}</th>
-                <th>{ui.jobLastRun}</th>
-                <th>{ui.jobNextRun}</th>
-                <th style={{ textAlign: 'right' }}>{ui.jobState}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredJobs.map(job => {
-                return (
-                  <tr key={job.job_id} className={job.paused ? 'is-paused-job' : ''}>
-                    <td>
-                      <span className="job-id-text">{job.job_id}</span>
+        <SpotlightCard className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse font-mono text-xs">
+              <thead>
+                <tr className="border-b border-[var(--color-line)] text-left font-sans text-xs font-medium text-[var(--color-ink-muted)]">
+                  <th className="px-5 py-3">{ui.jobName}</th>
+                  <th className="px-4 py-3">{ui.jobTrigger}</th>
+                  <th className="px-4 py-3">{ui.jobLastRun}</th>
+                  <th className="px-4 py-3">{ui.jobNextRun}</th>
+                  <th className="px-4 py-3 text-right">{ui.jobState}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-line)]/70">
+                {filteredJobs.map(job => (
+                  <tr
+                    key={job.job_id}
+                    className={cn(
+                      'transition-colors hover:bg-[var(--color-surface-2)]/50',
+                      job.paused && 'opacity-75',
+                    )}
+                  >
+                    <td className="px-5 py-3 font-semibold text-[var(--color-ink)]">{job.job_id}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-[var(--color-accent-strong)]">
+                        {job.trigger}
+                      </span>
                     </td>
-                    <td>
-                      <span className="job-trigger-badge">{job.trigger}</span>
+                    <td className="whitespace-nowrap px-4 py-3 text-[var(--color-ink-muted)]">
+                      {job.last_run_at || ui.jobNotRun}
                     </td>
-                    <td>
-                      {job.last_run_at ? (
-                        <span className="job-time-text">{job.last_run_at}</span>
-                      ) : (
-                        <span className="text-muted">{ui.jobNotRun}</span>
-                      )}
+                    <td className="whitespace-nowrap px-4 py-3 text-[var(--color-ink-muted)]">
+                      {job.next_run_at || ui.jobNotScheduled}
                     </td>
-                    <td>
-                      {job.next_run_at ? (
-                        <span className="job-time-text">{job.next_run_at}</span>
-                      ) : (
-                        <span className="text-muted">{ui.jobNotScheduled}</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      {job.paused && <span className="job-paused-pill">{ui.paused}</span>}
-                      <button
-                        type="button"
-                        className={`job-toggle-btn ${job.paused ? 'is-resume' : 'is-pause'}`}
-                        disabled={operatingId !== null}
-                        onClick={() => handleToggleJob(job)}
-                        title={job.paused ? ui.resume : ui.pause}
-                      >
-                        {job.paused ? <Play size={13} /> : <Pause size={13} />}
-                        <span>{job.paused ? ui.resume : ui.pause}</span>
-                      </button>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-sans">
+                      <div className="inline-flex items-center gap-2">
+                        {job.paused && (
+                          <span className="rounded-full bg-[color-mix(in_srgb,var(--color-warning)_16%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-warning-ink)]">
+                            {ui.paused}
+                          </span>
+                        )}
+                        <Button
+                          size="sm"
+                          variant={job.paused ? 'soft' : 'secondary'}
+                          icon={job.paused ? <Play size={12} /> : <Pause size={12} />}
+                          loading={operatingId === job.job_id}
+                          disabled={operatingId !== null}
+                          onClick={() => void handleToggleJob(job)}
+                          title={job.paused ? ui.resume : ui.pause}
+                        >
+                          {job.paused ? ui.resume : ui.pause}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SpotlightCard>
       )}
     </div>
   );

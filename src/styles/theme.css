@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../assets/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../assets/fonts/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+ * AlonaBot 清透精致视觉 Token 系统（Alona Crisp Navy & Ice-Cyan）。
+ * 基于 Alona 官方视觉基因（藏青发色 #1F2A44 + 冰青发卡 #22B8CF + 纯净雪白）：
+ * 保留 src/bridge/pluginPage.ts 读取的 17 个实体 CSS 变量，确保插件 iframe 主题实时同步。
+ */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #F4F7FB;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #ECF2F8;
+  --color-line: #DCE5F0;
+  --color-ink: #1F2A44;
+  --color-ink-muted: #5A6B86;
+  --color-accent: #18A7BE;
+  --color-accent-soft: #E5F7FA;
+  --color-accent-strong: #118499;
+  --color-danger: #DC3545;
+  --color-danger-soft: #FDECEF;
+  --color-warning: #C97A00;
+  --color-warning-soft: #FEF5E4;
+  --color-warning-ink: #9A5B00;
+  --color-success: #129463;
+  --color-success-soft: #E5F8F0;
+  --color-critical: #7C3AED;
+  --color-critical-soft: #F3EEFF;
+
+  /* 扩展清透材质与层次 Token */
+  --color-cyan: #22B8CF;
+  --color-indigo: #3B5588;
+  --color-glass-surface: rgba(255, 255, 255, 0.88);
+  --color-glass-elevated: rgba(255, 255, 255, 0.96);
+  --color-glass-border: rgba(31, 42, 68, 0.1);
+  --color-spotlight: rgba(34, 184, 207, 0.08);
+  --color-console-bg: #0C1322;
+  --color-console-text: #E6EFF9;
+  --color-console-dim: #7E92B0;
+  --color-console-line: #1E2C46;
+  --color-bubble: #1F2A44;
+  --color-on-bubble: #F4F7FB;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --shadow-card: 0 1px 2px rgba(31, 42, 68, 0.05), 0 6px 20px -12px rgba(31, 42, 68, 0.1);
+  --shadow-popover: 0 12px 32px -10px rgba(31, 42, 68, 0.18), 0 2px 6px rgba(31, 42, 68, 0.06);
+  --shadow-dialog: 0 24px 56px -14px rgba(15, 23, 42, 0.24), 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-glow-accent: 0 8px 20px -8px rgba(24, 167, 190, 0.36);
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+
+  --font-sans: 'Plus Jakarta Sans', 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 140ms;
+  --dur-mid: 240ms;
+  --dur-slow: 360ms;
+
+  --z-header: 20;
+  --z-sticky: 20;
+  --z-popover: 40;
+  --z-dialog: 60;
+  --z-toast: 80;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0D1422;
+  --color-surface: #141E32;
+  --color-surface-2: #1B2740;
+  --color-line: #273654;
+  --color-ink: #EEF4FA;
+  --color-ink-muted: #8FA2BF;
+  --color-accent: #22B8CF;
+  --color-accent-soft: #133142;
+  --color-accent-strong: #4DD0E1;
+  --color-danger: #F87171;
+  --color-danger-soft: #311722;
+  --color-warning: #F5B13B;
+  --color-warning-soft: #2D2212;
+  --color-warning-ink: #FCD34D;
+  --color-success: #34D399;
+  --color-success-soft: #102B24;
+  --color-critical: #C084FC;
+  --color-critical-soft: #26193B;
+
+  --color-cyan: #38D2E8;
+  --color-indigo: #7C9AD4;
+  --color-glass-surface: rgba(20, 30, 50, 0.88);
+  --color-glass-elevated: rgba(24, 36, 58, 0.96);
+  --color-glass-border: rgba(143, 162, 191, 0.18);
+  --color-spotlight: rgba(34, 184, 207, 0.1);
+  --color-console-bg: #090F1B;
+  --color-console-text: #E6EFF9;
+  --color-console-dim: #7E92B0;
+  --color-console-line: #1E2C46;
+  --color-bubble: #EEF4FA;
+  --color-on-bubble: #0D1422;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.28), 0 8px 24px -14px rgba(0, 0, 0, 0.45);
+  --shadow-popover: 0 16px 38px -10px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-dialog: 0 28px 64px -14px rgba(0, 0, 0, 0.65), 0 4px 14px rgba(0, 0, 0, 0.35);
+  --shadow-glow-accent: 0 8px 24px -8px rgba(34, 184, 207, 0.32);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 1ms;
+    --dur-mid: 1ms;
+    --dur-slow: 1ms;
+  }
+}

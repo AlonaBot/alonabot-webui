@@ -10,6 +10,8 @@ import {
   Copy,
   Check,
   Download,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
@@ -82,6 +84,16 @@ export function LogsPage(): JSX.Element {
   const [reload, setReload] = useState(0);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [copiedLocation, setCopiedLocation] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<ReadonlySet<string>>(new Set());
+
+  const toggleRowDetails = (rowKey: string): void => {
+    setExpandedRows(previous => {
+      const next = new Set(previous);
+      if (next.has(rowKey)) next.delete(rowKey);
+      else next.add(rowKey);
+      return next;
+    });
+  };
 
   // 3. 已载入记录及当前请求的归属
   const logsRef = useRef<LogRecord[]>([]);
@@ -526,11 +538,23 @@ export function LogsPage(): JSX.Element {
                 const desktopTime = formatLogTimeDesktop(record.time);
                 const mobileTime = formatLogTimeMobile(record.time);
                 const message = record.message;
+                const rowKey = `${record.time}-${index}`;
+                const expanded = expandedRows.has(rowKey);
 
                 return (
-                  <div key={`${record.time}-${index}`} className={`log-row ${colorClass}`}>
-                    {/* 桌面端单行对齐布局 */}
+                  <div key={rowKey} className={`log-row ${colorClass} ${expanded ? 'is-expanded' : ''}`}>
+                    {/* 桌面端紧凑单行终端布局 */}
                     <div className="log-row-desktop logs-desktop-only">
+                      <button
+                        type="button"
+                        className="log-expand-btn"
+                        aria-expanded={expanded}
+                        aria-label={ui.logsDetails}
+                        title={ui.logsDetails}
+                        onClick={() => toggleRowDetails(rowKey)}
+                      >
+                        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                      </button>
                       <span className="log-col log-col-time">[{desktopTime}]</span>
                       <span className="log-col log-col-source" title={sourceTag}>
                         [{sourceTag}]
@@ -577,13 +601,22 @@ export function LogsPage(): JSX.Element {
                         <span className="log-col log-col-location" />
                       )}
 
-                      {/* 消息正文：换行并对齐到消息列 */}
+                      {/* 消息正文：紧凑单行与换行对齐 */}
                       <span className="log-col log-col-msg">{message}</span>
                     </div>
 
-                    {/* 移动端两行布局 */}
+                    {/* 移动端紧凑布局 */}
                     <div className="log-row-mobile logs-mobile-only">
                       <div className="log-mobile-header">
+                        <button
+                          type="button"
+                          className="log-expand-btn"
+                          aria-expanded={expanded}
+                          aria-label={ui.logsDetails}
+                          onClick={() => toggleRowDetails(rowKey)}
+                        >
+                          {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                        </button>
                         <span className="log-mobile-time">{mobileTime}</span>
                         <span className="log-mobile-level">{levelDisplay}</span>
                         <span className="log-mobile-source">{sourceTag}</span>
@@ -599,10 +632,10 @@ export function LogsPage(): JSX.Element {
                       </div>
                       <div className="log-mobile-message">{message}</div>
                     </div>
-                    <details className="log-details">
-                      <summary>{ui.logsDetails}</summary>
-                      <pre>{JSON.stringify(record, null, 2)}</pre>
-                    </details>
+
+                    {expanded && (
+                      <pre className="log-details-pre">{JSON.stringify(record, null, 2)}</pre>
+                    )}
                   </div>
                 );
               })}

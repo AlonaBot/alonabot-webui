@@ -6,6 +6,7 @@ export type CoreInfo = {
   version: string;
   listen: string;
   admin_api_major: number;
+  started_at?: string;
 };
 
 // ----------------------------------------------------------------------------

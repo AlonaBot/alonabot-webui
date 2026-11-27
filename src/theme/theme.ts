@@ -16,6 +16,14 @@ export function resolveTheme(choice: ThemeChoice, prefersDark: boolean): 'light'
   return prefersDark ? 'dark' : 'light';
 }
 
+function applyTheme(resolved: 'light' | 'dark'): void {
+  document.documentElement.dataset.theme = resolved;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', resolved === 'dark' ? '#0D1422' : '#F4F7FB');
+  }
+}
+
 function readStoredChoice(): ThemeChoice {
   try {
     const saved = localStorage.getItem(themeStorageKey);
@@ -30,7 +38,7 @@ function readStoredChoice(): ThemeChoice {
 
 /**
  * 管理 WebUI 主题状态的 Hook。
- * 状态持久化在 localStorage，并同步到根节点的 data-theme 属性。
+ * 状态持久化在 localStorage，并同步到根节点 data-theme 属性与移动端浏览器 theme-color。
  */
 export function useTheme(): [ThemeChoice, (choice: ThemeChoice) => void] {
   const [choice, setChoiceState] = useState<ThemeChoice>(() => readStoredChoice());
@@ -38,14 +46,13 @@ export function useTheme(): [ThemeChoice, (choice: ThemeChoice) => void] {
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
 
-    const updateThemeAttribute = () => {
-      const resolved = resolveTheme(choice, media.matches);
-      document.documentElement.dataset.theme = resolved;
+    const updateThemeAttribute = (): void => {
+      applyTheme(resolveTheme(choice, media.matches));
     };
 
     updateThemeAttribute();
 
-    const listener = () => {
+    const listener = (): void => {
       if (choice === 'system') {
         updateThemeAttribute();
       }
@@ -57,7 +64,7 @@ export function useTheme(): [ThemeChoice, (choice: ThemeChoice) => void] {
     };
   }, [choice]);
 
-  const setChoice = (nextChoice: ThemeChoice) => {
+  const setChoice = (nextChoice: ThemeChoice): void => {
     try {
       localStorage.setItem(themeStorageKey, nextChoice);
     } catch {
@@ -65,7 +72,7 @@ export function useTheme(): [ThemeChoice, (choice: ThemeChoice) => void] {
     }
     setChoiceState(nextChoice);
     const media = window.matchMedia('(prefers-color-scheme: dark)');
-    document.documentElement.dataset.theme = resolveTheme(nextChoice, media.matches);
+    applyTheme(resolveTheme(nextChoice, media.matches));
   };
 
   return [choice, setChoice];

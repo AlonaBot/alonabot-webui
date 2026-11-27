@@ -8,8 +8,8 @@ export type SidebarState = {
 const sidebarStorageKey = 'alonabot.webui.sidebar';
 
 /**
- * 读取保存的侧栏状态。暂时不可用的条目（例如插件页面在组件列表加载前）保留在顺序里，
- * 由 arrangeSidebar 在渲染时过滤，避免加载过程中丢失用户的排序。
+ * 读取保存的侧栏状态。暂时不可用的条目（如组件加载前的插件页面）保留在顺序里，
+ * 由 arrangeSidebar 在渲染时过滤，避免丢失用户的自由排序。
  */
 export function loadSidebar(): SidebarState {
   const empty: SidebarState = { order: [], hidden: [], collapsed: false };
@@ -17,8 +17,13 @@ export function loadSidebar(): SidebarState {
     const parsed: unknown = JSON.parse(localStorage.getItem(sidebarStorageKey) ?? 'null');
     if (!parsed || typeof parsed !== 'object') return empty;
     const value = parsed as Record<string, unknown>;
-    const strings = (list: unknown) => Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : [];
-    return { order: [...new Set(strings(value.order))], hidden: [...new Set(strings(value.hidden))], collapsed: value.collapsed === true };
+    const strings = (list: unknown): string[] =>
+      Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : [];
+    return {
+      order: [...new Set(strings(value.order))],
+      hidden: [...new Set(strings(value.hidden))],
+      collapsed: value.collapsed === true,
+    };
   } catch {
     return empty;
   }
@@ -28,21 +33,23 @@ export function saveSidebar(state: SidebarState): void {
   try {
     localStorage.setItem(sidebarStorageKey, JSON.stringify(state));
   } catch {
-    // 存储不可用（隐私模式、配额）时只在本次会话内生效。
+    // 存储不可用时只在本次会话内生效。
   }
 }
 
-/** 按保存的顺序排列当前可用条目，新出现的条目按 available 的顺序追加在末尾。 */
+/** 按保存的顺序排列当前可用条目，新条目按 available 顺序追加在末尾；所有内置与插件入口一律平等。 */
 export function arrangeSidebar(state: SidebarState, available: readonly string[]): { visible: string[]; hidden: string[] } {
   const known = new Set(available);
   const ordered = state.order.filter(id => known.has(id));
   const placed = new Set(ordered);
-  for (const id of available) if (!placed.has(id)) ordered.push(id);
+  for (const id of available) {
+    if (!placed.has(id)) ordered.push(id);
+  }
   const hidden = new Set(state.hidden);
   return { visible: ordered.filter(id => !hidden.has(id)), hidden: ordered.filter(id => hidden.has(id)) };
 }
 
-/** 把 active 移到 over 的位置；顺序里保留暂时不可用的条目。 */
+/** 把 active 移到 over 的位置；允许任意跨条目自由排序，并保留暂时不可用的条目。 */
 export function moveSidebarItem(state: SidebarState, available: readonly string[], active: string, over: string): SidebarState {
   const { visible, hidden } = arrangeSidebar(state, available);
   const all = [...visible, ...hidden];

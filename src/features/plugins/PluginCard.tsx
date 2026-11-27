@@ -1,38 +1,60 @@
 import { useState, type JSX } from 'react';
-import { ArrowRight, ArrowUpCircle, FileWarning, Info, Lock, MoreHorizontal, Package as PackageIcon, Power, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
+import { ArrowRight, ArrowUpCircle, FileWarning, Info, Lock, MoreHorizontal, Package as PackageIcon, PanelRightOpen, Power, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
 import { packageIconURL, type Package } from '../../api/packages';
+import { formatMemoryBytes, type ComponentTelemetry } from '../../api/telemetry';
+import { MiniSparkline } from '../../components/charts/MiniSparkline';
 import { useUI } from '../../i18n/UI';
 import { hasPackageProblem } from '../../pages/packageState';
+import { useInspector } from '../../shell/inspector';
 import { navigate } from '../../shell/router';
 import { Button } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
+import { PulseDot, type PulseTone } from '../../ui/PulseDot';
+import { SpotlightCard } from '../../ui/SpotlightCard';
 import { Switch } from '../../ui/Switch';
 import { Tooltip } from '../../ui/Tooltip';
 import { packageName } from './usePackageActions';
-import { Sparkline } from './Sparkline';
-import styles from './Plugins.module.css';
 
-type Tone = 'running' | 'idle' | 'warning' | 'danger' | 'off';
-
-/** 卡片底部的状态：颜色点 + 文字。插件与 Agent 优先用运行态，其他角色用安装态。 */
-function status(pkg: Package, ui: ReturnType<typeof useUI>): { tone: Tone; text: string } {
+function resolveStatus(pkg: Package, ui: ReturnType<typeof useUI>): { tone: PulseTone; text: string } {
   if (!pkg.Enabled) return { tone: 'off', text: ui.stateStopped };
-  if (hasPackageProblem(pkg) || pkg.RuntimeState === 'FAILED') return { tone: 'danger', text: pkg.RuntimeState === 'FAILED' ? ui.runtimeFAILED : ui.stateProblem };
+  if (hasPackageProblem(pkg) || pkg.RuntimeState === 'FAILED') {
+    return { tone: 'danger', text: pkg.RuntimeState === 'FAILED' ? ui.runtimeFAILED : ui.stateProblem };
+  }
   if (pkg.RuntimeState) {
-    const tone: Record<string, Tone> = { ACTIVE: 'running', WAKING: 'warning', QUIESCING: 'warning', SUSPENDED: 'idle', STOPPED: 'off' };
-    return { tone: tone[pkg.RuntimeState] ?? 'idle', text: ui[`runtime${pkg.RuntimeState}`] };
+    const toneMap: Record<string, PulseTone> = {
+      ACTIVE: 'running',
+      WAKING: 'waking',
+      QUIESCING: 'waking',
+      SUSPENDED: 'idle',
+      STOPPED: 'off',
+    };
+    return { tone: toneMap[pkg.RuntimeState] ?? 'idle', text: ui[`runtime${pkg.RuntimeState}`] };
   }
   if (pkg.State === 'Activated') return { tone: 'running', text: ui.stateRunning };
   if (pkg.State === 'Installed') return { tone: 'idle', text: ui.stateInstalled };
   return { tone: 'danger', text: pkg.State || ui.stateDegraded };
 }
 
-/** 已安装组件卡片。WebUI 自己不能在这里停用或卸载，显示锁。 */
-export function PluginCard({ pkg, latest, updateFailed, activity, busy, onToggle, onRestart, onReload, onUpdate, onUninstall, onReason }: {
+/** 已安装组件 Bento 卡片：Spotlight 聚光、活体脉冲、24h 活动微图与一键滑出 Quick Inspector。 */
+export function PluginCard({
+  pkg,
+  latest,
+  updateFailed,
+  activity,
+  metrics,
+  busy,
+  onToggle,
+  onRestart,
+  onReload,
+  onUpdate,
+  onUninstall,
+  onReason,
+}: {
   pkg: Package;
   latest?: string;
   updateFailed: boolean;
   activity: readonly number[];
+  metrics?: ComponentTelemetry;
   busy: boolean;
   onToggle: () => void;
   onRestart: () => void;
@@ -42,47 +64,152 @@ export function PluginCard({ pkg, latest, updateFailed, activity, busy, onToggle
   onReason: () => void;
 }): JSX.Element {
   const ui = useUI();
+  const { openComponent } = useInspector();
   const [iconFailed, setIconFailed] = useState(false);
   const self = pkg.Role === 'webui';
-  const state = status(pkg, ui);
+  const state = resolveStatus(pkg, ui);
   const detail = `/components/${encodeURIComponent(pkg.ID)}`;
   const name = packageName(pkg);
 
-  return <article className={styles.card} data-tone={state.tone}>
-    <header className={styles.cardHead}>
-      <div className={styles.icon}>
-        {iconFailed ? <PackageIcon size={20} aria-hidden /> : <img src={packageIconURL(pkg.ID)} alt="" onError={() => setIconFailed(true)} />}
-      </div>
-      <div className={styles.heading}>
-        <button type="button" className={styles.name} onClick={() => navigate(detail)}>{name}</button>
-        <span className={styles.version}>
-          v{pkg.Version}
-          {latest && <><ArrowRight size={12} aria-hidden /><span className={styles.newVersion}>v{latest}</span></>}
-        </span>
-      </div>
-      {self
-        ? <Tooltip content={ui.webuiSelfLocked}><span className={styles.lock}><Lock size={16} aria-label={ui.webuiSelfLocked} /></span></Tooltip>
-        : <Switch checked={pkg.Enabled} pending={busy} onCheckedChange={onToggle} aria-label={`${pkg.Enabled ? ui.actionDisable : ui.actionEnable} ${name}`} />}
-    </header>
+  return (
+    <SpotlightCard
+      glowTone={state.tone === 'danger' ? 'danger' : state.tone === 'running' ? 'accent' : 'indigo'}
+      className="flex h-full flex-col p-4"
+    >
+      <div className="flex h-full flex-col gap-3">
+        <header className="flex items-start gap-3">
+          <button
+            type="button"
+            onClick={() => openComponent(pkg.ID, 'overview')}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface-2)] transition-transform hover:scale-105"
+            aria-label={`${ui.quickInspect} ${name}`}
+          >
+            {iconFailed ? (
+              <PackageIcon size={20} className="text-[var(--color-accent)]" aria-hidden="true" />
+            ) : (
+              <img src={packageIconURL(pkg.ID)} alt="" className="h-full w-full object-cover" onError={() => setIconFailed(true)} />
+            )}
+          </button>
 
-    <p className={styles.description}>{pkg.Description || (self ? ui.webuiSelfDescription : <span className={styles.muted}>{pkg.Source || ui.unknownMetadata}</span>)}</p>
-    {!self && <Sparkline values={activity} label={ui.activityLast24h} />}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => openComponent(pkg.ID, 'overview')}
+                className="truncate text-left text-sm font-bold text-[var(--color-ink)] transition-colors hover:text-[var(--color-accent)]"
+              >
+                {name}
+              </button>
+              <span className="shrink-0 rounded-md bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-[10px] font-medium text-[var(--color-ink-muted)]">
+                {pkg.Role}
+              </span>
+            </div>
+            <div className="tabular-nums mt-0.5 flex items-center gap-1 font-mono text-[11px] text-[var(--color-ink-muted)]">
+              <span>v{pkg.Version}</span>
+              {latest && (
+                <>
+                  <ArrowRight size={11} aria-hidden="true" />
+                  <span className="font-semibold text-[var(--color-accent)]">v{latest}</span>
+                </>
+              )}
+            </div>
+          </div>
 
-    <footer className={styles.cardFoot}>
-      <span className={styles.status}><span className={styles.dot} />{state.text}</span>
-      {updateFailed && <Tooltip content={ui.updateCheckFailed}><FileWarning size={14} className={styles.muted} aria-label={ui.updateCheckFailed} /></Tooltip>}
-      <span className={styles.spacer} />
-      {state.tone === 'danger' && <Button size="sm" icon={<Info size={14} />} onClick={onReason}>{ui.viewReason}</Button>}
-      {latest && state.tone !== 'danger' && <Button size="sm" variant="soft" icon={<ArrowUpCircle size={14} />} onClick={onUpdate} disabled={busy}>{ui.actionUpdate}</Button>}
-      {!self && <Menu align="end" trigger={<Button size="sm" variant="ghost" iconOnly aria-label={ui.actions}><MoreHorizontal size={18} /></Button>}>
-        <MenuItem icon={<PackageIcon size={16} />} onSelect={() => navigate(detail)}>{ui.actionDetails}</MenuItem>
-        <MenuItem icon={<Power size={16} />} onSelect={onToggle}>{pkg.Enabled ? ui.actionDisable : ui.actionEnable}</MenuItem>
-        {pkg.Enabled && pkg.Active && <MenuItem icon={<RefreshCw size={16} />} onSelect={onRestart}>{ui.actionRestart}</MenuItem>}
-        {pkg.State === 'Activated' && <MenuItem icon={<RotateCw size={16} />} onSelect={onReload}>{ui.actionReload}</MenuItem>}
-        <MenuItem icon={<ArrowUpCircle size={16} />} onSelect={onUpdate}>{ui.actionUpdate}</MenuItem>
-        <MenuSeparator />
-        <MenuItem icon={<Trash2 size={16} />} tone="danger" onSelect={onUninstall}>{ui.actionUninstall}</MenuItem>
-      </Menu>}
-    </footer>
-  </article>;
+          {self ? (
+            <Tooltip content={ui.webuiSelfLocked}>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-ink-muted)]">
+                <Lock size={15} aria-label={ui.webuiSelfLocked} />
+              </span>
+            </Tooltip>
+          ) : (
+            <Switch
+              checked={pkg.Enabled}
+              pending={busy}
+              onCheckedChange={onToggle}
+              aria-label={`${pkg.Enabled ? ui.actionDisable : ui.actionEnable} ${name}`}
+            />
+          )}
+        </header>
+
+        <p className="line-clamp-2 min-h-[2.5rem] text-xs leading-relaxed text-[var(--color-ink-muted)]">
+          {pkg.Description || (self ? ui.webuiSelfDescription : pkg.Source || ui.unknownMetadata)}
+        </p>
+
+        {metrics && (
+          <div className="tabular-nums flex items-center gap-2 rounded-lg bg-[var(--color-surface-2)]/70 px-2.5 py-1.5 font-mono text-[11px] text-[var(--color-ink-muted)]">
+            <span>CPU {metrics.cpu_percent.toFixed(1)}%</span>
+            <span>·</span>
+            <span>{formatMemoryBytes(metrics.rss_bytes)}</span>
+          </div>
+        )}
+
+        {!self && <MiniSparkline values={activity} label={ui.activityLast24h} height={32} tone={state.tone === 'danger' ? 'danger' : 'accent'} />}
+
+        <footer className="mt-auto flex items-center gap-1.5 border-t border-[var(--color-line)]/65 pt-3">
+          <span className="inline-flex items-center gap-2 text-xs font-medium text-[var(--color-ink)]">
+            <PulseDot tone={state.tone} size="sm" />
+            {state.text}
+          </span>
+          {updateFailed && (
+            <Tooltip content={ui.updateCheckFailed}>
+              <FileWarning size={14} className="text-[var(--color-warning)]" aria-label={ui.updateCheckFailed} />
+            </Tooltip>
+          )}
+          <span className="flex-1" />
+          {state.tone === 'danger' && (
+            <Button size="sm" variant="danger" icon={<Info size={13} />} onClick={onReason}>
+              {ui.viewReason}
+            </Button>
+          )}
+          {latest && state.tone !== 'danger' && (
+            <Button size="sm" variant="soft" icon={<ArrowUpCircle size={13} />} onClick={onUpdate} disabled={busy}>
+              {ui.actionUpdate}
+            </Button>
+          )}
+          <Tooltip content={ui.quickInspect}>
+            <Button size="sm" variant="ghost" iconOnly aria-label={ui.quickInspect} onClick={() => openComponent(pkg.ID, 'overview')}>
+              <PanelRightOpen size={15} />
+            </Button>
+          </Tooltip>
+          {!self && (
+            <Menu
+              align="end"
+              trigger={
+                <Button size="sm" variant="ghost" iconOnly aria-label={ui.actions}>
+                  <MoreHorizontal size={16} />
+                </Button>
+              }
+            >
+              <MenuItem icon={<PanelRightOpen size={15} />} onSelect={() => openComponent(pkg.ID, 'overview')}>
+                {ui.quickInspect}
+              </MenuItem>
+              <MenuItem icon={<PackageIcon size={15} />} onSelect={() => navigate(detail)}>
+                {ui.actionDetails}
+              </MenuItem>
+              <MenuItem icon={<Power size={15} />} onSelect={onToggle}>
+                {pkg.Enabled ? ui.actionDisable : ui.actionEnable}
+              </MenuItem>
+              {pkg.Enabled && pkg.Active && (
+                <MenuItem icon={<RefreshCw size={15} />} onSelect={onRestart}>
+                  {ui.actionRestart}
+                </MenuItem>
+              )}
+              {pkg.State === 'Activated' && (
+                <MenuItem icon={<RotateCw size={15} />} onSelect={onReload}>
+                  {ui.actionReload}
+                </MenuItem>
+              )}
+              <MenuItem icon={<ArrowUpCircle size={15} />} onSelect={onUpdate}>
+                {ui.actionUpdate}
+              </MenuItem>
+              <MenuSeparator />
+              <MenuItem icon={<Trash2 size={15} />} tone="danger" onSelect={onUninstall}>
+                {ui.actionUninstall}
+              </MenuItem>
+            </Menu>
+          )}
+        </footer>
+      </div>
+    </SpotlightCard>
+  );
 }

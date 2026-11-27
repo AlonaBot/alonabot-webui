@@ -8,7 +8,6 @@ import { packagesKey } from '../../queries/packages';
 import { Button } from '../../ui/Button';
 import { ConfirmDialog, Dialog } from '../../ui/Dialog';
 import { toast } from '../../ui/toast';
-import styles from './Plugins.module.css';
 
 export type InstallInput = { Source: string; Replace?: boolean; Build?: boolean; Ref?: string } | { archive: File; replace?: boolean };
 
@@ -156,11 +155,11 @@ export function usePackageActions(): {
     {confirmation && <ConfirmDialog open onOpenChange={open => { if (!open) { confirmation.settle(false); setConfirmation(null); } }} title={confirmation.title}
       description={ui.confirmAffectedDesc} confirmLabel={ui.confirmContinue}
       onConfirm={() => { const { run, settle } = confirmation; setConfirmation(null); void run().then(result => settle(result !== false), () => settle(false)); }}>
-      <ul className={styles.affected}>{confirmation.affected.map(item => <li key={item}>{item}</li>)}</ul>
+      <ul className="list-disc space-y-1 rounded-xl bg-[var(--color-surface-2)] py-3 pr-4 pl-7 font-mono text-xs text-[var(--color-ink)]">{confirmation.affected.map(item => <li key={item}>{item}</li>)}</ul>
     </ConfirmDialog>}
     {warnings && <Dialog open onOpenChange={open => { if (!open) setWarnings(null); }} title={ui.warningsTitle} size="sm"
       footer={<Button variant="primary" onClick={() => setWarnings(null)}>{ui.done}</Button>}>
-      <ul className={styles.affected}>{warnings.map(item => <li key={item}>{item}</li>)}</ul>
+      <ul className="list-disc space-y-1 rounded-xl bg-[var(--color-surface-2)] py-3 pr-4 pl-7 font-mono text-xs text-[var(--color-ink)]">{warnings.map(item => <li key={item}>{item}</li>)}</ul>
     </Dialog>}
     {changelog && <ChangelogDialog component={changelog.id} name={changelog.name} version={changelog.version} open automatic onClose={() => setChangelog(null)} />}
   </>;

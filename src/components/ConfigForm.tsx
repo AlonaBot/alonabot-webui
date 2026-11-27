@@ -617,27 +617,35 @@ function FormEditor(props: ConfigFormProps) {
           <pre>{error.message}</pre>
         </div>}
         {props.onDiscard ? (isDirty && (
-          <div className="config-form-actions">
-            <button
-              type="button"
-              className="discard-button"
-              disabled={!isDirty}
-              onClick={() => {
-                setEdited(editableValue(props.value) as Record<string, unknown>);
-                setExternal(undefined);
-                setError(null);
-                setResetVersion(version => version + 1);
-                props.onDiscard!();
-              }}
-            >
-              {ui.discard}
-            </button>
-            <button type="submit" className="save-button" disabled={!isDirty}>
-              {ui.save}
-            </button>
+          <div className="alona-glass-elevated sticky bottom-4 z-20 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--color-accent)_35%,var(--color-glass-border))] px-4 py-3 shadow-[var(--shadow-glow-accent)]">
+            <span className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--color-ink)]">
+              <span className="h-2 w-2 rounded-full bg-[var(--color-accent)]" aria-hidden="true" />
+              {ui.unsavedChanges}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="discard-button"
+                disabled={!isDirty}
+                onClick={() => {
+                  setEdited(editableValue(props.value) as Record<string, unknown>);
+                  setExternal(undefined);
+                  setError(null);
+                  setResetVersion(version => version + 1);
+                  props.onDiscard!();
+                }}
+              >
+                {ui.discard}
+              </button>
+              <button type="submit" className="save-button" disabled={!isDirty}>
+                {ui.save}
+              </button>
+            </div>
           </div>
         )) : (
-          props.footer ?? <button type="submit" className="save-button">{ui.save}</button>
+          <div className="mt-5 flex items-center justify-end gap-2">
+            {props.footer ?? <button type="submit" className="save-button">{ui.save}</button>}
+          </div>
         )}
       </form>
     </FormContext.Provider>

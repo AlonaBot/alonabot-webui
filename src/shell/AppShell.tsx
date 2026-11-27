@@ -1,15 +1,21 @@
 import { useCallback, useMemo, useState, type JSX, type ReactNode } from 'react';
-import { AppWindow } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
+import { AppWindow, Languages, Laptop, Moon, Puzzle, RotateCw, ScrollText, Sun, Wrench } from 'lucide-react';
+import { changePackage } from '../api/packages';
 import { useUI } from '../i18n/UI';
+import { packageName } from '../features/plugins/usePackageActions';
 import { installed, usePackages } from '../queries/packages';
 import { routes } from '../routes';
+import { toast } from '../ui/toast';
+import { InspectorContext, type InspectorTab } from './inspector';
 import { MobileTabBar } from './MobileTabBar';
 import { PageHeaderSlots } from './PageHeader';
+import { QuickInspector } from './QuickInspector';
 import { navigate, usePath, useQueryParam } from './router';
 import { SearchContext, type SearchItem } from './search';
+import { useUISettings } from './settings';
 import { Sidebar, type NavEntry } from './Sidebar';
 import { TopBar } from './TopBar';
-import styles from './AppShell.module.css';
 
 /** 插件页面在详情页里以标签打开；侧栏与搜索共用这个地址。 */
 export function pluginPagePath(pluginID: string, page: string): string {
@@ -17,17 +23,27 @@ export function pluginPagePath(pluginID: string, page: string): string {
 }
 
 /**
- * 管理界面外壳：桌面侧栏、顶栏（页面插槽 + 全局搜索）、内容区与手机底栏。
- * 侧栏条目由内置页面与已安装插件声明的页面组成；没有 Agent 时「模型」置灰。
+ * 新版管理界面外壳：分组桌面侧栏 + Core 状态胶囊、玻璃顶栏、可执行 ⌘K 命令面板、
+ * 全局右侧滑出 Quick Inspector 抽屉与移动端悬浮 Dock。
  */
-export function AppShell({ version, onLogout, coreUpdate, coreUpdateFailed, children }: {
+export function AppShell({
+  version,
+  coreStartedAt,
+  onLogout,
+  coreUpdate,
+  coreUpdateFailed,
+  children,
+}: {
   version: string;
+  coreStartedAt?: string;
   onLogout?: () => void;
   coreUpdate?: { version: string; releaseURL: string };
   coreUpdateFailed?: boolean;
   children: ReactNode;
 }): JSX.Element {
   const ui = useUI();
+  const reduced = useReducedMotion();
+  const { locale, setLocale, setTheme } = useUISettings();
   const labels = ui as Record<string, string>;
   const path = usePath();
   const pagePath = useQueryParam('path');
@@ -35,58 +51,214 @@ export function AppShell({ version, onLogout, coreUpdate, coreUpdateFailed, chil
   const packages = useMemo(() => installed(packageQuery.data), [packageQuery.data]);
   const agentMissing = packageQuery.isSuccess && !packages.some(item => item.Role === 'agent');
 
-  const pageEntries = useMemo<NavEntry[]>(() => packages.flatMap(item => (item.pages ?? []).filter(page => page.purpose !== 'instance_config').map(page => ({
-    id: `page:${item.ID}:${page.path}`,
-    label: page.title,
-    icon: AppWindow,
-    to: pluginPagePath(item.ID, page.path),
-    active: path === `/pages/${encodeURIComponent(item.ID)}` && pagePath === page.path,
-    disabledReason: item.Enabled ? undefined : ui.pluginPageDisabled,
-  }))), [packages, path, pagePath, ui]);
+  const [inspectorID, setInspectorID] = useState<string | null>(null);
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>('overview');
+  const openComponent = useCallback((id: string, tab: InspectorTab = 'overview') => {
+    setInspectorID(id);
+    setInspectorTab(tab);
+  }, []);
+  const closeInspector = useCallback(() => setInspectorID(null), []);
+  const inspectorValue = useMemo(() => ({ openComponent, close: closeInspector }), [openComponent, closeInspector]);
+
+  const pageEntries = useMemo<NavEntry[]>(
+    () =>
+      packages.flatMap(item =>
+        (item.pages ?? [])
+          .filter(page => page.purpose !== 'instance_config')
+          .map(page => ({
+            id: `page:${item.ID}:${page.path}`,
+            label: page.title,
+            icon: AppWindow,
+            to: pluginPagePath(item.ID, page.path),
+            active: path === `/pages/${encodeURIComponent(item.ID)}` && pagePath === page.path,
+            disabledReason: item.Enabled ? undefined : ui.pluginPageDisabled,
+          })),
+      ),
+    [packages, path, pagePath, ui],
+  );
   const onPluginPage = pageEntries.some(entry => entry.active);
 
-  const routeEntry = useCallback((route: typeof routes[number]): NavEntry => ({
-    id: route.id,
-    label: labels[route.label],
-    icon: route.icon,
-    to: route.path,
-    active: path === route.path || (path.startsWith(route.path + '/') && !(route.path === '/components' && onPluginPage)),
-    disabledReason: route.id === 'models' && agentMissing ? ui.modelsNeedAgent : undefined,
-  }), [labels, path, onPluginPage, agentMissing, ui]);
+  const routeEntry = useCallback(
+    (route: (typeof routes)[number]): NavEntry => ({
+      id: route.id,
+      label: labels[route.label],
+      icon: route.icon,
+      to: route.path,
+      active: path === route.path || (path.startsWith(`${route.path}/`) && !(route.path === '/components' && onPluginPage)),
+      disabledReason: route.id === 'models' && agentMissing ? ui.modelsNeedAgent : undefined,
+    }),
+    [labels, path, onPluginPage, agentMissing, ui],
+  );
 
-  const mainEntries = useMemo(() => [...routes.filter(route => route.group === 'main' && route.navigation !== false).map(routeEntry), ...pageEntries], [routeEntry, pageEntries]);
+  const mainEntries = useMemo(
+    () => [...routes.filter(route => route.group === 'main' && route.navigation !== false).map(routeEntry), ...pageEntries],
+    [routeEntry, pageEntries],
+  );
   const bottomEntries = useMemo(() => routes.filter(route => route.group === 'bottom').map(routeEntry), [routeEntry]);
 
-  // 页面通过 SearchContext 注册的条目与内置页面、插件页面合并。
   const [registered, setRegistered] = useState<SearchItem[]>([]);
   const [openRequest, setOpenRequest] = useState(0);
   const register = useCallback((items: SearchItem[]) => {
     setRegistered(previous => [...previous, ...items]);
     return () => setRegistered(previous => previous.filter(item => !items.includes(item)));
   }, []);
-  const searchContext = useMemo(() => ({ register, open: () => setOpenRequest(value => value + 1) }), [register]);
-  const searchItems = useMemo<SearchItem[]>(() => [
-    ...mainEntries.concat(bottomEntries).filter(entry => !entry.disabledReason).map(entry => ({
-      id: `nav-${entry.id}`, title: entry.label, section: ui.pageSection, icon: entry.icon, keywords: [entry.to], run: () => navigate(entry.to),
-    })),
-    ...registered.filter(item => !(agentMissing && item.id.startsWith('models-'))),
-  ], [mainEntries, bottomEntries, registered, agentMissing, ui]);
+  const openSearch = useCallback(() => setOpenRequest(value => value + 1), []);
+  const searchContext = useMemo(() => ({ register, open: openSearch }), [register, openSearch]);
+
+  // 合并页面跳转、已装组件快捷检查/重载动作与全局设置动作。
+  const searchItems = useMemo<SearchItem[]>(() => {
+    const navItems: SearchItem[] = mainEntries
+      .concat(bottomEntries)
+      .filter(entry => !entry.disabledReason)
+      .map(entry => ({
+        id: `nav-${entry.id}`,
+        title: entry.label,
+        section: ui.pageSection,
+        icon: entry.icon,
+        keywords: [entry.to, entry.id],
+        run: () => navigate(entry.to),
+      }));
+
+    const componentActions: SearchItem[] = packages.flatMap(pkg => {
+      const name = packageName(pkg);
+      const list: SearchItem[] = [
+        {
+          id: `inspect-${pkg.ID}`,
+          title: name,
+          section: ui.plugins,
+          icon: Puzzle,
+          context: ui.quickInspect,
+          value: `v${pkg.Version}`,
+          keywords: [pkg.ID, pkg.Role, 'inspect', 'plugin'],
+          run: () => openComponent(pkg.ID, 'overview'),
+        },
+      ];
+      if (pkg.Role !== 'webui' && pkg.State === 'Activated') {
+        list.push({
+          id: `reload-${pkg.ID}`,
+          title: `${ui.actionReload} ${name}`,
+          section: ui.commandSectionActions,
+          icon: RotateCw,
+          context: pkg.ID,
+          keywords: ['reload', 'restart', pkg.ID, name],
+          run: () => {
+            void changePackage('reload', pkg.ID)
+              .then(() => toast.success(ui.reloadedSuccess))
+              .catch((error: unknown) => toast.error(error));
+          },
+        });
+      }
+      return list;
+    });
+
+    const quickCommands: SearchItem[] = [
+      {
+        id: 'cmd-theme-dark',
+        title: `${ui.themeMode}: ${ui.themeDark}`,
+        section: ui.commandSectionActions,
+        icon: Moon,
+        keywords: ['dark', 'theme', 'night', '深色', '暗黑'],
+        run: () => setTheme('dark'),
+      },
+      {
+        id: 'cmd-theme-light',
+        title: `${ui.themeMode}: ${ui.themeLight}`,
+        section: ui.commandSectionActions,
+        icon: Sun,
+        keywords: ['light', 'theme', 'day', '浅色', '亮色'],
+        run: () => setTheme('light'),
+      },
+      {
+        id: 'cmd-theme-system',
+        title: `${ui.themeMode}: ${ui.themeSystem}`,
+        section: ui.commandSectionActions,
+        icon: Laptop,
+        keywords: ['system', 'theme', 'auto', '跟随系统'],
+        run: () => setTheme('system'),
+      },
+      {
+        id: 'cmd-locale-toggle',
+        title: locale === 'zh-CN' ? 'Switch UI Language → English' : '切换界面语言 → 简体中文',
+        section: ui.commandSectionActions,
+        icon: Languages,
+        keywords: ['language', 'locale', 'i18n', 'english', '中文'],
+        run: () => setLocale(locale === 'zh-CN' ? 'en-US' : 'zh-CN'),
+      },
+      {
+        id: 'cmd-core-lifecycle',
+        title: ui.coreLifecycleSection,
+        section: ui.commandSectionActions,
+        icon: Wrench,
+        keywords: ['core', 'update', 'restart', 'lifecycle', '更新', '重启'],
+        run: () => navigate('/settings#core-lifecycle'),
+      },
+      {
+        id: 'cmd-logs',
+        title: ui.viewLogs,
+        section: ui.commandSectionActions,
+        icon: ScrollText,
+        keywords: ['logs', 'error', 'debug', '日志'],
+        run: () => navigate('/logs'),
+      },
+    ];
+
+    return [
+      ...navItems,
+      ...quickCommands,
+      ...componentActions,
+      ...registered.filter(item => !(agentMissing && item.id.startsWith('models-'))),
+    ];
+  }, [mainEntries, bottomEntries, packages, registered, agentMissing, ui, openComponent, setTheme, locale, setLocale]);
 
   const [left, setLeft] = useState<HTMLElement | null>(null);
   const [right, setRight] = useState<HTMLElement | null>(null);
   const slots = useMemo(() => ({ left, right }), [left, right]);
   const title = [...mainEntries, ...bottomEntries].find(entry => entry.active)?.label ?? '';
 
-  return <SearchContext.Provider value={searchContext}>
-    <PageHeaderSlots.Provider value={slots}>
-      <div className={styles.shell}>
-        <Sidebar entries={mainEntries} bottom={bottomEntries} version={version} onLogout={onLogout} coreUpdate={coreUpdate} coreUpdateFailed={coreUpdateFailed} />
-        <div className={styles.main}>
-          <TopBar title={title} searchItems={searchItems} openRequest={openRequest} onLogout={onLogout} leftRef={setLeft} rightRef={setRight} />
-          <main key={path} className={styles.content}>{children}</main>
-        </div>
-        <MobileTabBar entries={[...mainEntries, ...bottomEntries]} />
-      </div>
-    </PageHeaderSlots.Provider>
-  </SearchContext.Provider>;
+  return (
+    <SearchContext.Provider value={searchContext}>
+      <InspectorContext.Provider value={inspectorValue}>
+        <PageHeaderSlots.Provider value={slots}>
+          <div className="flex min-h-dvh w-full">
+            <Sidebar
+              entries={mainEntries}
+              bottom={bottomEntries}
+              version={version}
+              coreStartedAt={coreStartedAt}
+              onLogout={onLogout}
+              coreUpdate={coreUpdate}
+              coreUpdateFailed={coreUpdateFailed}
+            />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <TopBar
+                title={title}
+                searchItems={searchItems}
+                openRequest={openRequest}
+                onLogout={onLogout}
+                leftRef={setLeft}
+                rightRef={setRight}
+              />
+              <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 pt-5 pb-24 md:px-6 md:pt-6 md:pb-10">
+                <motion.div
+                  key={path.startsWith('/permissions') ? '/permissions' : path}
+                  initial={reduced ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: reduced ? 0.01 : 0.14, ease: 'easeOut' }}
+                >
+                  {children}
+                </motion.div>
+              </main>
+            </div>
+            <MobileTabBar entries={[...mainEntries, ...bottomEntries]} onOpenSearch={openSearch} />
+            <QuickInspector
+              componentID={inspectorID}
+              tab={inspectorTab}
+              onTabChange={setInspectorTab}
+              onClose={closeInspector}
+            />
+          </div>
+        </PageHeaderSlots.Provider>
+      </InspectorContext.Provider>
+    </SearchContext.Provider>
+  );
 }
