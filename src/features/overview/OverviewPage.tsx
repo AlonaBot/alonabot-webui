@@ -134,7 +134,7 @@ export function OverviewPage(): JSX.Element {
   const roleShares = useMemo(() => (telemetry ? computeRoleShares(telemetry) : []), [telemetry]);
   const sortedResources = useMemo(() => {
     if (!telemetry) return [];
-    return [...telemetry.components]
+    return [...(telemetry.components ?? [])]
       .sort((a, b) => {
         if (a.running !== b.running) return Number(b.running) - Number(a.running);
         return resourceSort === 'cpu' ? b.cpu_percent - a.cpu_percent : b.rss_bytes - a.rss_bytes;

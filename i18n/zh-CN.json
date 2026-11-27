@@ -1020,6 +1020,7 @@
     "telemetryCoreCpu": "Core CPU",
     "telemetryRoleCore": "Core",
     "telemetryCollecting": "正在采集性能样本…",
+    "telemetryUptime": "运行时长",
     "telemetryHostRamShare": "占宿主机 {pct}%",
     "kpiActiveComponents": "活跃组件",
     "kpiSleepingCount": "其中 {count} 个按需休眠省电中",

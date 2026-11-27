@@ -233,7 +233,7 @@ function AdminApp() {
             </div>
           ) : null}
 
-          <ErrorBoundary key={currentPath}>
+          <ErrorBoundary key={currentPath} path={currentPath} onReauthenticate={() => void handleLogout()}>
             {currentPath === '/403' ? (
               <StatusPage code={403} path={currentPath} onReauthenticate={() => void handleLogout()} />
             ) : pagePlugin ? (

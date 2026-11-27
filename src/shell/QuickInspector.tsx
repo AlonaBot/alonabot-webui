@@ -275,7 +275,7 @@ export function QuickInspector({ componentID, tab, onTabChange, onClose }: Quick
                         </div>
                         <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
                           <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-ink-muted)]">
-                            <Timer size={13} aria-hidden="true" /> Uptime
+                            <Timer size={13} aria-hidden="true" /> {ui.telemetryUptime}
                           </div>
                           <div className="tabular-nums mt-1 font-mono text-base font-semibold text-[var(--color-ink)]">
                             {componentMetrics.running && componentUptime !== null ? formatUptime(componentUptime) : '—'}

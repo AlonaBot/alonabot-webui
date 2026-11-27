@@ -1020,6 +1020,7 @@
     "telemetryCoreCpu": "Core CPU",
     "telemetryRoleCore": "Core",
     "telemetryCollecting": "Collecting telemetry samples…",
+    "telemetryUptime": "Uptime",
     "telemetryHostRamShare": "{pct}% of host RAM",
     "kpiActiveComponents": "Active components",
     "kpiSleepingCount": "{count} sleeping on demand",

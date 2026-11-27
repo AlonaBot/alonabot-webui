@@ -6,6 +6,7 @@ import { useUI } from '../i18n/UI';
 import { packageName } from '../features/plugins/usePackageActions';
 import { installed, usePackages } from '../queries/packages';
 import { routes } from '../routes';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { toast } from '../ui/toast';
 import { InspectorContext, type InspectorTab } from './inspector';
 import { MobileTabBar } from './MobileTabBar';
@@ -49,7 +50,8 @@ export function AppShell({
   const labels = ui as Record<string, string>;
   const path = usePath();
   const pagePath = useQueryParam('path');
-  const packageQuery = usePackages();
+  // 外壳侧栏与命令面板不因 403 抛出到顶层，确保页面边界展示 403 状态页时导航仍保持可用。
+  const packageQuery = usePackages({ throwOnError: false });
   const packages = useMemo(() => installed(packageQuery.data), [packageQuery.data]);
   const agentMissing = packageQuery.isSuccess && !packages.some(item => item.Role === 'agent');
 
@@ -292,12 +294,14 @@ export function AppShell({
               </main>
             </div>
             <MobileTabBar entries={[...mainEntries, ...bottomEntries]} onOpenSearch={openSearch} />
-            <QuickInspector
-              componentID={inspectorID}
-              tab={inspectorTab}
-              onTabChange={setInspectorTab}
-              onClose={closeInspector}
-            />
+            <ErrorBoundary key={inspectorID ?? 'inspector-closed'} onReauthenticate={onLogout}>
+              <QuickInspector
+                componentID={inspectorID}
+                tab={inspectorTab}
+                onTabChange={setInspectorTab}
+                onClose={closeInspector}
+              />
+            </ErrorBoundary>
           </div>
         </PageHeaderSlots.Provider>
       </InspectorContext.Provider>

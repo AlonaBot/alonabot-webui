@@ -3,9 +3,17 @@ import { listPackages, type Package } from '../api/packages';
 
 export const packagesKey = ['packages'] as const;
 
+export interface PackagesQueryOptions {
+  readonly throwOnError?: boolean;
+}
+
 /** 已安装组件列表；安装、更新、卸载成功后由 client.ts 统一失效。 */
-export function usePackages() {
-  return useQuery({ queryKey: packagesKey, queryFn: listPackages });
+export function usePackages(options?: PackagesQueryOptions) {
+  return useQuery({
+    queryKey: packagesKey,
+    queryFn: listPackages,
+    ...(options?.throwOnError !== undefined ? { throwOnError: options.throwOnError } : {}),
+  });
 }
 
 /** 侧栏与搜索用：已安装且未卸载的组件。 */
