@@ -1,24 +1,22 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent, type JSX } from 'react';
-import { Button } from '../ui/Button';
-import { Skeleton } from '../ui/EmptyState';
-import { Switch } from '../ui/Switch';
-import { toast } from '../ui/toast';
-import { Plus, X } from 'lucide-react';
+import { MessageSquareReply, Plus, RotateCcw, Terminal, X } from 'lucide-react';
 import { getProfilePlatform, putProfilePlatform, type ProfilePlatform } from '../api/profiles';
 import { useUI } from '../i18n/UI';
+import { Button } from '../ui/Button';
+import { Skeleton } from '../ui/EmptyState';
+import { SpotlightCard } from '../ui/SpotlightCard';
+import { Switch } from '../ui/Switch';
+import { toast } from '../ui/toast';
 
-/** ProfilePlatformSection 负责展示与编辑配置文件的平台与消息设置。 */
-export function ProfilePlatformSection(props: { profileID: string }): JSX.Element {
-  const { profileID } = props;
+/** ProfilePlatformSection 负责展示与编辑配置文件的平台命令前缀与消息回复偏好。 */
+export function ProfilePlatformSection({ profileID }: { profileID: string }): JSX.Element {
   const ui = useUI();
 
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-
   const [defaultPlatform, setDefaultPlatform] = useState<ProfilePlatform | null>(null);
   const [currentPlatform, setCurrentPlatform] = useState<ProfilePlatform | null>(null);
 
-  // 本地草稿状态
   const [prefixes, setPrefixes] = useState<string[] | null>(null);
   const [newPrefix, setNewPrefix] = useState('');
   const [prefixError, setPrefixError] = useState<string | null>(null);
@@ -28,7 +26,7 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
   const [replyPrefix, setReplyPrefix] = useState<string | null>(null);
   const [forwardThreshold, setForwardThreshold] = useState<number | null>(null);
 
-  const loadData = async (clearError = true) => {
+  const loadData = async (): Promise<void> => {
     try {
       const current = await getProfilePlatform(profileID);
       setCurrentPlatform(current);
@@ -45,53 +43,49 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
       setReplyPrefix(current.reply.prefix);
       setForwardThreshold(current.reply.forward_threshold);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    setLoading(true);
+    void loadData();
   }, [profileID]);
 
-  // 前缀增删操作
   const effectivePrefixes = prefixes ?? defaultPlatform?.command_prefixes ?? [];
   const isPrefixOverridden = profileID === 'default' || prefixes !== null;
 
-  const handleAddPrefix = () => {
-    const trimmed = newPrefix;
+  const handleAddPrefix = (): void => {
+    const candidate = newPrefix;
     setPrefixError(null);
-    const target = prefixes ?? [...defaultPlatform!.command_prefixes!];
-    if (target.includes(trimmed)) {
+    const baseList = prefixes ?? [...(defaultPlatform?.command_prefixes ?? [])];
+    if (baseList.includes(candidate)) {
       setNewPrefix('');
       return;
     }
-    setPrefixes([...target, trimmed]);
+    setPrefixes([...baseList, candidate]);
     setNewPrefix('');
   };
 
-  const handleRemovePrefix = (prefixToRemove: string) => {
-    const target = prefixes ?? defaultPlatform!.command_prefixes!;
-    if (target.length <= 1) {
+  const handleRemovePrefix = (prefixToRemove: string): void => {
+    const baseList = prefixes ?? [...(defaultPlatform?.command_prefixes ?? [])];
+    if (baseList.length <= 1) {
       setPrefixError(ui.atLeastOnePrefix);
       return;
     }
     setPrefixError(null);
-    setPrefixes(target.filter(p => p !== prefixToRemove));
+    setPrefixes(baseList.filter(p => p !== prefixToRemove));
   };
 
-  const handleResetPrefixes = () => {
+  const handleResetPrefixes = (): void => {
     setPrefixError(null);
     setPrefixes(null);
   };
 
-  // 提交保存
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
-
-    // 校验前缀：若非跟随默认或为 default，前缀数组必须非空
     if (profileID === 'default' && (!prefixes || prefixes.length === 0)) {
       setPrefixError(ui.atLeastOnePrefix);
       return;
@@ -117,79 +111,102 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
       toast.success(ui.saveSuccess);
     } catch (err: unknown) {
       toast.error(err);
-    } finally { await loadData(false); setBusy(false); }
+    } finally {
+      await loadData();
+      setBusy(false);
+    }
   };
 
   if (!currentPlatform || !defaultPlatform) {
-    return <div className="profile-section-loading"><Skeleton height={160} /></div>;
+    return (
+      <SpotlightCard className="p-5">
+        <Skeleton height={160} />
+      </SpotlightCard>
+    );
   }
 
-  // 默认值解析（供非 default 配置文件显示基线）
-  const defMention = defaultPlatform.reply.mention_sender!;
-  const defQuote = defaultPlatform.reply.quote!;
-  const defPrefix = defaultPlatform.reply.prefix!;
-  const defThreshold = defaultPlatform.reply.forward_threshold!;
+  const defMention = defaultPlatform.reply.mention_sender ?? false;
+  const defQuote = defaultPlatform.reply.quote ?? false;
+  const defPrefix = defaultPlatform.reply.prefix ?? '';
+  const defThreshold = defaultPlatform.reply.forward_threshold ?? 0;
+
+  const inheritBadge = (overridden: boolean, onReset: () => void): JSX.Element | null => {
+    if (profileID === 'default') return null;
+    if (!overridden) {
+      return (
+        <span className="rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-ink-muted)]">
+          {ui.followDefault}
+        </span>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={onReset}
+        className="inline-flex items-center gap-1 rounded-full border border-[color-mix(in_srgb,var(--color-accent)_35%,transparent)] bg-[var(--color-accent-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-accent-strong)] transition-colors hover:brightness-105"
+      >
+        <RotateCcw size={11} aria-hidden="true" />
+        {ui.followDefault}
+      </button>
+    );
+  };
 
   return (
-    <form className="profile-platform-section" onSubmit={handleSubmit}>
+    <form onSubmit={e => void handleSubmit(e)}>
+      <fieldset disabled={busy || loading} className="m-0 space-y-5 border-0 p-0">
+        {/* 命令前缀卡片 */}
+        <SpotlightCard className="p-5">
+          <div className="mb-4 flex items-center gap-2.5">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+              <Terminal size={16} aria-hidden="true" />
+            </span>
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">{ui.sectionCommand}</h3>
+          </div>
 
-      <fieldset className="config-edit-fields" disabled={busy || loading}>
-      {/* 命令设置卡片 */}
-      <div className="profile-section-group">
-        <h3 className="profile-section-title">{ui.sectionCommand}</h3>
-        <div className="profile-card">
-          <div className="profile-card-row profile-prefixes-row">
-            <div className="profile-row-info">
-              <span className="profile-row-title">{ui.commandPrefixes}</span>
-              {profileID !== 'default' && (
-                <div className="profile-row-inherit-status">
-                  {isPrefixOverridden ? (
-                    <button type="button" className="profile-inherit-btn" onClick={handleResetPrefixes}>
-                      {ui.followDefault}
-                    </button>
-                  ) : (
-                    <span className="profile-inherit-badge">{ui.followDefault}</span>
-                  )}
-                </div>
-              )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-sm font-medium text-[var(--color-ink)]">{ui.commandPrefixes}</span>
+              {inheritBadge(isPrefixOverridden, handleResetPrefixes)}
             </div>
 
-            <div className="profile-tag-editor">
-              <div className="profile-tags-list">
+            <div className="flex flex-col items-stretch gap-2.5 sm:items-end">
+              <div className="flex flex-wrap gap-1.5 sm:justify-end">
                 {effectivePrefixes.map(prefix => (
-                  <span key={prefix} className="profile-tag-pill">
-                    <span className="profile-tag-text font-mono">{prefix === '' ? ui.emptyCommandPrefix : prefix}</span>
+                  <span
+                    key={prefix}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-line)] bg-[var(--color-surface-2)] py-1 pr-1.5 pl-3 font-mono text-xs font-medium text-[var(--color-ink)]"
+                  >
+                    <span>{prefix === '' ? ui.emptyCommandPrefix : prefix}</span>
                     {isPrefixOverridden && (
                       <button
                         type="button"
-                        className="profile-tag-remove"
                         aria-label={`${ui.removeRow} ${prefix || ui.emptyCommandPrefix}`}
                         onClick={() => handleRemovePrefix(prefix)}
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--color-ink-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_16%,transparent)] hover:text-[var(--color-danger)]"
                       >
-                        <X size={12} />
+                        <X size={11} />
                       </button>
                     )}
                   </span>
                 ))}
               </div>
 
-              {(!isPrefixOverridden && profileID !== 'default') ? (
-                <button
-                  type="button"
-                  className="profile-customize-btn"
+              {!isPrefixOverridden && profileID !== 'default' ? (
+                <Button
+                  size="sm"
+                  variant="soft"
+                  icon={<Plus size={14} />}
                   onClick={() => setPrefixes([...effectivePrefixes])}
                 >
-                  <Plus size={14} />
-                  <span>{ui.addPrefix}</span>
-                </button>
+                  {ui.addPrefix}
+                </Button>
               ) : (
-                <div className="profile-tag-input-box">
+                <div className="flex items-center gap-1.5">
                   <input
                     type="text"
                     aria-label={ui.addPrefix}
                     value={newPrefix}
                     placeholder={ui.addPrefix}
-                    className="profile-tag-input font-mono"
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setNewPrefix(e.currentTarget.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
@@ -197,117 +214,110 @@ export function ProfilePlatformSection(props: { profileID: string }): JSX.Elemen
                         handleAddPrefix();
                       }
                     }}
+                    className="h-9 min-w-[160px] flex-1 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 font-mono text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] focus:bg-[var(--color-surface)]"
                   />
-                  <button
-                    type="button"
-                    className="profile-tag-add-btn"
+                  <Button
+                    size="sm"
+                    variant="soft"
+                    iconOnly
                     aria-label={newPrefix ? ui.addPrefix : ui.emptyCommandPrefix}
                     onClick={handleAddPrefix}
                   >
                     <Plus size={14} />
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
           </div>
-          {prefixError && <p className="form-error profile-prefix-error" role="alert">{prefixError}</p>}
-        </div>
-      </div>
 
-      {/* 回复设置卡片 */}
-      <div className="profile-section-group">
-        <h3 className="profile-section-title">{ui.sectionReply}</h3>
-        <div className="profile-card">
-          {/* 回复时 @ 发送人 */}
-          <div className="profile-card-row">
-            <div className="profile-row-info">
-              <span className="profile-row-title">{ui.mentionSender}</span>
-              {profileID !== 'default' && (
-                <div className="profile-row-inherit-status">
-                  {mentionSender !== null ? (
-                    <button type="button" className="profile-inherit-btn" onClick={() => setMentionSender(null)}>
-                      {ui.followDefault}
-                    </button>
-                  ) : (
-                    <span className="profile-inherit-badge">{ui.followDefault}</span>
-                  )}
-                </div>
-              )}
-            </div>
-            <Switch aria-label={ui.mentionSender} checked={mentionSender !== null ? mentionSender : defMention} onCheckedChange={setMentionSender} />
+          {prefixError && (
+            <p className="form-error mt-3 mb-0" role="alert">
+              {prefixError}
+            </p>
+          )}
+        </SpotlightCard>
+
+        {/* 回复设置卡片 */}
+        <SpotlightCard className="p-5">
+          <div className="mb-4 flex items-center gap-2.5">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+              <MessageSquareReply size={16} aria-hidden="true" />
+            </span>
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">{ui.sectionReply}</h3>
           </div>
 
-          {/* 引用原消息 */}
-          <div className="profile-card-row">
-            <div className="profile-row-info">
-              <span className="profile-row-title">{ui.quoteOriginal}</span>
-              {profileID !== 'default' && (
-                <div className="profile-row-inherit-status">
-                  {quote !== null ? (
-                    <button type="button" className="profile-inherit-btn" onClick={() => setQuote(null)}>
-                      {ui.followDefault}
-                    </button>
-                  ) : (
-                    <span className="profile-inherit-badge">{ui.followDefault}</span>
-                  )}
-                </div>
-              )}
+          <div className="divide-y divide-[var(--color-line)]/70">
+            <div className="flex items-center justify-between gap-4 py-3.5 first:pt-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-[var(--color-ink)]">{ui.mentionSender}</span>
+                {inheritBadge(mentionSender !== null, () => setMentionSender(null))}
+              </div>
+              <Switch
+                aria-label={ui.mentionSender}
+                checked={mentionSender !== null ? mentionSender : defMention}
+                onCheckedChange={setMentionSender}
+              />
             </div>
-            <Switch aria-label={ui.quoteOriginal} checked={quote !== null ? quote : defQuote} onCheckedChange={setQuote} />
+
+            <div className="flex items-center justify-between gap-4 py-3.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-[var(--color-ink)]">{ui.quoteOriginal}</span>
+                {inheritBadge(quote !== null, () => setQuote(null))}
+              </div>
+              <Switch
+                aria-label={ui.quoteOriginal}
+                checked={quote !== null ? quote : defQuote}
+                onCheckedChange={setQuote}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2.5 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-[var(--color-ink)]">{ui.replyPrefix}</span>
+                {inheritBadge(replyPrefix !== null, () => setReplyPrefix(null))}
+              </div>
+              <input
+                type="text"
+                aria-label={ui.replyPrefix}
+                placeholder={
+                  profileID !== 'default' && replyPrefix === null
+                    ? defPrefix || ui.replyPrefixPlaceholder
+                    : ui.replyPrefixPlaceholder
+                }
+                value={replyPrefix !== null ? replyPrefix : defPrefix}
+                onChange={e => setReplyPrefix(e.currentTarget.value)}
+                className="h-9 w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 font-mono text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] focus:bg-[var(--color-surface)] sm:w-[220px]"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2.5 py-3.5 last:pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+              <div className="space-y-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-[var(--color-ink)]">{ui.forwardThreshold}</span>
+                  {inheritBadge(forwardThreshold !== null, () => setForwardThreshold(null))}
+                </div>
+                <p className="text-xs text-[var(--color-ink-muted)]">{ui.forwardThresholdDesc}</p>
+              </div>
+              <input
+                inputMode="numeric"
+                pattern="[0-9]*"
+                aria-label={ui.forwardThreshold}
+                required
+                value={forwardThreshold ?? defThreshold}
+                onChange={event =>
+                  setForwardThreshold(event.target.value === '' ? 0 : Number(event.target.value))
+                }
+                className="tabular-nums h-9 w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 font-mono text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] focus:bg-[var(--color-surface)] sm:w-[140px]"
+              />
+            </div>
           </div>
 
-          {/* 回复前缀 */}
-          <div className="profile-card-row">
-            <div className="profile-row-info">
-              <span className="profile-row-title">{ui.replyPrefix}</span>
-              {profileID !== 'default' && (
-                <div className="profile-row-inherit-status">
-                  {replyPrefix !== null ? (
-                    <button type="button" className="profile-inherit-btn" onClick={() => setReplyPrefix(null)}>
-                      {ui.followDefault}
-                    </button>
-                  ) : (
-                    <span className="profile-inherit-badge">{ui.followDefault}</span>
-                  )}
-                </div>
-              )}
-            </div>
-            <input
-              type="text"
-              aria-label={ui.replyPrefix}
-              className="profile-text-input font-mono"
-              placeholder={profileID !== 'default' && replyPrefix === null ? (defPrefix || ui.replyPrefixPlaceholder) : ui.replyPrefixPlaceholder}
-              value={replyPrefix !== null ? replyPrefix : defPrefix}
-              onChange={e => setReplyPrefix(e.currentTarget.value)}
-            />
+          <div className="mt-5 flex justify-end border-t border-[var(--color-line)]/70 pt-4">
+            <Button type="submit" variant="primary" loading={busy}>
+              {ui.save}
+            </Button>
           </div>
-
-          {/* 长回复合并转发 */}
-          <div className="profile-card-row">
-            <div className="profile-row-info">
-              <span className="profile-row-title">{ui.forwardThreshold}</span>
-              <span className="profile-row-desc">{ui.forwardThresholdDesc}</span>
-              {profileID !== 'default' && (
-                <div className="profile-row-inherit-status">
-                  {forwardThreshold !== null ? (
-                    <button type="button" className="profile-inherit-btn" onClick={() => setForwardThreshold(null)}>
-                      {ui.followDefault}
-                    </button>
-                  ) : (
-                    <span className="profile-inherit-badge">{ui.followDefault}</span>
-                  )}
-                </div>
-              )}
-            </div>
-            <input inputMode="numeric" pattern="[0-9]*" className="profile-text-input" aria-label={ui.forwardThreshold} required
-              value={forwardThreshold ?? defThreshold} onChange={event => setForwardThreshold(event.target.value === '' ? 0 : Number(event.target.value))} />
-          </div>
-        </div>
-      </div>
-
-      <div className="profile-actions-bar">
-        <Button type="submit" variant="primary" loading={busy}>{ui.save}</Button>
-      </div>
+        </SpotlightCard>
       </fieldset>
     </form>
   );

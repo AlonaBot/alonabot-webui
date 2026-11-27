@@ -1,7 +1,7 @@
-// 全局样式最先引入，组件的 CSS Modules 在层叠顺序上排在其后。
-import './styles/tokens.css';
+// 全局主题、基础样式与共享面板层最先引入。
+import './styles/theme.css';
 import './styles/base.css';
-import './style.css';
+import './styles/panels.css';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LanguageSwitch } from './components/LanguageSwitch';
@@ -192,7 +192,7 @@ function AdminApp() {
 
     // 未登录时显示登录页（开发环境下允许直接查看 /dev/forms）
     if (sessionState === 'unauthenticated' && !(import.meta.env.DEV && currentPath === '/dev/forms')) {
-      return <LoginPage onAuthenticated={handleAuthenticated} locale={locale} onLocaleChange={handleSetLocale} />;
+      return <LoginPage onAuthenticated={handleAuthenticated} locale={locale} onLocaleChange={handleSetLocale} theme={theme} onThemeChange={setTheme} />;
     }
 
     const matchedRoute = routes.find(r => r.path === currentPath);
@@ -204,6 +204,7 @@ function AdminApp() {
       <UISettingsContext.Provider value={uiSettingsValue}>
         <AppShell
           version={coreInfo?.version ?? '—'}
+          coreStartedAt={coreInfo?.started_at}
           onLogout={handleLogout}
           coreUpdateFailed={coreUpdateFailed}
           coreUpdate={latestCore && coreInfo && compareVersions(latestCore.version, coreInfo.version) === 1 ? { version: latestCore.version, releaseURL: latestCore.release_url } : undefined}

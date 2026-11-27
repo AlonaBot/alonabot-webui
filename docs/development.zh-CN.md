@@ -51,10 +51,10 @@ alonabot enable alonabot-webui-admin --data-dir ./data
 ### 页面接入外壳
 
 - 在 `src/routes.tsx` 的 `routes` 登记 `RouteEntry`：`id`、`path`、`label`、`icon: LucideIcon`、`group: 'main' | 'bottom'`、`render: () => JSX.Element`。`label` 填 `i18n/en-US.json` 与 `zh-CN.json` 均定义的 `messages` 键，供导航、顶栏标题和搜索共用。已登记总览、插件、账号、模型、配置文件、会话、日志、权限与系统设置，权限子页共用同一导航入口；`/dev/forms` 仅在开发模式登记。登录后访问 `/` 跳转 `/overview`，未登录访问管理页跳转 `/login`。
-- 桌面侧栏将 `main` 条目的顺序、隐藏状态和侧栏折叠偏好保存在浏览器中，`bottom` 条目放在底部。侧栏以 `100vh` 固定高度贴顶，导航内部滚动，底部保留版本号与「关于」入口。手机固定入口按 `overview`、`plugins`、`profiles`、`logs` 的顺序取已登记的 `main` 条目；其余条目（含 `bottom`）只出现在「更多」，无剩余条目时省略「更多」。
-- `AppShell({ version, onLogout?, coreUpdate?, coreUpdateFailed?, children })` 装配导航和搜索，页面由入口按路径选择后作为 `children` 传入；传入 `onLogout` 才显示退出入口。`coreUpdate` 为 `{ version, releaseURL }`，`coreUpdateFailed` 在侧栏更新处显示局部失败提示。站内跳转用 `router.ts` 的 `navigate(path, options?)` 或 `Link`。`Link` 的 props 为 `to`、可选的 `className` 和 `children`；手机「更多」使用 Radix 菜单项的 `onSelect` 调用 `navigate`。
-- 已登记路由自动加入全局搜索，匹配当前语言的标题和路径。页面可通过 `SearchContext.register(items: SearchItem[]): () => void` 补充搜索项，卸载时调用返回的注销函数。搜索项包含 `id`、`title`、`section`、`run: () => void` 与可选 `keywords`；按标题和关键词做大小写不敏感的子串匹配，结果按 `section` 分组。按 Enter 或点击执行后清除查询、焦点和悬停状态。
-- `useTheme(): [ThemeChoice, (choice: ThemeChoice) => void]` 提供主题选择接口，面向用户的控件由系统设置页接入。桌面搜索在透明顶栏右端，同排展开；收起时为 40×40，内容右边距为 40px。手机顶栏高 54px。配置表单与开发预览沿用原有结构、字体、尺寸和间距，颜色、背景、描边及原生控件 `color-scheme` 随主题更新。
+- 桌面侧栏以平等列表呈现全部 `main` 条目（官方页面与插件扩展页面同等排序，可自由拖拽将自定义入口置顶，也可右键或编辑隐藏任意官方或扩展入口），并在浏览器中持久化顺序、隐藏状态与折叠偏好；`bottom` 条目放在底部并保留 Core 活体状态胶囊（版本、更新提示与「关于」入口）。手机底部悬浮 Dock 固定 `overview`、`plugins`、`logs` 与全局 `⌘K` 命令面板入口；其余条目（含 `profiles` 与 `bottom`）收进「更多」，无剩余条目时省略「更多」。
+- `AppShell({ version, coreStartedAt?, onLogout?, coreUpdate?, coreUpdateFailed?, children })` 装配导航、居中悬浮 `⌘K` 命令面板与全局右侧滑出 `QuickInspector` 抽屉（移动端自动切换手势 Bottom Sheet），页面由入口按路径选择后作为 `children` 传入；传入 `onLogout` 才显示退出入口。`coreUpdate` 为 `{ version, releaseURL }`，`coreUpdateFailed` 在侧栏 Core 状态胶囊显示局部失败提示。站内跳转用 `router.ts` 的 `navigate(path, options?)` 或 `Link`。`Link` 的 props 为 `to`、可选的 `className` 和 `children`；手机「更多」使用 Radix 菜单项的 `onSelect` 调用 `navigate`。
+- 已登记路由、已装组件检查/重载与主题语言切换动作自动加入 `⌘K` 命令面板。页面可通过 `SearchContext.register(items: SearchItem[]): () => void` 补充条目，卸载时调用返回的注销函数。搜索项包含 `id`、`title`、`section`、`run: () => void` 与可选 `keywords`；按标题、上下文和关键词做大小写不敏感的子串匹配，结果按 `section` 分组。按 Enter 或点击执行后关闭面板并清空查询。
+- `useTheme(): [ThemeChoice, (choice: ThemeChoice) => void]` 提供主题选择接口，顶栏与系统设置页均可切换。设计令牌统一定义在 `src/styles/theme.css`（Tailwind CSS v4 `@theme` 与亮/暗双主题），并保留 `src/bridge/pluginPage.ts` 读取的 17 项实色/标准 `--color-*` / `--radius*` / `--font-*` 变量，确保插件沙箱 iframe 主题透传一致。
 
 插件详情提供详情页的数据库表格、KV/文件存储、导出与清空，以及 Agent 会话摘要与清除；Agent 页面提供会话正文。外壳保留配置、任务与插件页面入口，共用 `/permissions/users` 用户页。
 

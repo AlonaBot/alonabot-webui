@@ -1,13 +1,15 @@
-import { useState, useId, type JSX } from 'react';
-import { OptionSelect, CheckboxInput } from '../ui/NativeAdapters';
-import { AlertTriangle, X } from 'lucide-react';
-import { useUI } from '../i18n/UI';
+import { useId, useState, type JSX } from 'react';
+import { AlertTriangle, Download } from 'lucide-react';
 import { downloadDiagnostics, type DiagnosticsOptions } from '../api/logs';
+import { useUI } from '../i18n/UI';
+import { Button } from '../ui/Button';
+import { Checkbox } from '../ui/Checkbox';
 import { Dialog as SharedDialog } from '../ui/Dialog';
+import { Select } from '../ui/Select';
 
 interface DiagnosticsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
 }
 
 export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
@@ -26,8 +28,7 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleDownload = async () => {
-    // 检查三组内容是否全关
+  const handleDownload = async (): Promise<void> => {
     if (!options.logs && !options.settings && !options.components) {
       setErrorMessage(ui.diagnosticsAtLeastOne);
       return;
@@ -38,7 +39,6 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
 
     try {
       const { blob, filename } = await downloadDiagnostics(options);
-      // 生成下载并释放对象 URL
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -47,11 +47,8 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-
-      // 下载成功后关闭对话框
       onOpenChange(false);
     } catch (err) {
-      // 保持失败对话框与选择
       setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
@@ -59,102 +56,81 @@ export function DiagnosticsDialog(props: DiagnosticsDialogProps): JSX.Element {
   };
 
   return (
-    <SharedDialog open={open} onOpenChange={onOpenChange} title={ui.exportDiagnosticsTitle} size="lg">
+    <SharedDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={ui.exportDiagnosticsTitle}
+      size="md"
+      footer={
+        <>
+          <Button onClick={() => onOpenChange(false)} disabled={loading}>
+            {ui.cancel}
+          </Button>
+          <Button
+            variant="primary"
+            icon={<Download size={14} />}
+            loading={loading}
+            onClick={() => void handleDownload()}
+          >
+            {loading ? ui.diagnosticsDownloading : ui.diagnosticsDownload}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label htmlFor={timeRangeSelectId} className="block text-xs font-semibold text-[var(--color-ink-muted)]">
+            {ui.diagnosticsTimeRange}
+          </label>
+          <Select
+            id={timeRangeSelectId}
+            variant="filled"
+            className="w-full"
+            value={options.since}
+            disabled={loading}
+            onValueChange={since => setOptions({ ...options, since })}
+            options={[
+              { value: '24h', label: ui.diagnosticsRange24h },
+              { value: '72h', label: ui.diagnosticsRange72h },
+              { value: '168h', label: ui.diagnosticsRange168h },
+            ]}
+          />
+        </div>
 
-
-          <div className="diagnostics-dialog-body">
-            {/* 时间范围选择 */}
-            <div className="diagnostics-field">
-              <label htmlFor={timeRangeSelectId} className="diagnostics-field-label">
-                {ui.diagnosticsTimeRange}
-              </label>
-              <OptionSelect
-                id={timeRangeSelectId}
-                className="diagnostics-select"
-                value={options.since}
-                onChange={e => setOptions({ ...options, since: e.target.value })}
+        <div className="space-y-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-2)]/55 p-3">
+          {(
+            [
+              ['logs', ui.diagnosticsLogs],
+              ['settings', ui.diagnosticsSettings],
+              ['components', ui.diagnosticsComponents],
+              ['redact', ui.diagnosticsRedact],
+            ] as const
+          ).map(([key, label]) => (
+            <label
+              key={key}
+              className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface)]/80"
+            >
+              <Checkbox
+                checked={options[key]}
                 disabled={loading}
-              >
-                <option value="24h">{ui.diagnosticsRange24h}</option>
-                <option value="72h">{ui.diagnosticsRange72h}</option>
-                <option value="168h">{ui.diagnosticsRange168h}</option>
-              </OptionSelect>
-            </div>
+                onCheckedChange={checked => setOptions({ ...options, [key]: checked })}
+              />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
 
-            {/* 内容多选 */}
-            <div className="diagnostics-checkboxes">
-              <label className="logs-checkbox-row diagnostics-check-row">
-                <CheckboxInput
-                  type="checkbox"
-                  checked={options.logs}
-                  onChange={e => setOptions({ ...options, logs: e.target.checked })}
-                  disabled={loading}
-                />
-                <span>{ui.diagnosticsLogs}</span>
-              </label>
+        <div className="flex items-start gap-2.5 rounded-xl border border-[color-mix(in_srgb,var(--color-warning)_32%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3.5 py-2.5 text-xs leading-relaxed text-[var(--color-warning-ink)]">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <span>{ui.diagnosticsChatWarning}</span>
+        </div>
 
-              <label className="logs-checkbox-row diagnostics-check-row">
-                <CheckboxInput
-                  type="checkbox"
-                  checked={options.settings}
-                  onChange={e => setOptions({ ...options, settings: e.target.checked })}
-                  disabled={loading}
-                />
-                <span>{ui.diagnosticsSettings}</span>
-              </label>
-
-              <label className="logs-checkbox-row diagnostics-check-row">
-                <CheckboxInput
-                  type="checkbox"
-                  checked={options.components}
-                  onChange={e => setOptions({ ...options, components: e.target.checked })}
-                  disabled={loading}
-                />
-                <span>{ui.diagnosticsComponents}</span>
-              </label>
-
-              <label className="logs-checkbox-row diagnostics-check-row">
-                <CheckboxInput
-                  type="checkbox"
-                  checked={options.redact}
-                  onChange={e => setOptions({ ...options, redact: e.target.checked })}
-                  disabled={loading}
-                />
-                <span>{ui.diagnosticsRedact}</span>
-              </label>
-            </div>
-
-            {/* 提示信息 */}
-            <div className="diagnostics-warning-banner">
-              <AlertTriangle size={15} className="diagnostics-warning-icon" />
-              <span>{ui.diagnosticsChatWarning}</span>
-            </div>
-
-            {/* 错误展示 */}
-            {errorMessage && (
-              <div className="diagnostics-error-banner" role="alert">
-                <span>{errorMessage}</span>
-              </div>
-            )}
+        {errorMessage && (
+          <div className="form-error mb-0" role="alert">
+            <span>{errorMessage}</span>
           </div>
-
-          <div className="dialog-actions diagnostics-actions">
-            <button
-              type="button"
-              className="dialog-button"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
-              {ui.cancel}
-            </button>
-            <button
-              type="button"
-              className="dialog-button is-primary"
-              onClick={() => void handleDownload()}
-              disabled={loading}
-            >
-              {loading ? ui.diagnosticsDownloading : ui.diagnosticsDownload}
-            </button>
-          </div></SharedDialog>
+        )}
+      </div>
+    </SharedDialog>
   );
 }
