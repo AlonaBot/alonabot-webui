@@ -1,7 +1,7 @@
 import { useState, type JSX } from 'react';
-import { ArrowRight, ArrowUpCircle, FileWarning, Info, Lock, MoreHorizontal, Package as PackageIcon, PanelRightOpen, Power, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
+import { ArrowRight, ArrowUpCircle, Cpu, FileWarning, Info, Layers, Lock, Moon, MoreHorizontal, Package as PackageIcon, PanelRightOpen, Power, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
 import { packageIconURL, type Package } from '../../api/packages';
-import { formatMemoryBytes, type ComponentTelemetry } from '../../api/telemetry';
+import { formatMemoryBytes, formatUptime, isComponentSleeping, type ComponentTelemetry } from '../../api/telemetry';
 import { MiniSparkline } from '../../components/charts/MiniSparkline';
 import { useUI } from '../../i18n/UI';
 import { hasPackageProblem } from '../../pages/packageState';
@@ -14,6 +14,19 @@ import { SpotlightCard } from '../../ui/SpotlightCard';
 import { Switch } from '../../ui/Switch';
 import { Tooltip } from '../../ui/Tooltip';
 import { packageName } from './usePackageActions';
+
+const statusPillTone: Readonly<Record<PulseTone, string>> = {
+  running:
+    'border-[color-mix(in_srgb,var(--color-success)_32%,transparent)] bg-[color-mix(in_srgb,var(--color-success)_10%,var(--color-surface))] text-[var(--color-success)]',
+  idle:
+    'border-[color-mix(in_srgb,var(--color-accent)_32%,transparent)] bg-[color-mix(in_srgb,var(--color-accent)_10%,var(--color-surface))] text-[var(--color-accent-strong)]',
+  waking:
+    'border-[color-mix(in_srgb,var(--color-warning)_36%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_12%,var(--color-surface))] text-[var(--color-warning-ink)]',
+  danger:
+    'border-[color-mix(in_srgb,var(--color-danger)_36%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_12%,var(--color-surface))] text-[var(--color-danger)]',
+  off:
+    'border-[var(--color-line)] bg-[var(--color-surface-2)] text-[var(--color-ink-muted)]',
+};
 
 function resolveStatus(pkg: Package, ui: ReturnType<typeof useUI>): { tone: PulseTone; text: string } {
   if (!pkg.Enabled) return { tone: 'off', text: ui.stateStopped };
@@ -135,18 +148,41 @@ export function PluginCard({
           {pkg.Description || (self ? ui.webuiSelfDescription : pkg.Source || ui.unknownMetadata)}
         </p>
 
-        {metrics && (
-          <div className="tabular-nums flex items-center gap-2 rounded-lg bg-[var(--color-surface-2)]/70 px-2.5 py-1.5 font-mono text-[11px] text-[var(--color-ink-muted)]">
-            <span>CPU {metrics.cpu_percent.toFixed(1)}%</span>
-            <span>·</span>
-            <span>{formatMemoryBytes(metrics.rss_bytes)}</span>
+        {metrics && (isComponentSleeping(metrics, pkg.RuntimeState) ? (
+          <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-success)_28%,transparent)] bg-[color-mix(in_srgb,var(--color-success)_10%,var(--color-surface))] px-2.5 py-1 text-[11px] font-medium text-[var(--color-success)]">
+            <Moon size={12} aria-hidden="true" />
+            <span>{ui.telemetrySleepingZero}</span>
           </div>
-        )}
+        ) : metrics.in_process ? (
+          <div className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-[var(--color-surface-2)]/70 px-2.5 py-1 font-mono text-[11px] text-[var(--color-ink-muted)]">
+            <Layers size={12} aria-hidden="true" />
+            <span>{ui.telemetryInProcess}</span>
+          </div>
+        ) : metrics.running ? (
+          <div className="tabular-nums flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg bg-[var(--color-surface-2)]/70 px-2.5 py-1.5 font-mono text-[11px] text-[var(--color-ink-muted)]">
+            <span className="inline-flex items-center gap-1 text-[var(--color-ink)]">
+              <Cpu size={11} className="text-[var(--color-accent)]" aria-hidden="true" />
+              {metrics.cpu_percent.toFixed(1)}%
+            </span>
+            <span>·</span>
+            <span className="text-[var(--color-ink)]">{formatMemoryBytes(metrics.rss_bytes)}</span>
+            <span>·</span>
+            <span>UP {formatUptime(metrics.uptime_seconds)}</span>
+            {metrics.process_count > 1 && (
+              <>
+                <span>·</span>
+                <span>{ui.telemetryProcesses.replace('{count}', String(metrics.process_count))}</span>
+              </>
+            )}
+          </div>
+        ) : null)}
 
         {!self && <MiniSparkline values={activity} label={ui.activityLast24h} height={32} tone={state.tone === 'danger' ? 'danger' : 'accent'} />}
 
         <footer className="mt-auto flex items-center gap-1.5 border-t border-[var(--color-line)]/65 pt-3">
-          <span className="inline-flex items-center gap-2 text-xs font-medium text-[var(--color-ink)]">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusPillTone[state.tone]}`}
+          >
             <PulseDot tone={state.tone} size="sm" />
             {state.text}
           </span>

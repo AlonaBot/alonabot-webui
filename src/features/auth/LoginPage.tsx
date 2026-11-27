@@ -41,8 +41,20 @@ export function LoginPage({
   const [visible, setVisible] = useState(false);
   const [remember, setRemember] = useState(true);
   const [pending, setPending] = useState(false);
+  const [launching, setLaunching] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const triggerLaunch = (): void => {
+    if (reduced) {
+      onAuthenticated();
+      return;
+    }
+    setLaunching(true);
+    window.setTimeout(() => {
+      onAuthenticated();
+    }, 340);
+  };
 
   const isDark =
     theme === 'dark' ||
@@ -77,14 +89,13 @@ export function LoginPage({
     try {
       await login(value, remember);
       setToken('');
-      onAuthenticated();
+      triggerLaunch();
     } catch (error: unknown) {
       if (error instanceof AdminAPIError && error.status === 401) {
         setFieldError(ui.tokenInvalid);
       } else {
         toast.error(error, ui.loginFailed);
       }
-    } finally {
       setPending(false);
     }
   };
@@ -103,8 +114,40 @@ export function LoginPage({
     <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-12">
       <NetworkBackground className="pointer-events-none fixed inset-0 h-full w-full" />
 
+      {/* 登录成功时的冰青光环跃迁层，无缝衔接主界面入场 */}
+      {launching && !reduced && (
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 z-30 flex items-center justify-center overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.16 }}
+        >
+          <motion.div
+            className="h-[360px] w-[360px] rounded-full"
+            style={{
+              background:
+                'radial-gradient(circle, color-mix(in srgb, var(--color-accent) 34%, transparent) 0%, color-mix(in srgb, var(--color-cyan) 14%, transparent) 45%, transparent 72%)',
+            }}
+            initial={{ scale: 0.45, opacity: 0.9 }}
+            animate={{ scale: 4.8, opacity: 0 }}
+            transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+          />
+          <motion.div
+            className="absolute h-[220px] w-[220px] rounded-full border-2 border-[var(--color-accent)]/60"
+            initial={{ scale: 0.6, opacity: 0.85 }}
+            animate={{ scale: 5.2, opacity: 0 }}
+            transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+          />
+        </motion.div>
+      )}
+
       {/* 顶部右侧快捷切换：亮暗主题 + 语言 */}
-      <div className="fixed top-4 right-4 z-20 flex items-center gap-2">
+      <motion.div
+        animate={launching && !reduced ? { opacity: 0, y: -8 } : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed top-4 right-4 z-20 flex items-center gap-2"
+      >
         {onThemeChange && (
           <Tooltip content={isDark ? ui.themeLight : ui.themeDark}>
             <button
@@ -120,12 +163,22 @@ export function LoginPage({
         <div className="alona-glass rounded-full p-0.5">
           <LanguageSwitch value={locale} onChange={onLocaleChange} />
         </div>
-      </div>
+      </motion.div>
 
       <motion.main
         initial={reduced ? false : { opacity: 0, scale: 0.985 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={reduced ? { duration: 0.01 } : { duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        animate={
+          launching && !reduced
+            ? { opacity: 0, scale: 1.06, y: -12, filter: 'blur(10px)' }
+            : { opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }
+        }
+        transition={
+          reduced
+            ? { duration: 0.01 }
+            : launching
+              ? { duration: 0.3, ease: [0.22, 1, 0.36, 1] }
+              : { duration: 0.22, ease: [0.16, 1, 0.3, 1] }
+        }
         className="relative z-10 w-full max-w-[384px]"
       >
         <SpotlightCard className="alona-glass-elevated rounded-[18px] p-7">
@@ -223,9 +276,18 @@ export function LoginPage({
               </Popover.Root>
             </div>
 
-            <Button type="submit" variant="primary" size="lg" className="mt-1 w-full" loading={pending} disabled={checking}>
-              <span>{ui.login}</span>
-              {!pending && <ArrowRight size={16} aria-hidden="true" />}
+            <Button type="submit" variant="primary" size="lg" className="mt-1 w-full" loading={pending && !launching} disabled={checking || launching}>
+              {launching ? (
+                <>
+                  <Check size={16} aria-hidden="true" />
+                  <span>{ui.enteringConsole}</span>
+                </>
+              ) : (
+                <>
+                  <span>{ui.login}</span>
+                  {!pending && <ArrowRight size={16} aria-hidden="true" />}
+                </>
+              )}
             </Button>
           </form>
         </SpotlightCard>
@@ -244,7 +306,7 @@ export function LoginPage({
           onConfirm={async () => {
             await confirmBootstrap();
             setClaimed(null);
-            onAuthenticated();
+            triggerLaunch();
           }}
         />
       )}

@@ -1,11 +1,12 @@
 import { useMemo, useState, type JSX } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Cpu, HardDrive, Package as PackageIcon, RefreshCw, RotateCw, ScrollText, Timer } from 'lucide-react';
+import { ArrowUpRight, Cpu, HardDrive, Layers, Moon, Package as PackageIcon, RefreshCw, RotateCw, ScrollText, Timer } from 'lucide-react';
 import { getRecentLogs } from '../api/logs';
 import { changePackage, packageIconURL, type Package } from '../api/packages';
-import { formatMemoryBytes, formatUptime, getCoreTelemetry } from '../api/telemetry';
+import { formatMemoryBytes, formatUptime, getCoreTelemetry, isComponentSleeping } from '../api/telemetry';
 import { MiniSparkline } from '../components/charts/MiniSparkline';
 import { useUI } from '../i18n/UI';
+import { useLiveUptime } from '../lib/useLiveUptime';
 import { hasPackageProblem } from '../pages/packageState';
 import { PluginConfigPanel } from '../pages/PluginConfigPanel';
 import { packageName } from '../features/plugins/usePackageActions';
@@ -36,6 +37,19 @@ function resolvePulseTone(pkg: Package): PulseTone {
   if (pkg.RuntimeState === 'ACTIVE' || pkg.State === 'Activated') return 'running';
   return 'danger';
 }
+
+const inspectorToneBadge: Readonly<Record<PulseTone, string>> = {
+  running:
+    'border-[color-mix(in_srgb,var(--color-success)_32%,transparent)] bg-[color-mix(in_srgb,var(--color-success)_10%,var(--color-surface))] text-[var(--color-success)]',
+  idle:
+    'border-[color-mix(in_srgb,var(--color-accent)_32%,transparent)] bg-[color-mix(in_srgb,var(--color-accent)_10%,var(--color-surface))] text-[var(--color-accent-strong)]',
+  waking:
+    'border-[color-mix(in_srgb,var(--color-warning)_36%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_12%,var(--color-surface))] text-[var(--color-warning-ink)]',
+  danger:
+    'border-[color-mix(in_srgb,var(--color-danger)_36%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_12%,var(--color-surface))] text-[var(--color-danger)]',
+  off:
+    'border-[var(--color-line)] bg-[var(--color-surface)] text-[var(--color-ink-muted)]',
+};
 
 const levelBadge: Record<string, string> = {
   DEBUG: 'bg-stone-500/15 text-stone-500 dark:text-stone-400',
@@ -88,6 +102,11 @@ export function QuickInspector({ componentID, tab, onTabChange, onClose }: Quick
     () => telemetryQuery.data?.components.find(item => item.id === componentID) ?? null,
     [telemetryQuery.data, componentID],
   );
+  const componentUptime = useLiveUptime(
+    componentMetrics?.running ? componentMetrics.started_at : undefined,
+    componentMetrics?.running ? componentMetrics.uptime_seconds : undefined,
+  );
+  const componentSleeping = isComponentSleeping(componentMetrics ?? undefined, pkg?.RuntimeState);
 
   const componentLogs = useMemo(() => {
     if (!componentID || !logsQuery.data) return [];
@@ -175,8 +194,11 @@ export function QuickInspector({ componentID, tab, onTabChange, onClose }: Quick
                   aria-label={`${pkg.Enabled ? ui.actionDisable : ui.actionEnable} ${packageName(pkg)}`}
                 />
               )}
-              <span className="text-xs font-medium text-[var(--color-ink)]">
-                {pkg.Enabled ? pkg.RuntimeState ?? pkg.State : ui.stateStopped}
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${inspectorToneBadge[tone]}`}
+              >
+                <PulseDot tone={tone} size="sm" />
+                {pkg.Enabled ? (pkg.RuntimeState ? ui[`runtime${pkg.RuntimeState}`] : pkg.State) : ui.stateStopped}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -220,31 +242,54 @@ export function QuickInspector({ componentID, tab, onTabChange, onClose }: Quick
           {tab === 'overview' && (
             <div className="flex flex-col gap-4">
               {componentMetrics && (
-                <div className="grid grid-cols-3 gap-2.5">
-                  <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-ink-muted)]">
-                      <Cpu size={13} /> CPU
+                <div className="flex flex-col gap-2">
+                  {componentSleeping && (
+                    <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--color-success)_28%,transparent)] bg-[color-mix(in_srgb,var(--color-success)_10%,var(--color-surface))] px-3 py-1 text-xs font-medium text-[var(--color-success)]">
+                      <Moon size={13} aria-hidden="true" />
+                      <span>{ui.telemetrySleepingZero}</span>
                     </div>
-                    <div className="tabular-nums mt-1 font-mono text-base font-semibold text-[var(--color-ink)]">
-                      {componentMetrics.cpu_percent.toFixed(1)}%
+                  )}
+                  {componentMetrics.in_process ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3 text-xs text-[var(--color-ink-muted)]">
+                      <Layers size={14} className="shrink-0 text-[var(--color-accent)]" aria-hidden="true" />
+                      <span>{ui.telemetryInProcessHint}</span>
                     </div>
-                  </div>
-                  <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-ink-muted)]">
-                      <HardDrive size={13} /> RAM
-                    </div>
-                    <div className="tabular-nums mt-1 font-mono text-base font-semibold text-[var(--color-ink)]">
-                      {formatMemoryBytes(componentMetrics.rss_bytes)}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-ink-muted)]">
-                      <Timer size={13} /> Uptime
-                    </div>
-                    <div className="tabular-nums mt-1 font-mono text-base font-semibold text-[var(--color-ink)]">
-                      {componentMetrics.running ? formatUptime(componentMetrics.uptime_seconds) : '—'}
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-ink-muted)]">
+                            <Cpu size={13} aria-hidden="true" /> CPU
+                          </div>
+                          <div className="tabular-nums mt-1 font-mono text-base font-semibold text-[var(--color-ink)]">
+                            {componentMetrics.cpu_percent.toFixed(1)}%
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-ink-muted)]">
+                            <HardDrive size={13} aria-hidden="true" /> RAM
+                          </div>
+                          <div className="tabular-nums mt-1 font-mono text-base font-semibold text-[var(--color-ink)]">
+                            {formatMemoryBytes(componentMetrics.rss_bytes)}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-ink-muted)]">
+                            <Timer size={13} aria-hidden="true" /> Uptime
+                          </div>
+                          <div className="tabular-nums mt-1 font-mono text-base font-semibold text-[var(--color-ink)]">
+                            {componentMetrics.running && componentUptime !== null ? formatUptime(componentUptime) : '—'}
+                          </div>
+                        </div>
+                      </div>
+                      {componentMetrics.running && componentMetrics.pid > 0 && (
+                        <div className="tabular-nums flex items-center justify-between px-1 font-mono text-[11px] text-[var(--color-ink-muted)]">
+                          <span>PID {componentMetrics.pid}</span>
+                          <span>{ui.telemetryProcesses.replace('{count}', String(componentMetrics.process_count))}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 

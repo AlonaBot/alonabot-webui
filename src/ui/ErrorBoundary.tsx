@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type JSX, type ReactNode } from 'react';
 import { TriangleAlert } from 'lucide-react';
+import { AdminAPIError } from '../api/client';
+import { StatusPage } from '../features/errors/StatusPage';
 import { useUI } from '../i18n/UI';
 import { Button } from './Button';
 import { EmptyState } from './EmptyState';
@@ -7,7 +9,7 @@ import { Disclosure } from './Disclosure';
 
 type State = { error: Error | null };
 
-/** 隔离单个页面的渲染错误：外壳与导航保持可用，页面显示错误全文与重试。用路径作 key 以便换页时复位。 */
+/** 隔离单个页面的渲染错误：外壳与导航保持可用，403 错误自动切换专属无权页，其余显示错误与重试。 */
 export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   state: State = { error: null };
 
@@ -20,6 +22,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   }
 
   render() {
+    if (this.state.error instanceof AdminAPIError && this.state.error.status === 403) {
+      return <StatusPage code={403} />;
+    }
     if (this.state.error) return <Fallback error={this.state.error} onRetry={() => this.setState({ error: null })} />;
     return this.props.children;
   }

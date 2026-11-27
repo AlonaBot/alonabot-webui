@@ -89,7 +89,13 @@ export function formatMemoryBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
-/** 格式化运行秒数为紧凑时长（如 14d 6h、3h 12m、42m）。 */
+/** 将字节数转为保留一位小数的 MiB 数值，便于折线图与面积图展示。 */
+export function bytesToMiB(bytes: number): number {
+  if (bytes <= 0) return 0;
+  return Math.round((bytes / 1_048_576) * 10) / 10;
+}
+
+/** 格式化运行秒数为紧凑时长（如 14d 6h、3h 12m、42m、18s）。 */
 export function formatUptime(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
   const days = Math.floor(total / 86_400);
@@ -99,4 +105,84 @@ export function formatUptime(seconds: number): string {
   if (hours > 0) return `${hours}h ${minutes}m`;
   if (minutes > 0) return `${minutes}m`;
   return `${total}s`;
+}
+
+/** 根据启动时间或回退秒数计算当前已运行秒数。 */
+export function computeElapsedSeconds(
+  startedAt?: string,
+  fallbackSeconds?: number,
+  nowMs: number = Date.now(),
+): number | null {
+  if (startedAt) {
+    const startMs = Date.parse(startedAt);
+    if (Number.isFinite(startMs)) {
+      return Math.max(0, Math.floor((nowMs - startMs) / 1000));
+    }
+  }
+  if (typeof fallbackSeconds === 'number' && Number.isFinite(fallbackSeconds) && fallbackSeconds >= 0) {
+    return Math.floor(fallbackSeconds);
+  }
+  return null;
+}
+
+/** 判断组件当前是否处于空闲休眠（零进程零内存）状态。 */
+export function isComponentSleeping(metrics: ComponentTelemetry | undefined, runtimeState?: string): boolean {
+  if (metrics) {
+    return !metrics.running && (metrics.state === 'Suspended' || runtimeState === 'SUSPENDED');
+  }
+  return runtimeState === 'SUSPENDED';
+}
+
+export type TelemetryRoleKey = 'core' | 'plugin' | 'adapter' | 'agent' | 'webui';
+
+export interface RoleShare {
+  readonly role: TelemetryRoleKey;
+  readonly rssBytes: number;
+  readonly cpuPercent: number;
+  readonly percent: number;
+  readonly runningCount: number;
+  readonly totalCount: number;
+}
+
+const ORDERED_COMPONENT_ROLES: readonly Exclude<TelemetryRoleKey, 'core'>[] = ['plugin', 'adapter', 'agent', 'webui'];
+
+/** 计算 Core 与各组件角色的常驻内存占比，用于总览页堆叠条。 */
+export function computeRoleShares(telemetry: CoreTelemetry): readonly RoleShare[] {
+  const raw: {
+    readonly role: TelemetryRoleKey;
+    readonly rssBytes: number;
+    readonly cpuPercent: number;
+    readonly runningCount: number;
+    readonly totalCount: number;
+  }[] = [
+    {
+      role: 'core',
+      rssBytes: Math.max(0, telemetry.core.rss_bytes),
+      cpuPercent: Math.max(0, telemetry.core.cpu_percent),
+      runningCount: 1,
+      totalCount: 1,
+    },
+  ];
+
+  for (const role of ORDERED_COMPONENT_ROLES) {
+    const entry = telemetry.by_role[role];
+    if (!entry) continue;
+    if (entry.rss_bytes <= 0 && entry.total_count <= 0) continue;
+    raw.push({
+      role,
+      rssBytes: Math.max(0, entry.rss_bytes),
+      cpuPercent: Math.max(0, entry.cpu_percent),
+      runningCount: entry.running_count,
+      totalCount: entry.total_count,
+    });
+  }
+
+  const totalBytes = Math.max(
+    1,
+    raw.reduce((sum, item) => sum + item.rssBytes, 0),
+  );
+  return raw.map(item => ({
+    ...item,
+    percent: (item.rssBytes / totalBytes) * 100,
+  }));
 }
