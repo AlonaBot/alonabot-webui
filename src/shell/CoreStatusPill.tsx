@@ -1,8 +1,9 @@
-import { useEffect, useState, type JSX } from 'react';
+import { type JSX } from 'react';
 import { ArrowUpCircle, AlertCircle } from 'lucide-react';
 import { formatUptime } from '../api/telemetry';
 import { useUI } from '../i18n/UI';
 import { cn } from '../lib/cn';
+import { useLiveUptime } from '../lib/useLiveUptime';
 import { PulseDot } from '../ui/PulseDot';
 import { Tooltip } from '../ui/Tooltip';
 import { navigate } from './router';
@@ -18,7 +19,7 @@ export interface CoreStatusPillProps {
 
 /**
  * CoreStatusPill 侧栏底部 Core 活体状态胶囊：展示在线心跳、版本号、实时 Uptime，
- * 并在检测到新版本时呈现柔和脉冲升级入口（阶段 A 跳转系统设置 Core 版本区）。
+ * 并在检测到新版本时呈现柔和脉冲升级入口（跳转系统设置 Core 版本区）。
  */
 export function CoreStatusPill({
   version,
@@ -29,24 +30,7 @@ export function CoreStatusPill({
   onOpenAbout,
 }: CoreStatusPillProps): JSX.Element {
   const ui = useUI();
-  const [uptimeSeconds, setUptimeSeconds] = useState<number | null>(() => {
-    if (!startedAt) return null;
-    const ms = Date.parse(startedAt);
-    return Number.isFinite(ms) ? Math.max(0, Math.floor((Date.now() - ms) / 1000)) : null;
-  });
-
-  useEffect(() => {
-    if (!startedAt) {
-      setUptimeSeconds(null);
-      return undefined;
-    }
-    const startMs = Date.parse(startedAt);
-    if (!Number.isFinite(startMs)) return undefined;
-    const tick = (): void => setUptimeSeconds(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
-    tick();
-    const timer = window.setInterval(tick, 30_000);
-    return () => window.clearInterval(timer);
-  }, [startedAt]);
+  const uptimeSeconds = useLiveUptime(startedAt);
 
   const cleanVersion = `v${version.replace(/^v/, '')}`;
 

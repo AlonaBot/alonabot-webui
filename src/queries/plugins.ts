@@ -20,7 +20,12 @@ export function useInstances() {
 export function useLatestReleases(packages: readonly Package[]) {
   const repos = [...new Set(packages.map(item => repository(item.Source)).filter((repo): repo is string => repo !== null))];
   const results = useQueries({
-    queries: repos.map(repo => ({ queryKey: ['latest-release', repo.toLowerCase()], queryFn: () => getLatestRelease(repo), staleTime: 10 * 60_000 })),
+    queries: repos.map(repo => ({
+      queryKey: ['latest-release', repo.toLowerCase()],
+      queryFn: () => getLatestRelease(repo),
+      staleTime: 10 * 60_000,
+      throwOnError: false,
+    })),
   });
   return new Map(repos.map((repo, i) => [repo.toLowerCase(), results[i]]));
 }

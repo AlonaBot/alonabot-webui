@@ -1,25 +1,38 @@
 import { Component, type ErrorInfo, type JSX, type ReactNode } from 'react';
 import { TriangleAlert } from 'lucide-react';
+import { StatusPage } from '../features/errors/StatusPage';
 import { useUI } from '../i18n/UI';
+import { isForbiddenAPIError } from '../queries/client';
 import { Button } from './Button';
 import { EmptyState } from './EmptyState';
 import { Disclosure } from './Disclosure';
 
-type State = { error: Error | null };
+export interface ErrorBoundaryProps {
+  readonly children: ReactNode;
+  readonly path?: string;
+  readonly onReauthenticate?: () => void;
+}
 
-/** 隔离单个页面的渲染错误：外壳与导航保持可用，页面显示错误全文与重试。用路径作 key 以便换页时复位。 */
-export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
+interface State {
+  readonly error: Error | null;
+}
+
+/** 隔离单个页面的渲染错误：外壳与导航保持可用，403 错误自动切换专属无权页，其余显示错误与重试。 */
+export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
     return { error };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error(error, info.componentStack);
   }
 
-  render() {
+  render(): ReactNode {
+    if (isForbiddenAPIError(this.state.error)) {
+      return <StatusPage code={403} path={this.props.path} onReauthenticate={this.props.onReauthenticate} />;
+    }
     if (this.state.error) return <Fallback error={this.state.error} onRetry={() => this.setState({ error: null })} />;
     return this.props.children;
   }

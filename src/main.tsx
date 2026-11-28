@@ -29,6 +29,7 @@ import { Toaster } from './ui/Toaster';
 import { TooltipProvider } from './ui/Tooltip';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { Spinner } from './ui/EmptyState';
+import { StatusPage } from './features/errors/StatusPage';
 import { PluginPageView } from './features/plugins/PluginPageView';
 
 const languageStorageKey = 'alonabot.webui.locale';
@@ -55,6 +56,8 @@ function AdminApp() {
 
   // 令牌轮换后持有结果对话框，独立于已认证页面展示
   const [rotatedToken, setRotatedToken] = useState<string | null>(null);
+  // 登录成功后短暂触发主界面平滑入场动效
+  const [justAuthenticated, setJustAuthenticated] = useState(false);
 
   const restore = async () => {
     setSessionState('checking');
@@ -127,19 +130,23 @@ function AdminApp() {
     const labels = ui as Record<string, string>;
     if (currentPath === '/login') {
       document.title = `${ui.loginTitle} · AlonaBot`;
+    } else if (currentPath === '/403') {
+      document.title = `403 · ${ui.status403Title} · AlonaBot`;
     } else if (currentPath.startsWith('/components/') || currentPath.startsWith('/pages/')) {
       document.title = `${ui.plugins} · AlonaBot`;
     } else {
       const activeRoute = routes.find(r => r.path === currentPath);
-      const title = activeRoute ? labels[activeRoute.label] : ui.overview;
+      const title = activeRoute ? labels[activeRoute.label] : `404 · ${ui.status404Title}`;
       document.title = `${title} · AlonaBot`;
     }
   }, [locale, currentPath, ui]);
 
   const handleAuthenticated = () => {
     setAppError(null);
+    setJustAuthenticated(true);
     setSessionState('authenticated');
     navigate('/overview', { replace: true });
+    window.setTimeout(() => setJustAuthenticated(false), 750);
   };
 
   const handleLogout = useCallback(async () => {
@@ -205,6 +212,7 @@ function AdminApp() {
         <AppShell
           version={coreInfo?.version ?? '—'}
           coreStartedAt={coreInfo?.started_at}
+          entering={justAuthenticated}
           onLogout={handleLogout}
           coreUpdateFailed={coreUpdateFailed}
           coreUpdate={latestCore && coreInfo && compareVersions(latestCore.version, coreInfo.version) === 1 ? { version: latestCore.version, releaseURL: latestCore.release_url } : undefined}
@@ -225,18 +233,17 @@ function AdminApp() {
             </div>
           ) : null}
 
-          <ErrorBoundary key={currentPath}>
-            {pagePlugin ? (
+          <ErrorBoundary key={currentPath} path={currentPath} onReauthenticate={() => void handleLogout()}>
+            {currentPath === '/403' ? (
+              <StatusPage code={403} path={currentPath} onReauthenticate={() => void handleLogout()} />
+            ) : pagePlugin ? (
               <PluginPageView id={pagePlugin} />
             ) : isComponentDetail && componentId ? (
               <PluginDetailPage key={componentId} id={componentId} />
             ) : matchedRoute ? (
               matchedRoute.render()
             ) : (
-              <div className="shell-empty-view">
-                <h2>AlonaBot WebUI</h2>
-                <p>{ui.pageUnavailable}</p>
-              </div>
+              <StatusPage code={404} path={currentPath} />
             )}
           </ErrorBoundary>
         </AppShell>

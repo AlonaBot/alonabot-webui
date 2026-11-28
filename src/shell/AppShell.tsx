@@ -6,6 +6,7 @@ import { useUI } from '../i18n/UI';
 import { packageName } from '../features/plugins/usePackageActions';
 import { installed, usePackages } from '../queries/packages';
 import { routes } from '../routes';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { toast } from '../ui/toast';
 import { InspectorContext, type InspectorTab } from './inspector';
 import { MobileTabBar } from './MobileTabBar';
@@ -29,6 +30,7 @@ export function pluginPagePath(pluginID: string, page: string): string {
 export function AppShell({
   version,
   coreStartedAt,
+  entering,
   onLogout,
   coreUpdate,
   coreUpdateFailed,
@@ -36,6 +38,7 @@ export function AppShell({
 }: {
   version: string;
   coreStartedAt?: string;
+  entering?: boolean;
   onLogout?: () => void;
   coreUpdate?: { version: string; releaseURL: string };
   coreUpdateFailed?: boolean;
@@ -47,7 +50,8 @@ export function AppShell({
   const labels = ui as Record<string, string>;
   const path = usePath();
   const pagePath = useQueryParam('path');
-  const packageQuery = usePackages();
+  // 外壳侧栏与命令面板不因 403 抛出到顶层，确保页面边界展示 403 状态页时导航仍保持可用。
+  const packageQuery = usePackages({ throwOnError: false });
   const packages = useMemo(() => installed(packageQuery.data), [packageQuery.data]);
   const agentMissing = packageQuery.isSuccess && !packages.some(item => item.Role === 'agent');
 
@@ -215,47 +219,91 @@ export function AppShell({
   const slots = useMemo(() => ({ left, right }), [left, right]);
   const title = [...mainEntries, ...bottomEntries].find(entry => entry.active)?.label ?? '';
 
+  const playEntrance = Boolean(entering && !reduced);
+
   return (
     <SearchContext.Provider value={searchContext}>
       <InspectorContext.Provider value={inspectorValue}>
         <PageHeaderSlots.Provider value={slots}>
-          <div className="flex min-h-dvh w-full">
-            <Sidebar
-              entries={mainEntries}
-              bottom={bottomEntries}
-              version={version}
-              coreStartedAt={coreStartedAt}
-              onLogout={onLogout}
-              coreUpdate={coreUpdate}
-              coreUpdateFailed={coreUpdateFailed}
-            />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <TopBar
-                title={title}
-                searchItems={searchItems}
-                openRequest={openRequest}
-                onLogout={onLogout}
-                leftRef={setLeft}
-                rightRef={setRight}
+          <div className="relative flex min-h-dvh w-full">
+            {playEntrance && (
+              <motion.div
+                aria-hidden="true"
+                className="pointer-events-none fixed inset-0 z-[var(--z-popover)]"
+                style={{
+                  background:
+                    'radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--color-accent) 22%, transparent), var(--color-bg) 68%)',
+                }}
+                initial={{ opacity: 0.9, scale: 0.96 }}
+                animate={{ opacity: 0, scale: 1.08 }}
+                transition={{ duration: 0.48, ease: [0.16, 1, 0.3, 1] }}
               />
+            )}
+            <motion.div
+              className="flex shrink-0"
+              initial={playEntrance ? { opacity: 0, x: -20 } : false}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: playEntrance ? 0.38 : 0.01, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <Sidebar
+                entries={mainEntries}
+                bottom={bottomEntries}
+                version={version}
+                coreStartedAt={coreStartedAt}
+                onLogout={onLogout}
+                coreUpdate={coreUpdate}
+                coreUpdateFailed={coreUpdateFailed}
+              />
+            </motion.div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <motion.div
+                initial={playEntrance ? { opacity: 0, y: -12 } : false}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: playEntrance ? 0.34 : 0.01, delay: playEntrance ? 0.04 : 0, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <TopBar
+                  title={title}
+                  searchItems={searchItems}
+                  openRequest={openRequest}
+                  onLogout={onLogout}
+                  leftRef={setLeft}
+                  rightRef={setRight}
+                />
+              </motion.div>
               <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 pt-5 pb-24 md:px-6 md:pt-6 md:pb-10">
                 <motion.div
                   key={path.startsWith('/permissions') ? '/permissions' : path}
-                  initial={reduced ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: reduced ? 0.01 : 0.14, ease: 'easeOut' }}
+                  initial={
+                    reduced
+                      ? false
+                      : playEntrance
+                        ? { opacity: 0, y: 14, scale: 0.985 }
+                        : { opacity: 0 }
+                  }
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={
+                    reduced
+                      ? { duration: 0.01 }
+                      : playEntrance
+                        ? { duration: 0.44, delay: 0.06, ease: [0.16, 1, 0.3, 1] }
+                        : { duration: 0.14, ease: 'easeOut' }
+                  }
                 >
                   {children}
                 </motion.div>
               </main>
             </div>
             <MobileTabBar entries={[...mainEntries, ...bottomEntries]} onOpenSearch={openSearch} />
-            <QuickInspector
-              componentID={inspectorID}
-              tab={inspectorTab}
-              onTabChange={setInspectorTab}
-              onClose={closeInspector}
-            />
+            {inspectorID !== null && (
+              <ErrorBoundary key={inspectorID} onReauthenticate={onLogout}>
+                <QuickInspector
+                  componentID={inspectorID}
+                  tab={inspectorTab}
+                  onTabChange={setInspectorTab}
+                  onClose={closeInspector}
+                />
+              </ErrorBoundary>
+            )}
           </div>
         </PageHeaderSlots.Provider>
       </InspectorContext.Provider>

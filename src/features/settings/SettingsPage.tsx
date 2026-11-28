@@ -148,7 +148,6 @@ export function SettingsPage(): JSX.Element {
   const build = useQuery({ queryKey: ['build-environment'], queryFn: getBuildEnvironment });
 
   const [storeMirror, setStoreMirror] = useState(() => localStorage.getItem(storeMirrorKey) ?? 'auto');
-  const [localeDraft, setLocaleDraft] = useState<string | null>(null);
   const [sleepDraft, setSleepDraft] = useState<Pick<CoreSleep, 'mode' | 'idle_timeout'> | null>(null);
   const [rotating, setRotating] = useState(false);
   const [pruning, setPruning] = useState(false);
@@ -436,29 +435,32 @@ export function SettingsPage(): JSX.Element {
             />
           </Row>
           <Row title={ui.coreDefaultLocale} description={ui.coreDefaultLocaleDesc}>
-            <form
-              className="flex items-center gap-2"
-              onSubmit={event => {
-                event.preventDefault();
-                if (localeDraft !== null) {
-                  void write(() => setDefaultLocale(localeDraft), [['core-locale']])
-                    .then(() => setLocaleDraft(null))
-                    .catch(() => undefined);
-                }
-              }}
-            >
-              <input
-                className="alona-input w-40 font-mono text-xs"
-                aria-label={ui.coreDefaultLocale}
-                value={localeDraft ?? coreLocale.data?.default_locale ?? ''}
-                onChange={event => setLocaleDraft(event.target.value)}
-              />
-              {localeDraft !== null && (
-                <Button type="submit" size="sm" variant="primary">
-                  {ui.save}
-                </Button>
-              )}
-            </form>
+            {(() => {
+              const currentLocale = coreLocale.data?.default_locale ?? '';
+              const baseLocaleOptions = [
+                { value: 'zh-CN', label: `${ui.languageChinese} (zh-CN)` },
+                { value: 'zh-TW', label: `${ui.localeChineseTW} (zh-TW)` },
+                { value: 'en-US', label: `${ui.languageEnglish} (en-US)` },
+                { value: 'ja-JP', label: `${ui.localeJapanese} (ja-JP)` },
+                { value: 'ko-KR', label: `${ui.localeKorean} (ko-KR)` },
+              ];
+              const localeOptions =
+                currentLocale && !baseLocaleOptions.some(item => item.value === currentLocale)
+                  ? [{ value: currentLocale, label: currentLocale }, ...baseLocaleOptions]
+                  : baseLocaleOptions;
+              return (
+                <Select
+                  aria-label={ui.coreDefaultLocale}
+                  value={currentLocale}
+                  disabled={!coreLocale.data}
+                  placeholder="…"
+                  options={localeOptions}
+                  onValueChange={value =>
+                    void write(() => setDefaultLocale(value), [['core-locale']]).catch(() => undefined)
+                  }
+                />
+              );
+            })()}
           </Row>
           {sleepValue && (
             <>
