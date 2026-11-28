@@ -12,6 +12,7 @@ import { PluginConfigPanel } from '../pages/PluginConfigPanel';
 import { packageName } from '../features/plugins/usePackageActions';
 import { installed, usePackages } from '../queries/packages';
 import { useStatistics } from '../queries/plugins';
+import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { EmptyState, LoadingRows } from '../ui/EmptyState';
 import { PulseDot, type PulseTone } from '../ui/PulseDot';
@@ -241,10 +242,25 @@ export function QuickInspector({ componentID, tab, onTabChange, onClose }: Quick
 
           {tab === 'overview' && (
             <div className="flex flex-col gap-4">
-              {(telemetryQuery.data?.error || telemetryQuery.error) && (
-                <p role="alert" className="text-sm text-[var(--color-warning-ink)]">
-                  {ui.telemetryIssue.replace('{error}', telemetryQuery.data?.error || telemetryQuery.error?.message || '')}
-                </p>
+              {(telemetryQuery.error || telemetryQuery.data?.error) && (
+                <Alert
+                  compact
+                  tone={telemetryQuery.error ? 'danger' : 'warning'}
+                  title={telemetryQuery.error ? ui.telemetryLoadFailed : ui.telemetryIssue}
+                  description={telemetryQuery.error ? telemetryQuery.error.message : telemetryQuery.data?.error}
+                  monoDescription
+                  action={
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      loading={telemetryQuery.isFetching}
+                      icon={<RefreshCw size={12} />}
+                      onClick={() => void telemetryQuery.refetch()}
+                    >
+                      {ui.retry}
+                    </Button>
+                  }
+                />
               )}
               {componentMetrics && (
                 <div className="flex flex-col gap-2">

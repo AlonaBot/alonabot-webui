@@ -1,7 +1,7 @@
 import { useMemo, useState, type JSX } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'motion/react';
-import { Activity, AlertTriangle, ArrowRight, CheckCircle2, Cpu, HardDrive, HeartPulse, MessageSquare, Moon, Puzzle, Sparkles, Terminal, Timer, Wrench } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowRight, CheckCircle2, Cpu, HardDrive, HeartPulse, MessageSquare, Moon, Puzzle, RefreshCw, Sparkles, Terminal, Timer, Wrench } from 'lucide-react';
 import { getAgentModelUsage } from '../../api/agent';
 import { getCore } from '../../api/core';
 import {
@@ -25,6 +25,7 @@ import { useStatistics } from '../../queries/plugins';
 import { useInspector } from '../../shell/inspector';
 import { PageHeader } from '../../shell/PageHeader';
 import { Link, navigate } from '../../shell/router';
+import { Alert } from '../../ui/Alert';
 import { AnimatedNumber } from '../../ui/AnimatedNumber';
 import { Button } from '../../ui/Button';
 import { EmptyState, Skeleton } from '../../ui/EmptyState';
@@ -280,10 +281,24 @@ export function OverviewPage(): JSX.Element {
         </SpotlightCard>
       </motion.div>
 
-      {(telemetry?.error || telemetryQuery.error) && (
-        <p role="alert" className="text-sm text-[var(--color-warning-ink)]">
-          {ui.telemetryIssue.replace('{error}', telemetry?.error || telemetryQuery.error?.message || '')}
-        </p>
+      {(telemetryQuery.error || telemetry?.error) && (
+        <Alert
+          tone={telemetryQuery.error ? 'danger' : 'warning'}
+          title={telemetryQuery.error ? ui.telemetryLoadFailed : ui.telemetryIssue}
+          description={telemetryQuery.error ? telemetryQuery.error.message : telemetry?.error}
+          monoDescription
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={telemetryQuery.isFetching}
+              icon={<RefreshCw size={13} />}
+              onClick={() => void telemetryQuery.refetch()}
+            >
+              {ui.retry}
+            </Button>
+          }
+        />
       )}
 
       {/* 第一排 Bento：遥测可用时展示 4 张资源与脉搏卡 + 多序列历史趋势图，否则展示 4 张实时业务 KPI 卡片 */}
