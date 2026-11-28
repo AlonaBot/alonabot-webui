@@ -241,6 +241,11 @@ export function QuickInspector({ componentID, tab, onTabChange, onClose }: Quick
 
           {tab === 'overview' && (
             <div className="flex flex-col gap-4">
+              {(telemetryQuery.data?.error || telemetryQuery.error) && (
+                <p role="alert" className="text-sm text-[var(--color-warning-ink)]">
+                  {ui.telemetryIssue.replace('{error}', telemetryQuery.data?.error || telemetryQuery.error?.message || '')}
+                </p>
+              )}
               {componentMetrics && (
                 <div className="flex flex-col gap-2">
                   {componentSleeping && (

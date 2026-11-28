@@ -1020,6 +1020,7 @@
     "telemetryCoreCpu": "Core CPU",
     "telemetryRoleCore": "Core",
     "telemetryCollecting": "正在采集性能样本…",
+    "telemetryIssue": "遥测采样出错：{error}",
     "telemetryUptime": "运行时长",
     "telemetryHostRamShare": "占宿主机 {pct}%",
     "kpiActiveComponents": "活跃组件",

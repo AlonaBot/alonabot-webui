@@ -294,14 +294,16 @@ export function AppShell({
               </main>
             </div>
             <MobileTabBar entries={[...mainEntries, ...bottomEntries]} onOpenSearch={openSearch} />
-            <ErrorBoundary key={inspectorID ?? 'inspector-closed'} onReauthenticate={onLogout}>
-              <QuickInspector
-                componentID={inspectorID}
-                tab={inspectorTab}
-                onTabChange={setInspectorTab}
-                onClose={closeInspector}
-              />
-            </ErrorBoundary>
+            {inspectorID !== null && (
+              <ErrorBoundary key={inspectorID} onReauthenticate={onLogout}>
+                <QuickInspector
+                  componentID={inspectorID}
+                  tab={inspectorTab}
+                  onTabChange={setInspectorTab}
+                  onClose={closeInspector}
+                />
+              </ErrorBoundary>
+            )}
           </div>
         </PageHeaderSlots.Provider>
       </InspectorContext.Provider>

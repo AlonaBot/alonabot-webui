@@ -1,4 +1,4 @@
-// 阶段 B 资源开销与运行时间遥测探测接口；现行 Core 尚未提供时按 404 平滑降级。
+// 资源开销与运行时间遥测接口；Core 返回 404 时展示业务统计。
 import { AdminAPIError, request } from './client';
 
 export interface HostTelemetry {
@@ -45,6 +45,7 @@ export interface ComponentTelemetry {
 
 export interface TelemetryHistoryPoint {
   readonly ts: string;
+  readonly error?: string;
   readonly total_cpu_percent: number;
   readonly total_rss_bytes: number;
   readonly core_cpu_percent: number;
@@ -57,6 +58,7 @@ export interface TelemetryHistoryPoint {
 
 export interface CoreTelemetry {
   readonly sampled_at: string;
+  readonly error?: string;
   readonly interval_seconds: number;
   readonly cpu_scale: 'host_normalized_percent';
   readonly host: HostTelemetry;
@@ -69,7 +71,7 @@ export interface CoreTelemetry {
 
 export type TelemetryWindow = '5m' | '15m' | '30m';
 
-/** 拉取 Core 与组件资源遥测；Core 返回 404 时返回 null 以便阶段 A 无感降级。 */
+/** 拉取 Core 与组件资源遥测；Core 返回 404 时返回 null，调用方展示业务统计。 */
 export async function getCoreTelemetry(windowSize: TelemetryWindow = '30m'): Promise<CoreTelemetry | null> {
   try {
     return await request<CoreTelemetry>(`/api/v1/core/telemetry?window=${encodeURIComponent(windowSize)}`);

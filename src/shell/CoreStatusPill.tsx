@@ -19,7 +19,7 @@ export interface CoreStatusPillProps {
 
 /**
  * CoreStatusPill 侧栏底部 Core 活体状态胶囊：展示在线心跳、版本号、实时 Uptime，
- * 并在检测到新版本时呈现柔和脉冲升级入口（阶段 A 跳转系统设置 Core 版本区）。
+ * 并在检测到新版本时呈现柔和脉冲升级入口（跳转系统设置 Core 版本区）。
  */
 export function CoreStatusPill({
   version,

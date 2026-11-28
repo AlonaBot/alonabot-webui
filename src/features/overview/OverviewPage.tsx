@@ -47,7 +47,7 @@ const roleColors: Readonly<Record<TelemetryRoleKey, string>> = {
 /**
  * 总览旗舰 Bento 看板：
  * 1. Core 生命体征 Hero + 时间范围磁吸切换；
- * 2. 资源开销与实时运行 KPI Bento 行（阶段 B 端点可用时自动切换为 CPU/RAM/Uptime 遥测视图）；
+ * 2. 资源开销与实时运行 KPI Bento 行（遥测端点可用时自动切换为 CPU/RAM/Uptime 遥测视图）；
  * 3. ECharts 消息趋势、账号份额、热门插件（点击直达 Quick Inspector）、错误警告与 Agent Token 分布。
  */
 export function OverviewPage(): JSX.Element {
@@ -280,7 +280,13 @@ export function OverviewPage(): JSX.Element {
         </SpotlightCard>
       </motion.div>
 
-      {/* 第一排 Bento：阶段 B 遥测自动点亮 4 张资源与脉搏卡 + 多序列历史趋势图，否则展示 4 张实时业务 KPI 卡片 */}
+      {(telemetry?.error || telemetryQuery.error) && (
+        <p role="alert" className="text-sm text-[var(--color-warning-ink)]">
+          {ui.telemetryIssue.replace('{error}', telemetry?.error || telemetryQuery.error?.message || '')}
+        </p>
+      )}
+
+      {/* 第一排 Bento：遥测可用时展示 4 张资源与脉搏卡 + 多序列历史趋势图，否则展示 4 张实时业务 KPI 卡片 */}
       {telemetry ? (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
